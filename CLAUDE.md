@@ -35,7 +35,8 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
   - `shifts`: sadece `closed_at, counted_cash, expected_cash, cash_difference, notes`. Kapanınca donar.
   - Kapanmış satıştaki hata **iade kaydıyla** düzeltilir.
 - **Senkron:** Outbox sırayla gönderilir, UUID ile **idempotent**. Satış/ödeme/vardiya sadece eklenir. Katalogda **son yazan kazanır** (`updated_at`).
-- **İndirim:** Yüzde indirim kuruşa **aşağı** yuvarlanır. Satır indirimi satır toplamından düşer. Sepet indirimi, satır indirimleri düşüldükten sonraki ara toplama uygulanır ve satırlara **dağıtılmaz**. Hesap toplamı = satır toplamları − sepet indirimi. Ürün raporları satır toplamlarını kullanır, sepet indirimi ayrı kalem olarak raporlanır.
+- **Satış ekranı (2026-10-27):** Serbest tutar satırı **yok**, her satır bir ürüne bağlı. Sepetteki satıra tıklanınca yan kolonda işlemler açılır: İptal, Fiyatı değiştir, Adet, İndirim, İkram, not. Yan kolonda telefon tuşları gibi bir sayı tuş takımı bulunur (fare ile tıklanır, klavyeden de yazılabilir; ekran dokunmatik değil). Fiyatı değiştir sadece o satırı etkiler, menü fiyatı değişmez. `list_price` saklanır, `unit_price <> list_price` olan satır raporda işaretli görünür ve fark raporlanır.
+- **İndirim:** Sadece **tam sayı yüzde** (`discount_percent` 1–100). Hazır butonlar %10 ve %15, ayrıca elle yazılan yüzde. Yüzde indirim kuruşa **aşağı** yuvarlanır. Satır indirimi satır toplamından düşer. Sepet indirimi, satır indirimleri düşüldükten sonraki ara toplama uygulanır ve satırlara **dağıtılmaz**. Hesap toplamı = satır toplamları − sepet indirimi. Ürün raporları satır toplamlarını kullanır, sepet indirimi ayrı kalem olarak raporlanır.
 - **İkram:** `is_comp = true` olan satırın tutarı 0 sayılır, ama ikram olarak ayrıca raporlanır.
 - **Rapor günü:** Vardiyanın **açılış tarihi**. Ödeme ve iade toplamları, ödemenin/iadenin yapıldığı vardiyaya (`shift_id`) yazılır.
 - **Beklenen nakit** = açılış kasası + nakit ödemeler − nakit iadeler. **Fark** = sayılan − beklenen.
@@ -60,7 +61,7 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 
 0. **İskelet** ✅ (bkz. aşağıdaki durum). Kabul: Electron headless + Expo web açılır, ikisi de `shared`'dan import eder.
 1. **Katalog ve içe aktarma:** CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul: menü yüklenir, fiyat değişince geçmiş satırı oluşur.
-2. **Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, serbest tutar (F2), indirim, ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
+2. **Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki:** İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade:** Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
@@ -80,11 +81,17 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 1. Kroki arka plan görseli ve kafe ölçüleri (sonra verilecek, şimdilik boş kroki).
 2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
 3. Açık hesap varken vardiya kapatılırsa **devir mi, zorunlu kapatma mı**? (Faz 2'de sor.)
-4. Ortak sayısı ve e-postaları (`partners`).
+4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. Supabase projesi ve Expo/Apple/Google hesapları var mı?
 6. Uygulama simgesi ve renk teması (yoksa sade nötr tema).
 7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak?
-8. **(Faz 0'da eklendi)** Yüzde indirim tam sayı mı (0–100, şemada böyle), yoksa küsuratlı (ör. %12,5) olabilir mi? Faz 2'den önce teyit et.
+8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
+9. **MİMARİ KARAR BEKLİYOR (2026-10-27):** Kullanıcının mevcut müşteri sipariş uygulaması `basakrdnz/crumble` (Flutter + Firebase: Firestore, Functions, Auth; `dev` dalında yönetim tarafı var: siparişler, ürünler, vitrin, raporlar, ekip, denetim kaydı). Kullanıcı, mobil yönetimin o uygulamanın yönetim kısmıyla birleştirilmesini ve verilerin tek yerde toplanmasını önerdi. O repo'nun `ROADMAP.md` §6b'si de kasa + müşteri + yönetimi tek sistem olarak planlıyor. Karar verilene kadar `apps/manager-mobile` (Expo) ve `supabase/` üzerinde yeni iş yapma.
+
+## Git akışı
+
+- `main` korunur, doğrudan commit atılmaz. Her faz kendi dalında geliştirilir ve PR ile `main`'e birleştirilir. PR'ı kullanıcıya göster, birleştirme onayını bekle.
+- Faz 0 dalı: `claude/exciting-lovelace-2jp3ev`.
 
 ## Uygulama notları (Faz 0'da alınan teknik kararlar)
 
@@ -96,8 +103,9 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 - Supabase SQL (`supabase/migrations`), **hiçbir projeye uygulanmadı**:
   - `private` şeması: `is_device()` (JWT `app_metadata.role`), `is_partner()` (security definer) ve trigger fonksiyonları.
   - Birebir aynı içerikli (no-op) update her zaman serbest. Böylece senkronda yeniden gönderilen upsert idempotent kalır. Zaten var olan `tab_items` id'sinin yeniden insert'i de `ON CONFLICT` ile sorunsuz geçer. Faz 5'te insert-only tablolar için `ON CONFLICT DO NOTHING` kullan.
-  - Şemada fazladan kısıtlar var: tek açık vardiya (partial unique index), `cash_difference = counted − expected`, `paid` ⇒ `closed_at`/`closed_shift_id`/`total` dolu, `void` ⇒ `closed_at`/`closed_shift_id` dolu, `is_custom_amount ⇔ product_id null`, iade kalemi aynı hesaba ait (composite FK), iptal edilmiş kalem bir daha değişmez.
-  - `partners` silme yasağının dışında: ortağın erişimi kaldırılabilsin diye. Sadece admin yönetir, API yazma yetkisi yok.
+  - Şemada fazladan kısıtlar var: tek açık vardiya (partial unique index), `cash_difference = counted − expected`, `paid` ⇒ `closed_at`/`closed_shift_id`/`total` dolu, `void` ⇒ `closed_at`/`closed_shift_id` dolu, `tab_items.product_id` zorunlu, iade kalemi aynı hesaba ait (composite FK), iptal edilmiş kalem bir daha değişmez. Kullanıcı bunları onayladı.
+  - `partners` de silinemez (kullanıcı: herkes tek ortak hesapla giriyor, kişi bazlı erişim kaldırmaya gerek yok). Sadece admin yönetir, API yazma yetkisi yok.
+  - Migration'lar henüz hiçbir yere uygulanmadığı için Faz 0 içinde yerinde düzenlendi. **İlk uygulamadan sonra mevcut migration'ları asla düzenleme, yeni migration ekle.**
   - `pnpm db:test` geçici yerel Postgres kümesinde stub + migration + `supabase/tests/db.test.sql` çalıştırır.
 - Henüz yapılmayanlar: yerel SQLite şeması/migration'ları ve outbox (Faz 1/5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
 

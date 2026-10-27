@@ -66,13 +66,25 @@ select pg_temp.expect_error($$insert into public.shifts (id, opened_at, opening_
 -- Quick sale: open tab, item, payment, close.
 insert into public.tabs (id, opened_shift_id, kind, opened_at)
   values ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'quick', now());
-insert into public.tab_items (id, tab_id, product_id, name_snapshot, unit_price, quantity)
+insert into public.tab_items (id, tab_id, product_id, name_snapshot, list_price, unit_price, quantity)
   values ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
-          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 1);
+          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 12000, 1);
 select pg_temp.expect_ok($$update public.tab_items set quantity = 2
   where id = '50000000-0000-0000-0000-000000000001'$$, 'change quantity on open tab');
-select pg_temp.expect_error($$update public.tab_items set unit_price = 1
-  where id = '50000000-0000-0000-0000-000000000001'$$, 'change unit_price snapshot');
+select pg_temp.expect_ok($$update public.tab_items set unit_price = 11000
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'change line price (Fiyatı değiştir) on open tab');
+select pg_temp.expect_error($$update public.tab_items set list_price = 1
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'change list_price snapshot');
+select pg_temp.expect_error($$update public.tab_items set name_snapshot = 'X'
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'change name_snapshot');
+select pg_temp.expect_ok($$update public.tab_items set discount_percent = 15
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'line discount 15%');
+select pg_temp.expect_error($$update public.tab_items set discount_percent = 0
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'discount 0% rejected (use null)');
+select pg_temp.expect_error($$update public.tab_items set discount_percent = 101
+  where id = '50000000-0000-0000-0000-000000000001'$$, 'discount over 100% rejected');
+select pg_temp.expect_ok($$update public.tabs set discount_percent = 10
+  where id = '40000000-0000-0000-0000-000000000001'$$, 'cart discount 10%');
 insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
   values ('60000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
           '30000000-0000-0000-0000-000000000001', 'cash', 24000, now());
@@ -87,12 +99,12 @@ select pg_temp.expect_ok($$update public.tabs set status = status
   where id = '40000000-0000-0000-0000-000000000001'$$, 'no-op update on closed tab (idempotent sync)');
 select pg_temp.expect_error($$update public.tab_items set note = 'x'
   where id = '50000000-0000-0000-0000-000000000001'$$, 'update item of closed tab');
-select pg_temp.expect_error($$insert into public.tab_items (id, tab_id, product_id, name_snapshot, unit_price, quantity)
+select pg_temp.expect_error($$insert into public.tab_items (id, tab_id, product_id, name_snapshot, list_price, unit_price, quantity)
   values ('50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001',
-          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 1)$$, 'add item to closed tab');
-select pg_temp.expect_ok($$insert into public.tab_items (id, tab_id, product_id, name_snapshot, unit_price, quantity)
+          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 12000, 1)$$, 'add item to closed tab');
+select pg_temp.expect_ok($$insert into public.tab_items (id, tab_id, product_id, name_snapshot, list_price, unit_price, quantity)
   values ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
-          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 2)
+          '20000000-0000-0000-0000-000000000001', 'Latte', 12000, 12000, 2)
   on conflict (id) do nothing$$, 're-sent item insert is idempotent');
 
 -- Payments/refunds are insert-only, nothing is deleted.
@@ -177,6 +189,7 @@ select pg_temp.expect_error($$delete from public.payments$$, 'service_role delet
 select pg_temp.expect_error($$update public.payments set amount = 1$$, 'service_role update payment');
 select pg_temp.expect_error($$update public.tabs set total = 1$$, 'service_role update closed tab');
 select pg_temp.expect_error($$update public.shifts set notes = 'x'$$, 'service_role update closed shift');
+select pg_temp.expect_error($$delete from public.partners$$, 'service_role delete partner');
 commit;
 
 \echo 'ALL DATABASE TESTS PASSED'

@@ -97,8 +97,8 @@ create table public.tabs (
   table_id uuid references public.tables (id),
   customer_name text check (customer_name is null or btrim(customer_name) <> ''),
   status text not null default 'open' check (status in ('open', 'paid', 'void')),
-  discount_type text check (discount_type in ('percent', 'amount')),
-  discount_value integer,
+  -- Cart discount, whole percent only (presets 10/15 or typed).
+  discount_percent integer check (discount_percent between 1 and 100),
   total integer check (total >= 0),
   opened_at timestamptz not null,
   closed_at timestamptz,
@@ -107,11 +107,6 @@ create table public.tabs (
   constraint tabs_kind_fields check (
     (kind <> 'table' or table_id is not null)
     and (kind <> 'named' or customer_name is not null)
-  ),
-  constraint tabs_discount check (
-    (discount_type is null and discount_value is null)
-    or (discount_type = 'amount' and discount_value >= 0)
-    or (discount_type = 'percent' and discount_value between 0 and 100)
   ),
   -- open: nothing closed yet. paid/void: closed in a shift. paid: total frozen.
   constraint tabs_status_fields check (
@@ -129,14 +124,15 @@ create table public.tab_items (
   id uuid primary key,
   tab_id uuid not null references public.tabs (id),
   -- Kept after the product is soft-deleted or merged into a variant later.
-  product_id uuid references public.products (id),
+  product_id uuid not null references public.products (id),
   name_snapshot text not null,
+  -- Menu price when the line was added. unit_price is what was charged;
+  -- they differ when the cashier used "Fiyatı değiştir".
+  list_price integer not null check (list_price >= 0),
   unit_price integer not null check (unit_price >= 0),
   quantity integer not null check (quantity > 0),
-  discount_type text check (discount_type in ('percent', 'amount')),
-  discount_value integer,
+  discount_percent integer check (discount_percent between 1 and 100),
   is_comp boolean not null default false,
-  is_custom_amount boolean not null default false,
   note text,
   voided_at timestamptz,
   void_reason text,
@@ -145,13 +141,6 @@ create table public.tab_items (
   -- Lets refunds reference (tab_item_id, tab_id) so an item refund always
   -- belongs to the same tab.
   constraint tab_items_id_tab_id_key unique (id, tab_id),
-  -- "Serbest tutar" lines have no product; product lines always have one.
-  constraint tab_items_custom_amount check (is_custom_amount = (product_id is null)),
-  constraint tab_items_discount check (
-    (discount_type is null and discount_value is null)
-    or (discount_type = 'amount' and discount_value >= 0)
-    or (discount_type = 'percent' and discount_value between 0 and 100)
-  ),
   constraint tab_items_void_reason check (void_reason is null or voided_at is not null)
 );
 
