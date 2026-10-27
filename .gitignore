@@ -1,0 +1,27 @@
+node_modules/
+dist/
+out/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+# Electron
+apps/pos-desktop/release/
+
+# Expo
+.expo/
+apps/manager-mobile/dist/
+apps/manager-mobile/ios/
+apps/manager-mobile/android/
+expo-env.d.ts
+
+# Local data
+*.sqlite
+*.sqlite-journal
+
+.DS_Store
+Thumbs.db

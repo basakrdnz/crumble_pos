@@ -1,0 +1,30 @@
+{
+  "name": "@crumble/pos-desktop",
+  "version": "0.0.0",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "smoke": "electron-vite build && node scripts/smoke.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@crumble/shared": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "~19.3.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "electron": "^45.0.0",
+    "electron-vite": "^6.0.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.0"
+  }
+}
