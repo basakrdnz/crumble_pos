@@ -56,8 +56,8 @@ async function runSmoke(win: BrowserWindow, sqliteVersion: string): Promise<void
 
 void app.whenReady().then(() => {
   const db = openDatabase(databasePath());
-  const api = createApi(createContext(db));
-  ipcMain.handle(IPC_CHANNEL, (_event, method: string, args: unknown[]) => dispatch(api, method, args));
+  const server = createApi(createContext(db));
+  ipcMain.handle(IPC_CHANNEL, (_event, method: string, args: unknown[]) => dispatch(server, method, args));
 
   const win = createWindow();
   if (isSmoke) {

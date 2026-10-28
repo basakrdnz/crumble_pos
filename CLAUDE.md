@@ -61,7 +61,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 0. **İskelet** ✅ (bkz. aşağıdaki durum). Kabul: Electron headless + Expo web açılır, ikisi de `shared`'dan import eder.
 1. **Katalog ve içe aktarma** ✅ CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul `e2e/faz1-catalog.e2e.ts` ile gösterildi.
-2. **Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
+2. **Vardiya ve hızlı satış** ✅ (kabul: `test/sales.test.ts` örnek gün + `e2e/faz2-sale.e2e.ts`). Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki:** İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade:** Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
@@ -81,11 +81,11 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 1. Kroki arka plan görseli ve kafe ölçüleri (sonra verilecek, şimdilik boş kroki).
 2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
-3. Açık hesap varken vardiya kapatılırsa **devir mi, zorunlu kapatma mı**? (Faz 2'de sor.)
+3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. Supabase projesi ve Expo/Apple/Google hesapları var mı?
 6. Uygulama simgesi ve renk teması (yoksa sade nötr tema).
-7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak?
+7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak? (Şu an: sadece uygulama açılışında ve "Kilitle" butonuyla soruluyor. Sıfırlama yok.)
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
@@ -118,6 +118,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - `e2e/`: Playwright (`playwright-core` `_electron`) ile gerçek uygulama testleri. `pnpm pos:e2e` build alıp çalıştırır. `CRUMBLE_SCREENSHOTS=<klasör>` verilirse ekran görüntüsü alınır.
   - `CRUMBLE_DB_PATH` veritabanı yolunu değiştirir (testler ve smoke testi geçici dosya kullanır). Varsayılan: Electron `userData/crumble.sqlite`.
   - Kendi kararım: içinde ürün olan kategori silinemez, önce ürünler taşınmalı veya silinmeli. Fiyatsız içe aktarılan pasif bir ürüne fiyat girilince otomatik aktif olur (plan §5.6). "Fiyat doğru" butonu fiyatı değiştirmeden rozeti kaldırır.
+- **Satış (Faz 2):**
+  - Hızlı satış, ilk ürün eklenince açılan `kind = quick` bir hesaptır. Uygulama çökerse yarım satış geri gelir. Sepetten çıkarılan satır iptal kaydı (`voided_at`) olarak kalır. "Satışı iptal et" (Esc) hesabı `void` yapar.
+  - Hesap kuralları ve vardiya özeti `packages/shared/src/calc/` altında (`tabTotals`, `shiftSummary`), mobil raporlar da bunları kullanacak.
+  - İptal toplamı = kapanan hesaplardaki iptal satırları + void hesapların tüm kalemleri. İkram ve iptal değeri satış fiyatından (`unit_price`) hesaplanır.
+  - Kendi kararım: aynı ürüne tekrar tıklanınca sadece "düz" satırın (fiyatı, indirimi, ikramı ve notu değişmemiş) adedi artar, yoksa yeni satır açılır. Bir değişiklik hesabı alınmış ödemenin altına düşüremez. Tamamı ikram olan hesap ödeme alınmadan kapanır.
+  - `onSaleCompleted` (`src/db/events.ts`), hesap `paid` olunca commit sonrası tetiklenir.
+  - Kilit ana süreçte uygulanır: kilitliyken sadece `authStatus/setupPassword/unlock/lock` çalışır.
 - Henüz yapılmayanlar: outbox gönderimi (Faz 5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
 
 ## Komutlar

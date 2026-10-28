@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@crumble/shared": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -26,9 +27,9 @@
     "@vitejs/plugin-react": "^6.0.0",
     "electron": "^45.0.0",
     "electron-vite": "^6.0.0",
+    "playwright-core": "^1.63.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.0",
-    "vitest": "^5.0.5",
-    "playwright-core": "^1.63.0"
+    "vitest": "^5.0.5"
   }
 }

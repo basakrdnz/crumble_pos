@@ -42,3 +42,22 @@ export async function snap(page: Page, name: string): Promise<void> {
   const dir = process.env.CRUMBLE_SCREENSHOTS;
   if (dir) await page.screenshot({ path: join(dir, `${name}.png`) });
 }
+
+export const TEST_PASSWORD = '1234';
+
+/** Sets the POS password on first run, or logs in. */
+export async function unlock(page: Page, password = TEST_PASSWORD): Promise<void> {
+  await page.getByLabel('Şifre', { exact: true }).fill(password);
+  const repeat = page.getByLabel('Şifre tekrar');
+  if (await repeat.count()) await repeat.fill(password);
+  await page.getByRole('button', { name: /Şifreyi kaydet|Giriş/ }).click();
+  await page.getByRole('button', { name: 'Kilitle' }).waitFor();
+}
+
+/** Types on the on-screen keypad inside `scope` ("125,5" -> 1 2 5 , 5). */
+export async function typeKeypad(scope: Page | ReturnType<Page['locator']>, text: string): Promise<void> {
+  const pad = scope.getByRole('group', { name: 'Tuş takımı' });
+  for (const ch of text) {
+    await pad.getByRole('button', { name: ch, exact: true }).click();
+  }
+}
