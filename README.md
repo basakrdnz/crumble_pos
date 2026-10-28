@@ -50,6 +50,16 @@ SMOKE OK
 - `rendererText`: React ekranı `@crumble/shared` ile hesaplanan tutarı gösterdi.
 - `sqlite`: `better-sqlite3` Electron içinde yüklendi.
 
+Uçtan uca testler (uygulamayı açıp arayüzde tıklar):
+
+```powershell
+pnpm pos:e2e
+```
+
+Menü ilk kez yüklenirken: **Ayarlar → Menü içe aktar** → repo kökündeki `crumble_menu_seed.csv` dosyasını seç → önizlemeyi kontrol et → **Onayla ve içe aktar**.
+
+Veritabanı: `%APPDATA%\@crumble\pos-desktop\crumble.sqlite` (Electron `userData`). `CRUMBLE_DB_PATH` ortam değişkeniyle değiştirilebilir.
+
 ### Yönetim uygulaması (Expo)
 
 ```powershell

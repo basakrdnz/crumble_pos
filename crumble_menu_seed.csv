@@ -1,0 +1,85 @@
+kategori,urun,fiyat_tl,durum,not
+Kahve,Espresso,110,tamam,
+Kahve,Double Espresso,215,tamam,
+Kahve,Americano,215,tamam,
+Kahve,Filtre Kahve,185,tamam,
+Kahve,Cappuccino,215,tamam,
+Kahve,Cafe Latte,215,tamam,
+Kahve,Aromalı Latte,235,tamam,Önceki fiyat 220
+Kahve,Flat White,225,tamam,Önceki fiyat 220
+Kahve,Macchiato,215,tamam,
+Kahve,Aromalı Macchiato,235,tamam,Önceki fiyat 220
+Kahve,Mocha,240,tamam,Önceki fiyat 210
+Kahve,Türk Kahvesi,160,tamam,
+Kahve,Double Türk Kahvesi,190,tamam,
+Kış İçecekleri,Balkabağı Latte (Sıcak),245,tamam,"Yeni. 3 pompa pumpkin spice + 1 pompa karamel, tek shot, sweet cream köpük"
+Kış İçecekleri,Balkabağı Latte (Buzlu),260,tamam,"Yeni. 3 pompa pumpkin spice + 1 pompa karamel, tek shot, sweet cream köpük"
+Kış İçecekleri,White Chocolate Mocha (Sıcak),245,tamam,"Yeni. Beyaz çikolata sosu, espresso, süt; üzeri sweet cream köpük ve beyaz çikolata rendesi"
+Kış İçecekleri,White Chocolate Mocha (Buzlu),255,tamam,"Yeni. Beyaz çikolata sosu, espresso, süt; üzeri sweet cream köpük ve beyaz çikolata rendesi"
+Kış İçecekleri,Balkabaklı Chai (Sıcak),225,tamam,Yeni. Chai Tea Latte + pumpkin spice şurubu
+Kış İçecekleri,Balkabaklı Chai (Buzlu),230,tamam,Yeni. Chai Tea Latte + pumpkin spice şurubu
+Çay ve Diğer Sıcaklar,Bardak Çay,65,tamam,
+Çay ve Diğer Sıcaklar,Fincan Çay,85,tamam,
+Çay ve Diğer Sıcaklar,Bitki Çayı (Küçük),160,tamam,
+Çay ve Diğer Sıcaklar,Bitki Çayı (Büyük),250,tamam,
+Çay ve Diğer Sıcaklar,Termos Çay,550,tamam,
+Çay ve Diğer Sıcaklar,Chai Tea Latte,190,tamam,
+Çay ve Diğer Sıcaklar,Sıcak Çikolata,220,tamam,
+Çay ve Diğer Sıcaklar,Sahlep,220,tamam,
+Çay ve Diğer Sıcaklar,Adaçayı (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Adaçayı (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Elma-Tarçın (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Elma-Tarçın (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Hibiskus (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Hibiskus (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Papatya (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Papatya (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Anason (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Anason (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Yeşil Çay (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Yeşil Çay (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Lavanta (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Lavanta (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Zencefil (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Zencefil (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Biberiye (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Biberiye (Büyük),250,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Tane Karabiber (Küçük),160,tamam,Yeni bitki çayı
+Çay ve Diğer Sıcaklar,Tane Karabiber (Büyük),250,tamam,Yeni bitki çayı
+Soğuk İçecekler,Cool Lime,290,tamam,
+Soğuk İçecekler,Berry Hibiskus,280,tamam,
+Detox ve Matcha,Meyve Detox No1,290,tamam,"Elma, limon, zencefil"
+Detox ve Matcha,Meyve Detox No2,290,tamam,"Havuç, pancar, portakal"
+Detox ve Matcha,Meyve Detox No3,290,tamam,"Salatalık, limon, taze nane"
+Detox ve Matcha,Matcha Detox No1,330,tamam,"Matcha, salatalık, taze nane, tonik"
+Detox ve Matcha,Matcha Detox No2,330,tamam,"Matcha, limon suyu, taze nane, tonik"
+Detox ve Matcha,Matcha Detox No3,330,tamam,"Matcha, elma suyu, maden suyu"
+Detox ve Matcha,Matcha Detox No4,330,tamam,"Matcha, portakal suyu, maden suyu"
+Kahvaltılık,Granola Kase,350,tamam,"Yeni. Chia tohumlu ballı süzme yoğurt, yarım muz, granola, ay çekirdeği, parçalı fıstık ezmesi, kuru üzüm. Fıstık içerir."
+Yemek,Günün Çorbası,240,tamam,
+Yemek,Anne Makarnası,450,tamam,Özel kıyma harcı ve kekikli yoğurt
+Yemek,Chicken Alfredo,480,tamam,"Jülyen tavuk, krema, sarımsak, yeşil biber; üzeri parmesan ve fesleğen"
+Yemek,Pesto Alfredo,460,tamam,Krema ve taze pesto sos
+Yemek,Izgara Tavuk Kase,460,tamam,"Izgara tavuk, basmati pirinç pilavı, salata"
+Yemek,Köfte Kase,480,tamam,"El yapımı köfte (180 g), basmati pirinç pilavı, salata. Önceki fiyat 460"
+Yemek,Ekmek Arası Köfte,430,tamam,120 g köfte
+Yemek,Akdeniz Tost,255,tamam,
+Yemek,Karışık Tost,285,tamam,
+Yemek,Kaşarlı Tost,250,tamam,
+Yemek,Hindi Füme Baget,360,tamam,
+Yemek,Peynir Baget,370,tamam,
+Yemek,Dana Jambon Baget,390,tamam,
+Varsa Kap! (Vitrin),Elmalı Kurabiye,120,teyit_edilecek,Önceki fiyat 110
+Varsa Kap! (Vitrin),Triple Chocolate Cookie,230,tamam,Önceki fiyat 210
+Varsa Kap! (Vitrin),Mozaik,220,tamam,
+Varsa Kap! (Vitrin),Çikolatalı Kek,285,tamam,
+Varsa Kap! (Vitrin),Havuçlu Cevizli Kek,270,tamam,
+Varsa Kap! (Vitrin),Haşhaşlı Kek,270,tamam,
+Varsa Kap! (Vitrin),Crumble Turta,290,tamam,
+Varsa Kap! (Vitrin),Çıtır Kurabiye,,fiyat_belirlenecek,
+Varsa Kap! (Vitrin),Vişneli Parmak Kurabiye,,fiyat_belirlenecek,
+Varsa Kap! (Vitrin),Dereotlu Poğaça,135,tamam,
+Varsa Kap! (Vitrin),Patatesli Börek,130,teyit_edilecek,Fiyat artırıldı; güncel fiyat girilecek
+Varsa Kap! (Vitrin),Peynirli Börek,140,teyit_edilecek,Fiyat artırıldı; güncel fiyat girilecek
+Varsa Kap! (Vitrin),Tavuklu Sebzeli Börek,150,teyit_edilecek,Fiyat artırıldı; güncel fiyat girilecek
+Varsa Kap! (Vitrin),Pizza Dilimi,150,tamam,

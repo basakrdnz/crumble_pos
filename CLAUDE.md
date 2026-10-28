@@ -49,7 +49,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 
 ## Menü içe aktarma (Faz 1)
 
-Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; 83 ürün, 8 kategori). Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
+Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada **84 ürün**, 8 kategori var, olduğu gibi aktarılır). Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
 - `fiyat_tl` × 100 → kuruş.
 - Sıcak/buzlu ve boy seçenekleri ayrı ürün olarak, isim aynen aktarılır.
 - `fiyat_belirlenecek` → pasif, fiyat 0.
@@ -60,7 +60,7 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 ## Fazlar
 
 0. **İskelet** ✅ (bkz. aşağıdaki durum). Kabul: Electron headless + Expo web açılır, ikisi de `shared`'dan import eder.
-1. **Katalog ve içe aktarma:** CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul: menü yüklenir, fiyat değişince geçmiş satırı oluşur.
+1. **Katalog ve içe aktarma** ✅ CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul `e2e/faz1-catalog.e2e.ts` ile gösterildi.
 2. **Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki:** İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade:** Satır ve satış iadesi, kapanış toplamlarına yansıması.
@@ -109,13 +109,22 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
   - `partners` de silinemez (kullanıcı: herkes tek ortak hesapla giriyor, kişi bazlı erişim kaldırmaya gerek yok). Sadece admin yönetir, API yazma yetkisi yok.
   - Migration'lar henüz hiçbir yere uygulanmadığı için Faz 0 içinde yerinde düzenlendi. **İlk uygulamadan sonra mevcut migration'ları asla düzenleme, yeni migration ekle.**
   - `pnpm db:test` geçici yerel Postgres kümesinde stub + migration + `supabase/tests/db.test.sql` çalıştırır.
-- Henüz yapılmayanlar: yerel SQLite şeması/migration'ları ve outbox (Faz 1/5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
+- **Kasa kod yapısı (Faz 1):**
+  - `src/db/schema.ts`: yerel SQLite şeması, Supabase ile aynı tablolar ve değişmezlik trigger'ları, ayrıca `outbox` ve `settings`. Migration'lar `PRAGMA user_version` ile sırayla uygulanır ve sadece eklenir.
+  - `src/db/database.ts`: `insertRow`/`updateRow` her yazımda tam satırı outbox'a koyar. Bunlar her zaman `tx()` içinde çağrılır.
+  - `src/db/*.ts`: iş kuralları (repository). Electron'dan bağımsızdır, Vitest ile bellek içi SQLite'ta test edilir (`test/`).
+  - `src/api/contract.ts`: `PosApi` arayüzü. `server.ts` (ana süreç) ve `client.ts` (arayüz, Proxy) tek bir IPC kanalı üzerinden konuşur. Hatalar `{ok:false,error}` olarak döner.
+  - `src/screens/`, `src/components/`: React arayüzü.
+  - `e2e/`: Playwright (`playwright-core` `_electron`) ile gerçek uygulama testleri. `pnpm pos:e2e` build alıp çalıştırır. `CRUMBLE_SCREENSHOTS=<klasör>` verilirse ekran görüntüsü alınır.
+  - `CRUMBLE_DB_PATH` veritabanı yolunu değiştirir (testler ve smoke testi geçici dosya kullanır). Varsayılan: Electron `userData/crumble.sqlite`.
+  - Kendi kararım: içinde ürün olan kategori silinemez, önce ürünler taşınmalı veya silinmeli. Fiyatsız içe aktarılan pasif bir ürüne fiyat girilince otomatik aktif olur (plan §5.6). "Fiyat doğru" butonu fiyatı değiştirmeden rozeti kaldırır.
+- Henüz yapılmayanlar: outbox gönderimi (Faz 5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
 
 ## Komutlar
 
 ```
 pnpm install | pnpm test | pnpm typecheck | pnpm db:test
-pnpm pos:dev | pnpm pos:smoke | pnpm mobile:web | pnpm mobile:smoke
+pnpm pos:dev | pnpm pos:smoke | pnpm pos:e2e | pnpm mobile:web | pnpm mobile:smoke
 ```
 
 Bulut (Linux) oturumunda `pos:smoke` xvfb ile ve `--no-sandbox` ile çalışır. `mobile:smoke` Playwright ister.

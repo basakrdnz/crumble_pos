@@ -1,16 +1,33 @@
-import { expectedCash, formatTL } from '@crumble/shared';
+import { formatTL } from '@crumble/shared';
+import { useState } from 'react';
+import { ToastProvider } from './components/Toast';
+import { Settings } from './screens/Settings';
 
-// Faz 0 placeholder: proves the renderer can use @crumble/shared.
-const sample = expectedCash(50000, [{ method: 'cash', amount: 73450 }], []);
+type Screen = 'sale' | 'settings';
 
 export function App() {
+  const [screen, setScreen] = useState<Screen>('settings');
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 32 }}>
-      <h1>Crumble POS</h1>
-      <p>Kasa uygulaması iskeleti (Faz 0).</p>
-      <p>
-        Ortak paket testi: <strong data-smoke>{formatTL(sample)}</strong>
-      </p>
-    </main>
+    <ToastProvider>
+      <div className="app">
+        <header className="topbar">
+          <span className="brand">Crumble POS</span>
+          <button className={`btn${screen === 'sale' ? ' active' : ''}`} onClick={() => setScreen('sale')}>
+            Satış
+          </button>
+          <button className={`btn${screen === 'settings' ? ' active' : ''}`} onClick={() => setScreen('settings')}>
+            Ayarlar
+          </button>
+          <span className="spacer" />
+          {/* Read by the smoke test: proves the renderer uses @crumble/shared. */}
+          <span data-smoke hidden>
+            {formatTL(123450)}
+          </span>
+        </header>
+        <main className="main">
+          {screen === 'settings' ? <Settings /> : <div className="content empty">Satış ekranı Faz 2'de gelecek.</div>}
+        </main>
+      </div>
+    </ToastProvider>
   );
 }

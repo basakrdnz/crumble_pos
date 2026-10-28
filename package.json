@@ -12,6 +12,7 @@
     "pos:smoke": "pnpm --filter @crumble/pos-desktop smoke",
     "mobile:web": "pnpm --filter @crumble/manager-mobile web",
     "mobile:smoke": "pnpm --filter @crumble/manager-mobile smoke",
-    "db:test": "bash supabase/tests/run_local.sh"
+    "db:test": "bash supabase/tests/run_local.sh",
+    "pos:e2e": "pnpm --filter @crumble/pos-desktop e2e"
   }
 }
