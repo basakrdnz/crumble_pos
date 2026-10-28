@@ -1,22 +1,9 @@
 import type { Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { launchApp, type RunningApp, SEED_CSV, snap, typeKeypad, unlock } from './launch';
+import { cartTotal, importMenu, pick } from './helpers';
+import { launchApp, type RunningApp, snap, typeKeypad, unlock } from './launch';
 
-async function importMenu(page: Page) {
-  await page.getByRole('button', { name: 'Ayarlar' }).click();
-  await page.getByRole('button', { name: 'Menü içe aktar' }).click();
-  await page.getByLabel('CSV dosyası').setInputFiles(SEED_CSV);
-  page.once('dialog', (d) => void d.accept());
-  await page.getByRole('button', { name: 'Onayla ve içe aktar' }).click();
-  await page.getByTestId('import-summary').filter({ hasText: 'zaten var' }).waitFor();
-}
-
-async function pick(page: Page, category: string, product: string) {
-  await page.getByRole('tab', { name: category }).click();
-  await page.getByRole('button', { name: new RegExp(`^${product.replace(/[()]/g, '\\$&')}`) }).click();
-}
-
-const total = (page: Page) => page.getByTestId('cart-total').textContent();
+const total = cartTotal;
 
 async function payCash(page: Page, received?: string) {
   await page.keyboard.press('F12');

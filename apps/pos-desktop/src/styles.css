@@ -197,3 +197,31 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
   .print-area { position: absolute; left: 0; top: 0; width: 100%; }
   .no-print { display: none !important; }
 }
+
+/* Floor plan */
+.floor {
+  position: relative; width: 100%; max-width: calc((100vh - 150px) * 1.5); background: #fbfaf8; border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; user-select: none;
+  background-image: radial-gradient(circle, #e8e2da 1px, transparent 1px); background-size: 24px 24px;
+}
+.floor-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0.35; pointer-events: none; }
+.floor-table {
+  position: absolute; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer; transform-origin: center; color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.floor-table.busy { background: var(--accent); color: #fff; border-color: #6d4429; }
+.floor-table.selected { outline: 3px solid #2f6fdb; outline-offset: 2px; }
+.floor.editable .floor-table { cursor: move; }
+.floor-label { display: flex; flex-direction: column; align-items: center; line-height: 1.1; text-align: center; pointer-events: none; font-size: 14px; }
+.floor-total { font-size: 12px; font-weight: 600; }
+.floor-name { font-size: 11px; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resize-handle {
+  position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; background: #2f6fdb; border: 2px solid #fff;
+  border-radius: 3px; cursor: nwse-resize;
+}
+.section-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tab-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.tab-card { text-align: left; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.tab-card:hover { border-color: var(--accent); }
+.tab-card .amount { font-size: 20px; font-weight: 700; }
+.editor-layout { display: grid; grid-template-columns: 1fr 260px; gap: 16px; align-items: start; }
