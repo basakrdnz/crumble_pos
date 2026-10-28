@@ -3,12 +3,16 @@ import { BulkPrices } from './settings/BulkPrices';
 import { CatalogEditor } from './settings/CatalogEditor';
 import { ChangeHistory } from './settings/ChangeHistory';
 import { Import } from './Import';
+import { Password } from './settings/Password';
+import { Shortcuts } from './settings/Shortcuts';
 
 const SECTIONS = [
   { id: 'catalog', label: 'Kategori ve ürünler', render: () => <CatalogEditor /> },
   { id: 'prices', label: 'Toplu fiyat', render: () => <BulkPrices /> },
   { id: 'import', label: 'Menü içe aktar', render: () => <Import /> },
   { id: 'history', label: 'Değişiklik geçmişi', render: () => <ChangeHistory /> },
+  { id: 'password', label: 'Kasa şifresi', render: () => <Password /> },
+  { id: 'shortcuts', label: 'Kısayollar', render: () => <Shortcuts /> },
 ] as const;
 
 export function Settings() {

@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { launchApp, type RunningApp, SEED_CSV, snap } from './launch';
+import { launchApp, type RunningApp, SEED_CSV, snap, unlock } from './launch';
 
 // Faz 1 kabul: menü yüklenir, fiyat değişince geçmiş satırı oluşur.
 describe('Faz 1: katalog ve içe aktarma', () => {
   let run: RunningApp;
   beforeAll(async () => {
     run = await launchApp();
+    await unlock(run.page);
   });
   afterAll(async () => {
     await run?.close();
@@ -62,6 +63,7 @@ describe('Faz 1: katalog ve içe aktarma', () => {
     await run.app.close();
     const again = await launchApp(dbPath);
     try {
+      await unlock(again.page);
       await again.page.getByRole('button', { name: 'Ayarlar' }).click();
       await again.page.getByRole('button', { name: 'Toplu fiyat' }).click();
       expect(await again.page.getByLabel('Mocha fiyatı', { exact: true }).inputValue()).toBe('250,00');

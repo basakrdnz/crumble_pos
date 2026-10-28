@@ -5,5 +5,5 @@
     "jsx": "react-jsx",
     "types": ["node"]
   },
-  "include": ["electron", "src", "test", "e2e", "electron.vite.config.ts", "vitest.config.ts", "vitest.e2e.config.ts"]
+  "include": ["electron", "src", "test", "e2e", "electron.vite.config.ts", "vitest.config.mts", "vitest.e2e.config.mts"]
 }
