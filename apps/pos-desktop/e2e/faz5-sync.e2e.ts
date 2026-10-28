@@ -12,13 +12,15 @@ const count = async (db: pg.Client, sql: string) => Number((await db.query(sql))
 describe.skipIf(!bin)('Faz 5: senkron (uygulama + sahte Supabase + gerçek Postgres)', () => {
   let cluster: PgCluster;
   let db: pg.Client;
+  let pool: pg.Pool;
   let cloud: FakeSupabase;
   let run: RunningApp;
 
   beforeAll(async () => {
     cluster = await startCluster(bin!);
     db = await cluster.connect();
-    cloud = fakeSupabase(db, 54000 + Math.floor(Math.random() * 900));
+    pool = cluster.pool();
+    cloud = fakeSupabase(pool, 54000 + Math.floor(Math.random() * 900), { device: 'kasa@crumble.test', partner: 'ortak@crumble.test' });
     await cloud.start();
     run = await launchApp();
     await unlock(run.page);
@@ -27,6 +29,7 @@ describe.skipIf(!bin)('Faz 5: senkron (uygulama + sahte Supabase + gerçek Postg
   afterAll(async () => {
     await run?.close();
     await cloud?.stop();
+    await pool?.end();
     await db?.end();
     cluster?.stop();
   });

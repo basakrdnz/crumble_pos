@@ -62,12 +62,14 @@ Veritabanı: `%APPDATA%\@crumble\pos-desktop\crumble.sqlite` (Electron `userData
 
 ### Yönetim uygulaması (Expo)
 
+Önce `apps/manager-mobile/.env.example` dosyasını `.env` olarak kopyalayın, içine Supabase adresini ve **anon** anahtarını yazın (bkz. `supabase/README.md`).
+
 ```powershell
 pnpm mobile:web            # tarayıcıda açar (http://localhost:8081)
 pnpm --filter @crumble/manager-mobile start   # Expo Go ile telefonda açmak için QR kod
 ```
 
-Ekranda "Ortak paket testi: 1.234,50 ₺" görünmelidir.
+Ortak hesabıyla giriş yapılır. Ekranlar: Bugün, Satışlar, Ürünler, Raporlar, Diğer (Vardiyalar, Değişiklik geçmişi, Ayarlar).
 `pnpm mobile:smoke` aynı kontrolü otomatik yapar ama Playwright ister (`npm i -g playwright`, sonra `npx playwright install chromium`).
 
 ### Testler

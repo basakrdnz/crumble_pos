@@ -22,6 +22,7 @@ export function findPgBin(): string | null {
 
 export interface PgCluster {
   connect(): Promise<pg.Client>;
+  pool(): pg.Pool;
   stop(): void;
 }
 
@@ -55,6 +56,7 @@ export async function startCluster(bin: string): Promise<PgCluster> {
 
   return {
     connect,
+    pool: () => new pg.Pool({ host: '127.0.0.1', port, user: 'postgres', database: 'postgres', max: 6 }),
     stop: () => {
       try {
         run([join(bin, 'pg_ctl'), '-D', data, '-m', 'immediate', 'stop']);

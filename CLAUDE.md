@@ -65,7 +65,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 3. **Hesap ve kroki** ✅ (kabul: `test/tabs.test.ts` + `e2e/faz3-tabs.e2e.ts`). İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade** ✅ (kabul: `test/refunds.test.ts` + `e2e/faz4-refunds.e2e.ts`). Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanacak (`supabase/README.md`, henüz yapılmadı). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
-6. **Mobil:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
+6. **Mobil** ✅ (kabul: `apps/pos-desktop/e2e/faz6-mobile.e2e.ts`). Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama:** Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
 8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
 
@@ -152,7 +152,18 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - `restore.ts`: boş kasaya geri yükleme, outbox'a yazmaz. Hesaplar önce açık eklenir, sonra son hallerine getirilir (trigger'lar için).
   - Testler: `test/pgCluster.ts` geçici Postgres açar (stub + tüm migration'lar). `test/pgTransport.ts`, PostgREST gibi `json_populate_recordset` ve cihaz rolüyle yazar. `e2e/fakeSupabase.ts` uygulamayı gerçek HTTP üzerinden buna bağlar. Postgres yoksa bu testler atlanır.
   - Yeni migration: `20261028000005_device_status.sql` (telefondaki "son senkron" için).
-- Henüz yapılmayanlar: Realtime yayını (Faz 6), `supabase/seed`.
+- **Mobil yönetim (Faz 6), `apps/manager-mobile`:**
+  - expo-router: `app/(tabs)` altında Bugün/Satışlar/Ürünler/Raporlar/Diğer. Ayrıca `sale/[id]`, `shifts`, `history`, `settings`.
+  - Supabase ayarları `.env` dosyasında (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, bkz. `.env.example`).
+  - Sadece `partners` tablosunda olan hesap girebilir. Kontrol bitmeden uygulama ekranı açılmaz.
+  - Raporlar telefonda hesaplanır: `@crumble/shared/src/reports` (`periodTotals`, `revenueSeries`, `hourlyActivity`, `productReport`), kasadaki vardiya özetiyle aynı kurallar. Rapor günü = vardiyanın açılış günü (İstanbul, sabit UTC+3).
+  - Veri büyürse sunucu tarafı toplama (SQL view/RPC) düşünülebilir. Şimdilik sayfalı (1000) okuma yapılıyor.
+  - Canlılık: Supabase Realtime (`20261028000006_realtime.sql` yayını) + 15 sn yoklama yedeği (`EXPO_PUBLIC_POLL_MS`). Yerel testte Realtime yok, E2E yoklamayla (3 sn) ölçüyor.
+  - "Son senkron" bilgisi `device_status`'tan okunur, 10 dakikadan eskiyse uyarı renginde gösterilir.
+  - Bildirim tercihi sadece kaydedilir, push bildirimi yok (plan kapsamında gönderim tanımlı değil).
+  - Not: RN'de `textTransform: 'uppercase'` Türkçe bilmez (i→I), kullanma.
+  - E2E altyapısı: `e2e/fakeSupabase.ts`, Auth + PostgREST POST/GET alt kümesini gerçek Postgres'e cihaz/ortak rolüyle (RLS açık) çevirir. Gerçek PostgREST ikili dosyası indirilemedi (izin verilmedi), yerine bu kullanılıyor.
+- Henüz yapılmayanlar: `supabase/seed`.
 
 ## Komutlar
 

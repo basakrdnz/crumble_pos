@@ -1,5 +1,5 @@
-// Faz 0 acceptance: export the web build, serve it, open it in headless
-// Chromium (Playwright) and check the text rendered via @crumble/shared.
+// Smoke test: export the web build, serve it, open it in headless Chromium
+// (Playwright) and check the app starts without errors (login screen).
 import { execSync } from 'node:child_process';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -9,7 +9,8 @@ import { extname, join, resolve } from 'node:path';
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, '..');
 const dist = join(root, 'dist');
-const expected = '1.234,50 ₺';
+// Without Supabase settings the app must still load and show the login screen.
+const expected = 'Crumble Yönetim';
 
 execSync('npx expo export --platform web --output-dir dist', { cwd: root, stdio: 'inherit' });
 
@@ -39,7 +40,7 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(url);
-  const text = await page.getByTestId('smoke').textContent({ timeout: 30_000 });
+  const text = await page.getByText('Crumble Yönetim').first().textContent({ timeout: 30_000 });
   console.log({ url, rendererText: text, pageErrors: errors });
   ok = text === expected && errors.length === 0;
 } finally {
