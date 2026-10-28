@@ -93,6 +93,17 @@ export function tabTotals(items: readonly CalcItem[], cartDiscountPercent: numbe
   };
 }
 
+/**
+ * What the customer effectively paid for one line: its total minus its share
+ * of the cart discount (rounded down). Used only to suggest an item refund;
+ * the cart discount itself is never spread over the lines in reports.
+ */
+export function lineNetAfterCartDiscount(item: CalcItem, cartDiscountPercent: number | null): Kurus {
+  if (item.voided_at) return 0;
+  const { total } = lineTotals(item);
+  return cartDiscountPercent ? total - percentOf(total, cartDiscountPercent) : total;
+}
+
 /** Change to give back for a cash payment. */
 export function changeDue(received: Kurus, due: Kurus): Kurus {
   assertKurus(received);

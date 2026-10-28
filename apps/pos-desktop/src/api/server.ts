@@ -3,6 +3,7 @@ import * as catalog from '../db/catalog';
 import * as floor from '../db/floor';
 import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
+import * as refunds from '../db/refunds';
 import * as sales from '../db/sales';
 import { type AuthStatus, type IpcResult, type PosApi, PUBLIC_METHODS } from './contract';
 
@@ -89,6 +90,12 @@ export function createApi(ctx: Context): ApiServer {
       sales.setCustomerName(ctx, tabId, name);
       return sales.getTab(ctx, tabId);
     },
+
+    listSales: (shiftId) => refunds.listSales(ctx, shiftId),
+    getRefundInfo: (tabId) => refunds.getRefundInfo(ctx, tabId),
+    refundAll: (tabId, reason) => refunds.refundAll(ctx, tabId, reason),
+    refundPart: (tabId, input) => refunds.refundPart(ctx, tabId, input),
+    refundAndVoid: (tabId, reason) => refunds.refundAndVoid(ctx, tabId, reason),
 
     listFloorPlans: () => floor.listFloorPlans(ctx),
     createFloorPlan: (name) => floor.createFloorPlan(ctx, name),

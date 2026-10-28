@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type CalcItem, changeDue, lineTotals, percentOf, tabTotals } from './tab';
+import { type CalcItem, changeDue, lineNetAfterCartDiscount, lineTotals, percentOf, tabTotals } from './tab';
 
 const item = (over: Partial<CalcItem> = {}): CalcItem => ({
   list_price: 21500,
@@ -86,5 +86,14 @@ describe('changeDue', () => {
   it('returns the change and refuses too little cash', () => {
     expect(changeDue(50000, 35148)).toBe(14852);
     expect(() => changeDue(100, 200)).toThrow();
+  });
+});
+
+describe('lineNetAfterCartDiscount', () => {
+  it('takes the cart discount share off the line', () => {
+    expect(lineNetAfterCartDiscount(item(), null)).toBe(21500);
+    expect(lineNetAfterCartDiscount(item(), 15)).toBe(21500 - 3225);
+    expect(lineNetAfterCartDiscount(item({ is_comp: true }), 10)).toBe(0);
+    expect(lineNetAfterCartDiscount(item({ voided_at: 'x' }), null)).toBe(0);
   });
 });

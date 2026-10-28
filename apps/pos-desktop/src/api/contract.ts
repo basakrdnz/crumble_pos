@@ -1,11 +1,12 @@
 // The API the renderer uses. Implemented in the main process (createApi) and
 // called over IPC through window.crumble.invoke. Arguments and results must be
 // structured-clone friendly (plain data).
-import type { CatalogChange, Category, FloorPlan, FloorTable, Product, Shift, ShiftSummary, Tab, TableShape } from '@crumble/shared';
+import type { CatalogChange, Category, FloorPlan, FloorTable, Product, Refund, Shift, ShiftSummary, Tab, TableShape } from '@crumble/shared';
 import type { ImportPreview } from '../catalog/menuCsv';
 import type { NewProduct, ProductPatch } from '../db/catalog';
 import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
+import type { PartialRefund, RefundInfo, SaleRow } from '../db/refunds';
 import type { CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
 
 export interface AuthStatus {
@@ -61,6 +62,13 @@ export interface PosApi {
   listOpenTabSummaries(): OpenTabSummary[];
   moveTab(tabId: string, tableId: string): TabDetail;
   setCustomerName(tabId: string, name: string | null): TabDetail;
+
+  // Sales list and refunds (iade)
+  listSales(shiftId: string): SaleRow[];
+  getRefundInfo(tabId: string): RefundInfo;
+  refundAll(tabId: string, reason?: string | null): Refund[];
+  refundPart(tabId: string, input: PartialRefund): Refund;
+  refundAndVoid(tabId: string, reason?: string | null): void;
 
   // Floor plan (kroki)
   listFloorPlans(): FloorPlan[];
