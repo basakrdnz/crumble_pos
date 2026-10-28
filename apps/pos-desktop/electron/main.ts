@@ -1,15 +1,27 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import { formatTL } from '@crumble/shared';
 import { IPC_CHANNEL } from '../src/api/contract';
 import { createApi, dispatch } from '../src/api/server';
 import { createContext, openDatabase } from '../src/db/database';
+import { CloudManager, plainBox, type SecretBox } from '../src/sync/cloud';
+import { SyncService } from '../src/sync/service';
 
 // Smoke mode (scripts/smoke.mjs): load the window, report what rendered, then quit.
 const isSmoke = process.env.CRUMBLE_SMOKE === '1';
 
 function databasePath(): string {
   return process.env.CRUMBLE_DB_PATH ?? join(app.getPath('userData'), 'crumble.sqlite');
+}
+
+/** Encrypts the stored cloud session with the OS keychain (DPAPI on Windows) when available. */
+function secretBox(): SecretBox {
+  if (!safeStorage.isEncryptionAvailable()) return plainBox;
+  return {
+    encrypt: (plain) => `enc:${safeStorage.encryptString(plain).toString('base64')}`,
+    decrypt: (stored) =>
+      stored.startsWith('enc:') ? safeStorage.decryptString(Buffer.from(stored.slice(4), 'base64')) : stored,
+  };
 }
 
 function createWindow(): BrowserWindow {
@@ -56,14 +68,20 @@ async function runSmoke(win: BrowserWindow, sqliteVersion: string): Promise<void
 
 void app.whenReady().then(() => {
   const db = openDatabase(databasePath());
-  const server = createApi(createContext(db));
+  const ctx = createContext(db);
+  const sync = new SyncService(ctx);
+  const cloud = new CloudManager(ctx, sync, secretBox());
+  const server = createApi(ctx, { sync, cloud });
   ipcMain.handle(IPC_CHANNEL, (_event, method: string, args: unknown[]) => dispatch(server, method, args));
+  if (!isSmoke) void cloud.start().catch((error) => console.error('Bulut başlatılamadı', error));
 
   const win = createWindow();
   if (isSmoke) {
     const { v } = db.prepare('select sqlite_version() as v').get() as { v: string };
     void runSmoke(win, v);
   }
+
+  app.on('before-quit', () => sync.stop());
 });
 
 app.on('window-all-closed', () => {

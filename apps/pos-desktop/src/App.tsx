@@ -3,13 +3,14 @@ import { formatTL } from '@crumble/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api/client';
 import type { AuthStatus } from './api/contract';
+import { SyncIndicator } from './components/SyncIndicator';
 import { ToastProvider } from './components/Toast';
 import { formatTime } from './format';
 import { FloorPlan } from './screens/FloorPlan';
 import { Login } from './screens/Login';
 import { Sale } from './screens/Sale';
 import { Sales } from './screens/Sales';
-import { Settings } from './screens/Settings';
+import { Settings, type SettingsSection } from './screens/Settings';
 import { ShiftScreen } from './screens/Shift';
 import { Tabs } from './screens/Tabs';
 
@@ -37,6 +38,7 @@ function Shell() {
   const [screen, setScreen] = useState<Screen>('sale');
   const [shift, setShift] = useState<Shift | null | undefined>(undefined);
   const [newTabRequest, setNewTabRequest] = useState(0);
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('catalog');
 
   useEffect(() => {
     void api.authStatus().then(setAuth);
@@ -65,13 +67,26 @@ function Shell() {
         <span className="brand">Crumble POS</span>
         {auth?.unlocked &&
           SCREENS.map(([id, label]) => (
-            <button key={id} className={`btn${screen === id ? ' active' : ''}`} onClick={() => setScreen(id)}>
+            <button
+              key={id}
+              className={`btn${screen === id ? ' active' : ''}`}
+              onClick={() => {
+                if (id === 'settings') setSettingsSection('catalog');
+                setScreen(id);
+              }}
+            >
               {label}
             </button>
           ))}
         <span className="spacer" />
         {auth?.unlocked && (
           <>
+            <SyncIndicator
+              onClick={() => {
+                setSettingsSection('cloud');
+                setScreen('settings');
+              }}
+            />
             <span className="status" data-testid="shift-status">
               {shift ? `Vardiya açık · ${formatTime(shift.opened_at)}` : 'Vardiya kapalı'}
             </span>
@@ -101,7 +116,7 @@ function Shell() {
         ) : screen === 'shift' ? (
           <ShiftScreen shift={shift} onShiftChange={() => void reloadShift()} />
         ) : (
-          <Settings />
+          <Settings key={settingsSection} initial={settingsSection} />
         )}
       </main>
     </div>

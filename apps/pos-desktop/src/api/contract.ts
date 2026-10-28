@@ -7,6 +7,9 @@ import type { NewProduct, ProductPatch } from '../db/catalog';
 import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
 import type { PartialRefund, RefundInfo, SaleRow } from '../db/refunds';
+import type { CloudInfo, ConnectInput } from '../sync/cloud';
+import type { RestoreResult } from '../sync/restore';
+import type { SyncStatus } from '../sync/service';
 import type { CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
 
 export interface AuthStatus {
@@ -82,7 +85,19 @@ export interface PosApi {
   createTable(floorPlanId: string, shape: TableShape, at?: { x: number; y: number }): FloorTable;
   updateTable(id: string, patch: TablePatch): FloorTable;
   deleteTable(id: string): void;
+
+  // Cloud sync (Faz 5)
+  getSyncStatus(): SyncStatus;
+  syncNow(): Promise<SyncStatus>;
+  getCloudInfo(): CloudInfo;
+  connectCloud(input: ConnectInput): Promise<CloudInfo>;
+  disconnectCloud(): Promise<CloudInfo>;
+  isLocalEmpty(): boolean;
+  restoreFromCloud(): Promise<RestoreResult>;
 }
+
+/** Calls that only read; everything else is a write and nudges the sync. */
+export const READ_ONLY = /^(get|list|auth|preview|is)/;
 
 export type PosApiMethod = keyof PosApi;
 

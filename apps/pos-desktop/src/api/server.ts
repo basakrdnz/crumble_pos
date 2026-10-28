@@ -5,14 +5,28 @@ import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
 import * as refunds from '../db/refunds';
 import * as sales from '../db/sales';
-import { type AuthStatus, type IpcResult, type PosApi, PUBLIC_METHODS } from './contract';
+import type { CloudManager } from '../sync/cloud';
+import { isLocalEmpty } from '../sync/restore';
+import type { SyncService } from '../sync/service';
+import { type AuthStatus, type IpcResult, type PosApi, PUBLIC_METHODS, READ_ONLY } from './contract';
 
 export interface ApiServer {
   api: PosApi;
   isUnlocked(): boolean;
+  /** Called after every successful write (pushes the outbox soon). */
+  onWrite(): void;
 }
 
-export function createApi(ctx: Context): ApiServer {
+export interface CloudDeps {
+  sync: SyncService;
+  cloud: CloudManager;
+}
+
+export function createApi(ctx: Context, deps?: CloudDeps): ApiServer {
+  const need = () => {
+    if (!deps) throw new Error('Bulut senkronu bu ortamda yok.');
+    return deps;
+  };
   let unlocked = false;
   const status = (): AuthStatus => ({ passwordSet: auth.isPasswordSet(ctx), unlocked });
   const tabOf = (itemId: string) => sales.getTab(ctx, ctx.db.prepare('select tab_id from tab_items where id = ?').pluck().get(itemId) as string);
@@ -108,20 +122,30 @@ export function createApi(ctx: Context): ApiServer {
     createTable: (planId, shape, at) => floor.createTable(ctx, planId, shape, at),
     updateTable: (id, patch) => floor.updateTable(ctx, id, patch),
     deleteTable: (id) => floor.deleteTable(ctx, id),
+
+    getSyncStatus: () => need().sync.getStatus(),
+    syncNow: () => need().sync.syncNow(),
+    getCloudInfo: () => need().cloud.info(),
+    connectCloud: (input) => need().cloud.connect(input),
+    disconnectCloud: () => need().cloud.disconnect(),
+    isLocalEmpty: () => isLocalEmpty(ctx),
+    restoreFromCloud: () => need().cloud.restore(),
   };
 
-  return { api, isUnlocked: () => unlocked };
+  return { api, isUnlocked: () => unlocked, onWrite: () => deps?.sync.nudge() };
 }
 
 /** Dispatches one IPC call; errors are returned as messages, not thrown across IPC. */
-export function dispatch(server: ApiServer, method: string, args: unknown[]): IpcResult {
+export async function dispatch(server: ApiServer, method: string, args: unknown[]): Promise<IpcResult> {
   const fn = (server.api as unknown as Record<string, (...a: unknown[]) => unknown>)[method];
   if (typeof fn !== 'function') return { ok: false, error: `Bilinmeyen işlem: ${method}` };
   if (!server.isUnlocked() && !(PUBLIC_METHODS as readonly string[]).includes(method)) {
     return { ok: false, error: 'Kasa kilitli. Şifre ile giriş yapın.' };
   }
   try {
-    return { ok: true, value: fn(...args) };
+    const value = await fn(...args);
+    if (!READ_ONLY.test(method)) server.onWrite();
+    return { ok: true, value };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

@@ -226,3 +226,7 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
 .tab-card .amount { font-size: 20px; font-weight: 700; }
 .editor-layout { display: grid; grid-template-columns: 1fr 260px; gap: 16px; align-items: start; }
 .sale-detail { width: 640px; }
+.sync-indicator.idle { color: var(--ok); }
+.sync-indicator.offline { color: var(--warn); background: var(--warn-soft); }
+.sync-indicator.error { color: #fff; background: var(--danger); border-color: var(--danger); }
+.sync-indicator.disabled { color: var(--muted); }

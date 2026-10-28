@@ -64,7 +64,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 2. **Vardiya ve hızlı satış** ✅ (kabul: `test/sales.test.ts` örnek gün + `e2e/faz2-sale.e2e.ts`). Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki** ✅ (kabul: `test/tabs.test.ts` + `e2e/faz3-tabs.e2e.ts`). İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade** ✅ (kabul: `test/refunds.test.ts` + `e2e/faz4-refunds.e2e.ts`). Satır ve satış iadesi, kapanış toplamlarına yansıması.
-5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
+5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanacak (`supabase/README.md`, henüz yapılmadı). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama:** Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
 8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
@@ -83,7 +83,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
-5. Supabase projesi ve Expo/Apple/Google hesapları var mı?
+5. Supabase projesi ve Expo/Apple/Google hesapları var mı? (Supabase kurulumu: `supabase/README.md`)
 6. Uygulama simgesi ve renk teması (yoksa sade nötr tema).
 7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak? (Şu an: sadece uygulama açılışında ve "Kilitle" butonuyla soruluyor. Sıfırlama yok.)
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
@@ -142,7 +142,17 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Satır iadesinin önerilen tutarı, satır toplamından sepet indirimi payı düşülerek bulunur (`lineNetAfterCartDiscount`). Kasiyer tuş takımıyla değiştirebilir.
   - Kısmi ödemesi olan açık hesap iptal edilince `refundAndVoid` alınan parayı iade edip hesabı void yapar (tek işlemde).
   - "void sadece net ödeme 0 iken" kuralı DB'de de var: SQLite migration v2 ve `supabase/migrations/20261028000004_void_rule.sql`.
-- Henüz yapılmayanlar: outbox gönderimi (Faz 5), Realtime yayını (Faz 6), `supabase/seed`.
+- **Senkron (Faz 5), `src/sync/`:**
+  - `engine.ts` outbox'ı `seq` sırasıyla gönderir. Aynı tablodan art arda gelenler tek istekte gider, aynı satır birden çok kez varsa son hali gönderilir.
+  - Ödeme, iade ve geçmiş kayıtları `insert-ignore` (ON CONFLICT DO NOTHING) ile, diğerleri upsert ile yazılır.
+  - İlk hatada durur, sıra bozulmaz. Hata türü: çevrimdışı (tekrar denenir) ya da reddedildi (ekranda "Senkron hatası").
+  - `service.ts`: yazımdan 1,5 sn sonra gönderir. Hata olursa 10 sn'den başlayıp 5 dakikaya kadar artan aralıklarla dener, yoksa 60 sn'de bir. Her başarılı gönderimden sonra `device_status` tablosuna heartbeat yazar. 14 günden eski gönderilmiş satırlar silinir.
+  - `supabase.ts`: supabase-js ile cihaz girişi (`app_metadata.role = 'device'` kontrolü), upsert ve geri yükleme okuması.
+  - `cloud.ts`: ayarlar, cihaz şifresi saklanmaz. Oturum `settings` tablosunda `safeStorage` (DPAPI) ile şifreli tutulur.
+  - `restore.ts`: boş kasaya geri yükleme, outbox'a yazmaz. Hesaplar önce açık eklenir, sonra son hallerine getirilir (trigger'lar için).
+  - Testler: `test/pgCluster.ts` geçici Postgres açar (stub + tüm migration'lar). `test/pgTransport.ts`, PostgREST gibi `json_populate_recordset` ve cihaz rolüyle yazar. `e2e/fakeSupabase.ts` uygulamayı gerçek HTTP üzerinden buna bağlar. Postgres yoksa bu testler atlanır.
+  - Yeni migration: `20261028000005_device_status.sql` (telefondaki "son senkron" için).
+- Henüz yapılmayanlar: Realtime yayını (Faz 6), `supabase/seed`.
 
 ## Komutlar
 
