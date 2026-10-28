@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
 
 const require = createRequire(import.meta.url);
@@ -20,7 +20,7 @@ export async function launchApp(dbPath?: string): Promise<RunningApp> {
   const app = await electron.launch({
     executablePath: require('electron') as string,
     args: [resolve(__dirname, '..'), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
-    env: { ...process.env, CRUMBLE_DB_PATH: path } as Record<string, string>,
+    env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path) } as Record<string, string>,
   });
   const page = await app.firstWindow();
   await page.waitForSelector('.topbar');

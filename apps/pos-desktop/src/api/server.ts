@@ -5,6 +5,8 @@ import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
 import * as refunds from '../db/refunds';
 import * as sales from '../db/sales';
+import { backupNow, listBackups } from '../maintenance/backup';
+import type { Logger } from '../maintenance/logger';
 import type { CloudManager } from '../sync/cloud';
 import { isLocalEmpty } from '../sync/restore';
 import type { SyncService } from '../sync/service';
@@ -15,6 +17,13 @@ export interface ApiServer {
   isUnlocked(): boolean;
   /** Called after every successful write (pushes the outbox soon). */
   onWrite(): void;
+  logger?: Logger;
+}
+
+export interface MaintenanceDeps {
+  backupDir: string;
+  logger: Logger;
+  openPath(path: string): void;
 }
 
 export interface CloudDeps {
@@ -22,10 +31,14 @@ export interface CloudDeps {
   cloud: CloudManager;
 }
 
-export function createApi(ctx: Context, deps?: CloudDeps): ApiServer {
+export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: MaintenanceDeps): ApiServer {
   const need = () => {
     if (!deps) throw new Error('Bulut senkronu bu ortamda yok.');
     return deps;
+  };
+  const care = () => {
+    if (!maintenance) throw new Error('Bakım işlemleri bu ortamda yok.');
+    return maintenance;
   };
   let unlocked = false;
   const status = (): AuthStatus => ({ passwordSet: auth.isPasswordSet(ctx), unlocked });
@@ -130,9 +143,16 @@ export function createApi(ctx: Context, deps?: CloudDeps): ApiServer {
     disconnectCloud: () => need().cloud.disconnect(),
     isLocalEmpty: () => isLocalEmpty(ctx),
     restoreFromCloud: () => need().cloud.restore(),
+
+    listBackups: () => listBackups(care().backupDir),
+    backupNow: () => backupNow(ctx.db, care().backupDir),
+    openBackupFolder: () => care().openPath(care().backupDir),
+    readLog: (lines) => care().logger.recent(lines),
+    openLogFolder: () => care().openPath(care().logger.dir),
+    logRendererError: (message, detail) => maintenance?.logger.log('error', `Ekran hatası: ${message}`, detail),
   };
 
-  return { api, isUnlocked: () => unlocked, onWrite: () => deps?.sync.nudge() };
+  return { api, isUnlocked: () => unlocked, onWrite: () => deps?.sync.nudge(), logger: maintenance?.logger };
 }
 
 /** Dispatches one IPC call; errors are returned as messages, not thrown across IPC. */
@@ -147,6 +167,11 @@ export async function dispatch(server: ApiServer, method: string, args: unknown[
     if (!READ_ONLY.test(method)) server.onWrite();
     return { ok: true, value };
   } catch (error) {
+    // Messages meant for the cashier are plain Errors; anything else
+    // (SqliteError, TypeError, ...) is unexpected and goes to the error log.
+    if (!(error instanceof Error) || error.name !== 'Error') {
+      server.logger?.log('error', `İşlem başarısız: ${method}`, error);
+    }
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

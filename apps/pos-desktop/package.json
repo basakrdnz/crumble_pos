@@ -1,6 +1,6 @@
 {
   "name": "@crumble/pos-desktop",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "main": "out/main/index.js",
   "scripts": {
@@ -10,29 +10,34 @@
     "smoke": "electron-vite build && node scripts/smoke.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "e2e": "electron-vite build && node scripts/e2e.mjs"
+    "e2e": "electron-vite build && node scripts/e2e.mjs",
+    "dist:win": "electron-vite build && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
-    "@crumble/shared": "workspace:*",
     "@supabase/supabase-js": "^2.118.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "better-sqlite3": "^13.0.3"
   },
   "devDependencies": {
+    "@crumble/shared": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.23.1",
     "@types/react": "~19.3.0",
     "@types/react-dom": "~19.3.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "electron": "^45.0.0",
+    "electron": "45.0.0",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "pg": "^8.23.1",
     "playwright-core": "^1.63.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.0",
     "vitest": "^5.0.5"
-  }
+  },
+  "productName": "Crumble POS",
+  "description": "Crumble Cafe kasa uygulaması",
+  "author": "Crumble Cafe"
 }

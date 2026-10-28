@@ -58,7 +58,27 @@ pnpm pos:e2e
 
 Menü ilk kez yüklenirken: **Ayarlar → Menü içe aktar** → repo kökündeki `crumble_menu_seed.csv` dosyasını seç → önizlemeyi kontrol et → **Onayla ve içe aktar**.
 
-Veritabanı: `%APPDATA%\@crumble\pos-desktop\crumble.sqlite` (Electron `userData`). `CRUMBLE_DB_PATH` ortam değişkeniyle değiştirilebilir.
+### Kurulum dosyası (installer)
+
+Windows'ta, repo kökünde:
+
+```powershell
+pnpm pos:dist
+```
+
+Çıktı: `apps\pos-desktop\release\Crumble-POS-Kurulum-1.0.0.exe`. Kurulumla masaüstü ve Başlat menüsü kısayolu oluşur. Uygulama tam ekran açılır, aynı anda tek pencere çalışır.
+
+### Veri, yedek ve günlük
+
+Hepsi `%APPDATA%\Crumble POS\` klasöründe durur. Kaldırma işlemi bu klasörü silmez.
+
+- `crumble.sqlite`: kasanın veritabanı.
+- `backups\crumble-YYYY-AA-GG.sqlite`: her gün otomatik alınan yedek, son 30 gün saklanır. **Ayarlar → Yedek ve günlük** ekranında "Şimdi yedekle" butonu var.
+- `logs\crumble-YYYY-AA-GG.log`: hata günlüğü. Aynı ekrandan okunabilir.
+
+Bir yedeğe dönmek için uygulamayı kapatın, yedek dosyasını `crumble.sqlite` adıyla bu klasöre kopyalayın.
+
+Test ve geliştirme için `CRUMBLE_DATA_DIR` ortam değişkeni veri klasörünü değiştirir, `CRUMBLE_DB_PATH` sadece veritabanı yolunu değiştirir.
 
 ### Yönetim uygulaması (Expo)
 

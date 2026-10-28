@@ -1,0 +1,31 @@
+# Windows installer (plan Faz 7). Build on Windows: pnpm pos:dist
+appId: com.crumble.pos
+productName: Crumble POS
+copyright: Crumble Cafe
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# Native module must live outside the asar archive to be loaded.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+# better-sqlite3 v13 ships Node-API prebuilds (win32-x64 included): no rebuild.
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: Crumble-POS-Kurulum-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Crumble POS
+  # Keep %APPDATA%\Crumble POS (database, backups) when uninstalling.
+  deleteAppDataOnUninstall: false
+# No auto-update server (yet); do not generate app-update.yml.
+publish: null

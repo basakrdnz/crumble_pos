@@ -7,6 +7,7 @@ import type { NewProduct, ProductPatch } from '../db/catalog';
 import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
 import type { PartialRefund, RefundInfo, SaleRow } from '../db/refunds';
+import type { BackupFile } from '../maintenance/backup';
 import type { CloudInfo, ConnectInput } from '../sync/cloud';
 import type { RestoreResult } from '../sync/restore';
 import type { SyncStatus } from '../sync/service';
@@ -94,15 +95,23 @@ export interface PosApi {
   disconnectCloud(): Promise<CloudInfo>;
   isLocalEmpty(): boolean;
   restoreFromCloud(): Promise<RestoreResult>;
+
+  // Maintenance (Faz 7)
+  listBackups(): BackupFile[];
+  backupNow(): Promise<BackupFile>;
+  openBackupFolder(): void;
+  readLog(lines?: number): string[];
+  openLogFolder(): void;
+  logRendererError(message: string, detail?: string): void;
 }
 
 /** Calls that only read; everything else is a write and nudges the sync. */
-export const READ_ONLY = /^(get|list|auth|preview|is)/;
+export const READ_ONLY = /^(get|list|auth|preview|is|read|open|log|backup)/;
 
 export type PosApiMethod = keyof PosApi;
 
 /** Methods that work while the POS is locked. */
-export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'setupPassword', 'unlock', 'lock'];
+export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'setupPassword', 'unlock', 'lock', 'logRendererError'];
 
 export type IpcResult = { ok: true; value: unknown } | { ok: false; error: string };
 
