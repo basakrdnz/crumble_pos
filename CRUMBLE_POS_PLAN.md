@@ -218,6 +218,7 @@ Tüm tablolarda ortak alanlar: `id uuid`, `created_at`, `updated_at`. Tutarlar `
 6. **Faz 5 – Senkron:** Outbox, buluta gönderme, internet kesilince/gelince davranış, durum göstergesi. *Kabul:* internet kapalıyken 20 satış yapılıp açılınca hepsi **bir kez** buluta düşer.
 7. **Faz 6 – Mobil uygulama:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. *Kabul:* kasadaki satış birkaç saniye içinde mobilde görünür.
 8. **Faz 7 – Cilalama ve paketleme:** Windows kurulum dosyası (installer), yerel yedek, kısayol listesi, hata günlüğü.
+9. **Faz 8 (sonra) – Ortak satış görünümü:** Crumble müşteri uygulamasındaki (`basakrdnz/crumble`, Firebase) online siparişler ile kasa satışlarının birlikte görülmesi. **Öneri, henüz kesin değil:** Crumble'daki ödemesi tamamlanmış siparişler, bir Firebase Cloud Function ile tek yönlü olarak Supabase'deki ayrı bir `online_orders` tablosuna kopyalanır. Kasa tabloları buna karışmaz. Mobil yönetim uygulaması iki kaynağı yan yana gösterir. Ayrıntılar (alanlar, ürün eşleştirme, nerede gösterileceği) bu faza gelince kullanıcıyla netleşecek.
 
 ## 11. MVP dışı (şimdi yapma)
 

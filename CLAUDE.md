@@ -67,6 +67,7 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama:** Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
+8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
 
 **MVP dışı:** Yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme.
 
@@ -86,7 +87,8 @@ Kaynak `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üret
 6. Uygulama simgesi ve renk teması (yoksa sade nötr tema).
 7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak?
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
-9. **MİMARİ KARAR BEKLİYOR (2026-10-27):** Kullanıcının mevcut müşteri sipariş uygulaması `basakrdnz/crumble` (Flutter + Firebase: Firestore, Functions, Auth; `dev` dalında yönetim tarafı var: siparişler, ürünler, vitrin, raporlar, ekip, denetim kaydı). Kullanıcı, mobil yönetimin o uygulamanın yönetim kısmıyla birleştirilmesini ve verilerin tek yerde toplanmasını önerdi. O repo'nun `ROADMAP.md` §6b'si de kasa + müşteri + yönetimi tek sistem olarak planlıyor. Karar verilene kadar `apps/manager-mobile` (Expo) ve `supabase/` üzerinde yeni iş yapma.
+9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
+10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
 
 ## Git akışı
 
