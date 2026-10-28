@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BulkPrices } from './settings/BulkPrices';
 import { CatalogEditor } from './settings/CatalogEditor';
 import { ChangeHistory } from './settings/ChangeHistory';
+import { Cloud } from './settings/Cloud';
 import { FloorEditor } from './settings/FloorEditor';
 import { Import } from './Import';
 import { Password } from './settings/Password';
@@ -13,12 +14,15 @@ const SECTIONS = [
   { id: 'import', label: 'Menü içe aktar', render: () => <Import /> },
   { id: 'floor', label: 'Kroki düzenle', render: () => <FloorEditor /> },
   { id: 'history', label: 'Değişiklik geçmişi', render: () => <ChangeHistory /> },
+  { id: 'cloud', label: 'Bulut bağlantısı', render: () => <Cloud /> },
   { id: 'password', label: 'Kasa şifresi', render: () => <Password /> },
   { id: 'shortcuts', label: 'Kısayollar', render: () => <Shortcuts /> },
 ] as const;
 
-export function Settings() {
-  const [section, setSection] = useState<(typeof SECTIONS)[number]['id']>('catalog');
+export type SettingsSection = (typeof SECTIONS)[number]['id'];
+
+export function Settings({ initial = 'catalog' }: { initial?: SettingsSection }) {
+  const [section, setSection] = useState<SettingsSection>(initial);
   const current = SECTIONS.find((s) => s.id === section)!;
   return (
     <>

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { type Context, createContext, migrate } from '../src/db/database';
 
 /** In-memory database with a deterministic clock (+1s per call) and ids. */
-export function testContext(start = '2026-11-01T08:00:00.000Z'): Context {
+export function testContext(start = '2026-11-01T08:00:00.000Z', uuid?: () => string): Context {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
   migrate(db);
@@ -11,7 +11,7 @@ export function testContext(start = '2026-11-01T08:00:00.000Z'): Context {
   return createContext(
     db,
     { now: () => new Date((t += 1000)).toISOString() },
-    () => `00000000-0000-4000-8000-${(++n).toString().padStart(12, '0')}`,
+    uuid ?? (() => `00000000-0000-4000-8000-${(++n).toString().padStart(12, '0')}`),
   );
 }
 
