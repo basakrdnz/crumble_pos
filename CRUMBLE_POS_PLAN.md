@@ -56,15 +56,15 @@ Sistem **yazarkasaya veya mali cihaza bağlı değildir**. Yasal fiş bu sistemi
   - **Hiçbir kayıt fiziksel olarak silinmez.** Ürün/kategori/masa/bölüm `deleted_at` ile soft delete edilir.
   - `payments` ve `refunds` **tamamen değişmez** (sadece eklenir, güncellenmez).
   - Diğer tablolarda **sadece yaşam döngüsü alanları** güncellenebilir:
-    - `tabs`: `status`, `closed_at`, `closed_shift_id`, `total`, `table_id`, `customer_name` (masa taşıma/isim ekleme) ve indirim alanları. Kapalı (`paid`) bir hesapta bu alanlar bir daha değişmez.
-    - `tab_items`: hesap **açıkken** adet, indirim, ikram ve not güncellenebilir, `voided_at` / `void_reason` dolar. Hesap kapandıktan sonra hiçbir alanı değişmez.
+    - `tabs`: `status`, `closed_at`, `closed_shift_id`, `total`, `table_id`, `customer_name` (masa taşıma/isim ekleme) ve `discount_percent`. Kapalı (`paid`/`void`) bir hesapta bu alanlar bir daha değişmez.
+    - `tab_items`: hesap **açıkken** adet, satış fiyatı (`unit_price`), indirim, ikram ve not güncellenebilir, `voided_at` / `void_reason` dolar. `list_price` (menü fiyatı) ve `name_snapshot` değişmez. Hesap kapandıktan sonra hiçbir alanı değişmez.
     - `shifts`: `closed_at`, `counted_cash`, `expected_cash`, `cash_difference`, `notes`. Kapanmış vardiya bir daha değişmez.
   - Kapanmış bir satışta hata varsa düzeltme **iade kaydı** ile yapılır, kayıt değiştirilmez.
   - Bu kural hem yerel SQLite'ta (trigger) hem Supabase'te (RLS + trigger) uygulanır. Yasak güncellemeyi veritabanı reddeder.
 - **Senkron:** İşlemler yerelde bir `outbox` tablosuna yazılır, sırayla buluta gönderilir. Her kayıt UUID ile geldiği için **idempotent** (aynı kayıt iki kez gelirse çift yazılmaz).
 - **Çakışma:** Satış/ödeme/vardiya sadece eklenir, çakışma olmaz. Katalog (ürün, fiyat, kategori, kroki) için **son yazan kazanır** (`updated_at`).
 - Her tabloda: `id`, `created_at`, `updated_at`, `deleted_at` (uygun olanlarda).
-- **Yuvarlama:** Yüzde indirim hesabı kuruşa **aşağı** yuvarlanır (müşteri lehine değil, tutarlılık için tek kural). **İndirim kuralı:** Satır indirimi o satırın toplamından düşer. Sepet (hesap) indirimi, satır indirimleri düşüldükten sonraki ara toplam üzerinden hesaplanır ve satırlara **dağıtılmaz**. Hesap toplamı = (satır toplamlarının toplamı) − sepet indirimi. Ürün bazlı raporlar satır toplamlarını kullanır, sepet indirimi ayrı bir kalem olarak raporlanır.
+- **Yuvarlama:** İndirim sadece yüzde olarak verilir (tam sayı). Yüzde indirim hesabı kuruşa **aşağı** yuvarlanır (müşteri lehine değil, tutarlılık için tek kural). **İndirim kuralı:** Satır indirimi o satırın toplamından düşer. Sepet (hesap) indirimi, satır indirimleri düşüldükten sonraki ara toplam üzerinden hesaplanır ve satırlara **dağıtılmaz**. Hesap toplamı = (satır toplamlarının toplamı) − sepet indirimi. Ürün bazlı raporlar satır toplamlarını kullanır, sepet indirimi ayrı bir kalem olarak raporlanır.
 - **Rapor günü:** Raporlama **vardiyanın açılış tarihine** göre yapılır (gece yarısını geçen vardiya tek güne yazılır). "Bugün" = bugünün tarihinde açılan vardiya(lar). Ödeme/ciro toplamları ise ödeme anının vardiyasına göredir (bkz. 8).
 - **Senkron yönü:** Tek kasa var. Veri **kasadan buluta tek yönlü** gönderilir (push). Buluttan kasaya çekme (pull) sadece yeni kurulumda veya geri yüklemede kullanılır.
 - **Tutarlılık:** Bulut ile kasa arasında fark olursa **kasa doğru kabul edilir**.
@@ -73,12 +73,15 @@ Sistem **yazarkasaya veya mali cihaza bağlı değildir**. Yasal fiş bu sistemi
 
 ### 5.1 Satış ekranı (ana ekran)
 - Üstte kategori sekmeleri, ortada ürün butonları (grid), yanda sepet.
-- Ürüne tıkla = sepete ekle. Tekrar tıkla = adet artar. Sepette adet değiştir, satırı kaldır.
-- **Serbest tutar:** "Serbest" butonu. Tutar + opsiyonel not girilir, sepete özel satır olarak eklenir (kategorisi yok, "Serbest" olarak raporlanır).
-- **İndirim:** Tüm sepete veya tek satıra, yüzde veya tutar.
+- Ürüne tıkla = sepete ekle. Tekrar tıkla = adet artar.
+- **Serbest tutar satırı yok** (2026-10-27 kararı). Sepetteki her satır bir ürüne bağlıdır.
+- **Satır işlemleri paneli:** Sepetteki bir satıra tıklanınca yan kolonda o satırın işlemleri açılır: **İptal** (satırı kaldır), **Fiyatı değiştir**, **Adet**, **İndirim**, **İkram**, not.
+- **Sayı tuş takımı:** Yan kolonda telefon tuşları gibi küçük bir sayı tuş takımı (0–9, sil, onay) bulunur. Fiyat, adet, indirim yüzdesi ve nakitte "alınan" tutar bununla girilir. Ekran dokunmatik değildir: tuşlara fareyle tıklanır, klavyeden rakam yazmak da çalışır.
+- **Fiyatı değiştir:** Sadece o satışın o satırının fiyatı değişir, menü fiyatı değişmez. Satırda menü fiyatı (`list_price`) da saklanır. Fiyatı değiştirilmiş satırlar raporda işaretli görünür ve aradaki fark raporlanır.
+- **İndirim:** Sadece **yüzde**. Hazır butonlar **%10** ve **%15**, ayrıca tuş takımıyla elle yazılan tam sayı yüzde (1–100). Tek satıra veya tüm sepete uygulanabilir.
 - **İkram:** Satırı "ikram" işaretle. Fiyatı 0 olur ama `is_comp = true` ile ayrıca raporlanır.
 - **Ödeme:** Nakit, kart veya karma (nakit + kart tutarı girilir, toplam eşleşmeli). Nakitte "alınan" ve "para üstü" hesaplanır.
-- Klavye kısayolları: ödeme (`F12`), iptal (`Esc`), serbest tutar (`F2`), yeni hesap (`F3`). Kısayol listesi ayarlarda görünür.
+- Klavye kısayolları: ödeme (`F12`), iptal (`Esc`), yeni hesap (`F3`). Kısayol listesi ayarlarda görünür.
 
 ### 5.2 Masa ve hesap (adisyon)
 - **Hesap (tab):** Açık bir sipariş hesabı. `table_id` (opsiyonel) ve `customer_name` (opsiyonel) alanları var. **En az biri dolu olmalı.**
@@ -164,9 +167,9 @@ Tüm tablolarda ortak alanlar: `id uuid`, `created_at`, `updated_at`. Tutarlar `
 - `tables` (floor_plan_id, label, shape, x, y, width, height, rotation, color, deleted_at)
 - `shifts` (opened_at, closed_at?, opening_cash, counted_cash?, expected_cash?, cash_difference?, notes?)
 - `tabs` – **tek sipariş/hesap varlığı**. Hızlı satış da bir tab'dır (açılıp hemen kapanır). Ayrı bir `sales` tablosu **yoktur**; "satış" = kapanmış (`paid`) tab.
-  Alanlar: `opened_shift_id`, `closed_shift_id?`, `kind` (quick/table/named), `table_id?`, `customer_name?`, `status` (open/paid/void), `discount_type?` (percent/amount), `discount_value?`, `total?` (sadece kapanışta dondurulur), `opened_at`, `closed_at?`.
+  Alanlar: `opened_shift_id`, `closed_shift_id?`, `kind` (quick/table/named), `table_id?`, `customer_name?`, `status` (open/paid/void), `discount_percent?` (tam sayı 1–100, sepet indirimi), `total?` (sadece kapanışta dondurulur), `opened_at`, `closed_at?`.
   Kısıt: `kind = table` ise `table_id` zorunlu, `named` ise `customer_name` zorunlu, `quick` ise ikisi de boş olabilir. Masaya bağlı hesapta isim de yazılabilir.
-- `tab_items` (tab_id, product_id?, name_snapshot, unit_price, quantity, discount_type?, discount_value?, is_comp, is_custom_amount, note?, voided_at?, void_reason?) – ürün çıkarılırsa satır silinmez, `voided_at` dolar.
+- `tab_items` (tab_id, product_id, name_snapshot, list_price, unit_price, quantity, discount_percent?, is_comp, note?, voided_at?, void_reason?) – `list_price` = ürün eklendiği andaki menü fiyatı, `unit_price` = satış fiyatı (fiyatı değiştir ile farklı olabilir; `unit_price <> list_price` ise "fiyatı değiştirildi"). Ürün çıkarılırsa satır silinmez, `voided_at` dolar.
 - `payments` (tab_id, **shift_id**, method: cash/card, amount, paid_at) – **ödemenin yapıldığı vardiyaya** yazılır. Karma ödemede iki satır. Kısmi ödemede tab açıkken de payment eklenebilir.
 - `refunds` (tab_id, tab_item_id?, **shift_id**, amount, method, reason?, created_at) – iade, **iadenin yapıldığı vardiyaya** yazılır.
 
@@ -175,7 +178,7 @@ Tüm tablolarda ortak alanlar: `id uuid`, `created_at`, `updated_at`. Tutarlar `
 - `partners` (user_id, email)
 - `outbox` (**sadece yerel SQLite**): senkron kuyruğu
 
-`name_snapshot` ve `unit_price` satış anındaki değeri saklar. Sonradan fiyat değişse eski satış değişmez.
+`name_snapshot`, `list_price` ve `unit_price` satış anındaki değeri saklar. Sonradan menü fiyatı değişse eski satış değişmez.
 
 ## 9. Proje ağacı
 
@@ -209,12 +212,13 @@ Tüm tablolarda ortak alanlar: `id uuid`, `created_at`, `updated_at`. Tutarlar `
 
 1. **Faz 0 – İskelet:** Monorepo, shared paketi, `supabase/migrations` altına şema + RLS **SQL dosyaları yazılır ama hiçbir Supabase projesine uygulanmaz** (uygulama, Faz 5'ten önce kullanıcı projeyi açınca birlikte yapılır). Boş Electron ve Expo uygulamaları açılıyor. *Kabul:* Linux ortamında Electron headless, Expo web modunda açılır ve ikisi de `shared` paketinden bir fonksiyon import edebilir. Windows'ta çalıştırma testini kullanıcı kendisi yapar, bunun için Windows'ta çalıştırma komutlarını README'ye yaz.
 2. **Faz 1 – Katalog ve içe aktarma:** Kategori/ürün CRUD, toplu fiyat tablosu, `crumble_menu_seed.csv` dosyasından içe aktarma, `catalog_changes` kaydı. *Kabul:* menü yüklenir, fiyat değişince geçmiş satırı oluşur.
-3. **Faz 2 – Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, serbest tutar, indirim, ikram, nakit/kart/karma ödeme. *Kabul:* örnek bir gün simüle edilir, kapanıştaki beklenen nakit elle hesapla aynıdır.
+3. **Faz 2 – Vardiya ve hızlı satış:** Vardiya aç/kapat, satış ekranı, satır işlemleri paneli ve sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme. *Kabul:* örnek bir gün simüle edilir, kapanıştaki beklenen nakit elle hesapla aynıdır.
 4. **Faz 3 – Hesap ve kroki:** İsimle hesap, masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve düzenleme editörü, çoklu bölüm. *Kabul:* masaya tıkla hesap aç, ürün ekle, kısmi ödeme al, kapat.
 5. **Faz 4 – İptal/iade:** Satır ve satış iptali/iadesi, kapanış toplamlarına yansıma.
 6. **Faz 5 – Senkron:** Outbox, buluta gönderme, internet kesilince/gelince davranış, durum göstergesi. *Kabul:* internet kapalıyken 20 satış yapılıp açılınca hepsi **bir kez** buluta düşer.
 7. **Faz 6 – Mobil uygulama:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. *Kabul:* kasadaki satış birkaç saniye içinde mobilde görünür.
 8. **Faz 7 – Cilalama ve paketleme:** Windows kurulum dosyası (installer), yerel yedek, kısayol listesi, hata günlüğü.
+9. **Faz 8 (sonra) – Ortak satış görünümü:** Crumble müşteri uygulamasındaki (`basakrdnz/crumble`, Firebase) online siparişler ile kasa satışlarının birlikte görülmesi. **Öneri, henüz kesin değil:** Crumble'daki ödemesi tamamlanmış siparişler, bir Firebase Cloud Function ile tek yönlü olarak Supabase'deki ayrı bir `online_orders` tablosuna kopyalanır. Kasa tabloları buna karışmaz. Mobil yönetim uygulaması iki kaynağı yan yana gösterir. Ayrıntılar (alanlar, ürün eşleştirme, nerede gösterileceği) bu faza gelince kullanıcıyla netleşecek.
 
 ## 11. MVP dışı (şimdi yapma)
 
@@ -232,7 +236,7 @@ Planlanıyor ama acelesi yok (kış sezonu başında, MVP sonrası). Fikir: bir 
 1. Kroki arka plan görseli ve kafenin ölçüleri (sonradan verilecek, şimdilik boş kroki).
 2. ~~QR menü ürün listesi~~ Tamam: `crumble_menu_seed.csv` ekte. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
 3. Açık hesap varken vardiya kapatılırsa **devir mi, zorunlu kapatma mı** (Faz 2'de sor).
-4. Ortak sayısı ve e-postaları (`partners` kaydı için).
+4. ~~Ortak sayısı ve e-postaları~~ Kullanıcı (2026-10-27): herkes aynı hesaba aynı şifreyle giriyor, kişi bazlı ortak hesabı gerekmiyor. Kullanılacak e-posta kurulumda girilecek.
 5. Supabase projesi ve Expo/Apple/Google hesapları kullanıcıda var mı.
 6. Uygulama simgesi ve renk teması (yoksa sade nötr tema ile başla).
 7. Kasa şifresi: boştayken **otomatik kilitlensin mi** (ve kaç dakika sonra), yoksa sadece uygulama açılışında mı sorulsun? Şifre unutulursa nasıl sıfırlanacak?
@@ -245,3 +249,4 @@ Planlanıyor ama acelesi yok (kış sezonu başında, MVP sonrası). Fikir: bir 
 - Para hesabı ve vardiya nakit hesabı için **birim testi** yaz (`packages/shared`).
 - Senkron ve vardiya kapanışı için **entegrasyon testi** yaz.
 - Belirsiz bir durumda dur ve sor, uydurma.
+- **Git akışı:** `main` korunur. Her faz ayrı bir dalda geliştirilir ve PR ile `main`'e birleştirilir. PR kullanıcıya gösterilir.

@@ -14,8 +14,8 @@ export type TabKind = (typeof TAB_KINDS)[number];
 export const TAB_STATUSES = ['open', 'paid', 'void'] as const;
 export type TabStatus = (typeof TAB_STATUSES)[number];
 
-export const DISCOUNT_TYPES = ['percent', 'amount'] as const;
-export type DiscountType = (typeof DISCOUNT_TYPES)[number];
+/** Discounts are whole percentages only: presets or typed on the keypad. */
+export const DISCOUNT_PRESETS = [10, 15] as const;
 
 export const TABLE_SHAPES = ['circle', 'square', 'rectangle', 'rounded_rectangle'] as const;
 export type TableShape = (typeof TABLE_SHAPES)[number];
@@ -86,8 +86,8 @@ export interface Tab extends BaseRow {
   table_id: Uuid | null;
   customer_name: string | null;
   status: TabStatus;
-  discount_type: DiscountType | null;
-  discount_value: number | null;
+  /** Cart discount, whole percent 1–100. */
+  discount_percent: number | null;
   total: Kurus | null;
   opened_at: UtcTimestamp;
   closed_at: UtcTimestamp | null;
@@ -95,14 +95,16 @@ export interface Tab extends BaseRow {
 
 export interface TabItem extends BaseRow {
   tab_id: Uuid;
-  product_id: Uuid | null;
+  product_id: Uuid;
   name_snapshot: string;
+  /** Menu price when the line was added. */
+  list_price: Kurus;
+  /** Price actually charged; differs from list_price after "Fiyatı değiştir". */
   unit_price: Kurus;
   quantity: number;
-  discount_type: DiscountType | null;
-  discount_value: number | null;
+  /** Line discount, whole percent 1–100. */
+  discount_percent: number | null;
   is_comp: boolean;
-  is_custom_amount: boolean;
   note: string | null;
   voided_at: UtcTimestamp | null;
   void_reason: string | null;

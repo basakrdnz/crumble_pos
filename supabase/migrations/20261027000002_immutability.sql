@@ -61,7 +61,7 @@ begin
   end if;
   if not private.changes_only(to_jsonb(old), to_jsonb(new), array[
     'status', 'closed_at', 'closed_shift_id', 'total', 'table_id', 'customer_name',
-    'discount_type', 'discount_value', 'updated_at'
+    'discount_percent', 'updated_at'
   ]) then
     raise exception 'Hesapta sadece yaşam döngüsü alanları değiştirilebilir (tab %).', old.id
       using errcode = 'restrict_violation';
@@ -106,7 +106,7 @@ begin
       using errcode = 'restrict_violation';
   end if;
   if not private.changes_only(to_jsonb(old), to_jsonb(new), array[
-    'quantity', 'discount_type', 'discount_value', 'is_comp', 'note',
+    'quantity', 'unit_price', 'discount_percent', 'is_comp', 'note',
     'voided_at', 'void_reason', 'updated_at'
   ]) then
     raise exception 'Kalemde sadece yaşam döngüsü alanları değiştirilebilir (tab_item %).', old.id
@@ -139,16 +139,14 @@ begin
 end;
 $$;
 
--- No physical deletes of business data (row and TRUNCATE). partners is left
--- out on purpose: removing a partner must revoke their access, and partners
--- are managed only by an admin, never through the API.
+-- No physical deletes anywhere (row and TRUNCATE).
 do $$
 declare
   t text;
 begin
   foreach t in array array[
     'categories', 'products', 'floor_plans', 'tables', 'shifts', 'tabs', 'tab_items',
-    'payments', 'refunds', 'catalog_changes'
+    'payments', 'refunds', 'catalog_changes', 'partners'
   ] loop
     execute format(
       'create trigger %I before delete on public.%I for each row execute function private.reject_delete()',
