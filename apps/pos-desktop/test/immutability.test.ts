@@ -77,4 +77,25 @@ describe('SQLite immutability triggers', () => {
     ).toThrow();
     expect(() => run(`update tab_items set discount_percent = 0 where id = 'i1'`)).toThrow();
   });
+
+  it('voids a tab with money only after it is refunded', () => {
+    const { run, t } = seed();
+    run(`insert into payments values ('pay1', 't1', 's1', 'cash', 5000, ${t}, ${t}, ${t})`);
+    const voidIt = () => run(`update tabs set status = 'void', closed_at = ${t}, closed_shift_id = 's1' where id = 't1'`);
+    expect(voidIt).toThrow(/iade/);
+    run(`insert into refunds (id, tab_id, shift_id, amount, method, created_at, updated_at) values ('r1', 't1', 's1', 5000, 'cash', ${t}, ${t})`);
+    voidIt();
+  });
+
+  it('migrates an existing v1 database forward', async () => {
+    const Database = (await import('better-sqlite3')).default;
+    const { MIGRATIONS } = await import('../src/db/schema');
+    const { migrate } = await import('../src/db/database');
+    const db = new Database(':memory:');
+    db.exec(MIGRATIONS[0]!);
+    db.pragma('user_version = 1');
+    migrate(db);
+    expect(db.pragma('user_version', { simple: true })).toBe(MIGRATIONS.length);
+    expect(db.prepare("select count(*) as n from sqlite_master where name = 'tabs_void_requires_refund'").get()).toEqual({ n: 1 });
+  });
 });

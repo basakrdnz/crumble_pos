@@ -67,9 +67,14 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
           onBack();
         }}
         onCancelTab={() => {
-          if (!detail || !window.confirm('Hesap iptal edilsin mi? İptal kaydı tutulur.')) return;
+          if (!detail) return;
+          const question =
+            detail.paid > 0
+              ? `Alınan ${formatTL(detail.paid)} iade edilip hesap iptal edilsin mi?`
+              : 'Hesap iptal edilsin mi? İptal kaydı tutulur.';
+          if (!window.confirm(question)) return;
           void run(async () => {
-            await api.voidTab(detail.tab.id);
+            await api.refundAndVoid(detail.tab.id, null);
             onBack();
           }, 'Hesap iptal edildi.');
         }}

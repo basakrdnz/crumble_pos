@@ -246,6 +246,16 @@ when ${anyChanged(['id', 'opened_at', 'opening_cash', 'created_at'])}
 begin select raise(abort, 'Vardiyada sadece kapanış alanları değiştirilebilir.'); end;
 `;
 
+// v2 (Faz 4): a tab that took money can only be voided after it is refunded.
+const voidRule = `
+create trigger tabs_void_requires_refund before update of status on tabs
+when new.status = 'void' and old.status = 'open'
+  and coalesce((select sum(amount) from payments where tab_id = new.id), 0)
+    <> coalesce((select sum(amount) from refunds where tab_id = new.id), 0)
+begin select raise(abort, 'Ödemesi alınmış hesap iptal edilemez. Önce iade yapın.'); end;
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
+  voidRule,
 ];

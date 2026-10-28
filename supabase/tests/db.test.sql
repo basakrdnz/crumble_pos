@@ -117,13 +117,29 @@ select pg_temp.expect_ok($$insert into public.payments (id, tab_id, shift_id, me
   values ('60000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
           '30000000-0000-0000-0000-000000000001', 'cash', 24000, now())
   on conflict (id) do nothing$$, 're-sent payment insert is idempotent');
-select pg_temp.expect_count($$select count(*) from public.payments$$, 1, 'payments after re-send');
+select pg_temp.expect_count($$select count(*) from public.payments where id = '60000000-0000-0000-0000-000000000001'$$, 1, 'payments after re-send');
 
 -- Refund must point at an item of the same tab.
 insert into public.refunds (id, tab_id, tab_item_id, shift_id, amount, method)
   values ('70000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
           '50000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 12000, 'cash');
 select pg_temp.expect_error($$update public.refunds set reason = 'x'$$, 'update refund');
+
+-- A tab with money can be voided only after a refund.
+insert into public.tabs (id, opened_shift_id, kind, opened_at)
+  values ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'quick', now());
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+  values ('60000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000001', 'cash', 5000, now());
+select pg_temp.expect_error($$update public.tabs set status = 'void', closed_at = now(),
+  closed_shift_id = '30000000-0000-0000-0000-000000000001'
+  where id = '40000000-0000-0000-0000-000000000002'$$, 'void a tab that took money');
+insert into public.refunds (id, tab_id, shift_id, amount, method)
+  values ('70000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000001', 5000, 'cash');
+select pg_temp.expect_ok($$update public.tabs set status = 'void', closed_at = now(),
+  closed_shift_id = '30000000-0000-0000-0000-000000000001'
+  where id = '40000000-0000-0000-0000-000000000002'$$, 'void after full refund');
 
 -- Tab kind rules.
 select pg_temp.expect_error($$insert into public.tabs (id, opened_shift_id, kind, opened_at)
@@ -158,7 +174,7 @@ commit;
 begin;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001"}', true);
-select pg_temp.expect_count($$select count(*) from public.payments$$, 1, 'partner reads payments');
+select pg_temp.expect_count($$select count(*) from public.payments$$, 2, 'partner reads payments');
 select pg_temp.expect_count($$select count(*) from public.partners$$, 1, 'partner reads partners');
 select pg_temp.expect_error($$insert into public.categories (id, name)
   values ('10000000-0000-0000-0000-000000000002', 'X')$$, 'partner insert');

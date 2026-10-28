@@ -63,7 +63,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 1. **Katalog ve içe aktarma** ✅ CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul `e2e/faz1-catalog.e2e.ts` ile gösterildi.
 2. **Vardiya ve hızlı satış** ✅ (kabul: `test/sales.test.ts` örnek gün + `e2e/faz2-sale.e2e.ts`). Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki** ✅ (kabul: `test/tabs.test.ts` + `e2e/faz3-tabs.e2e.ts`). İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
-4. **İptal/iade:** Satır ve satış iadesi, kapanış toplamlarına yansıması.
+4. **İptal/iade** ✅ (kabul: `test/refunds.test.ts` + `e2e/faz4-refunds.e2e.ts`). Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama:** Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
@@ -136,7 +136,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Rehber görsel sadece bu bilgisayarda tutulur (`settings` tablosunda data URL). Senkronlanmaz, `floor_plans.background_image_url` boş kalır.
   - Masa, bölüm ve şekil değişiklikleri de `catalog_changes`'e yazılır (konum, boyut, renk dahil).
   - F3 her ekrandan "İsimle hesap aç" penceresini açar (açık vardiya varken).
-- Henüz yapılmayanlar: outbox gönderimi (Faz 5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
+- **İade (Faz 4):**
+  - `src/db/refunds.ts`, ekran `src/screens/Sales.tsx` (Satışlar: vardiya seç, satış detayı, iade).
+  - İade, ödendiği yöntemle sınırlıdır (kartla ödenen nakit iade edilemez). Açık vardiyaya yazılır.
+  - Satır iadesinin önerilen tutarı, satır toplamından sepet indirimi payı düşülerek bulunur (`lineNetAfterCartDiscount`). Kasiyer tuş takımıyla değiştirebilir.
+  - Kısmi ödemesi olan açık hesap iptal edilince `refundAndVoid` alınan parayı iade edip hesabı void yapar (tek işlemde).
+  - "void sadece net ödeme 0 iken" kuralı DB'de de var: SQLite migration v2 ve `supabase/migrations/20261028000004_void_rule.sql`.
+- Henüz yapılmayanlar: outbox gönderimi (Faz 5), Realtime yayını (Faz 6), `supabase/seed`.
 
 ## Komutlar
 

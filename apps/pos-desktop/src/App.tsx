@@ -8,16 +8,18 @@ import { formatTime } from './format';
 import { FloorPlan } from './screens/FloorPlan';
 import { Login } from './screens/Login';
 import { Sale } from './screens/Sale';
+import { Sales } from './screens/Sales';
 import { Settings } from './screens/Settings';
 import { ShiftScreen } from './screens/Shift';
 import { Tabs } from './screens/Tabs';
 
-type Screen = 'sale' | 'floor' | 'tabs' | 'shift' | 'settings';
+type Screen = 'sale' | 'floor' | 'tabs' | 'sales' | 'shift' | 'settings';
 
 const SCREENS: [Screen, string][] = [
   ['sale', 'Satış'],
   ['floor', 'Kroki'],
   ['tabs', 'Hesaplar'],
+  ['sales', 'Satışlar'],
   ['shift', 'Vardiya'],
   ['settings', 'Ayarlar'],
 ];
@@ -94,6 +96,8 @@ function Shell() {
           <FloorPlan />
         ) : screen === 'tabs' ? (
           <Tabs newTabRequest={newTabRequest} />
+        ) : screen === 'sales' ? (
+          <Sales shift={shift} />
         ) : screen === 'shift' ? (
           <ShiftScreen shift={shift} onShiftChange={() => void reloadShift()} />
         ) : (
