@@ -37,3 +37,20 @@ describe('sync nudge', () => {
     expect(writes).toBe(2);
   });
 });
+
+describe('error logging', () => {
+  it('logs unexpected errors but not messages meant for the cashier', async () => {
+    const lines: string[] = [];
+    const logger = { dir: '', log: (level: string, message: string) => lines.push(`${level} ${message}`), recent: () => [] };
+    const ctx = testContext();
+    const server = createApi(ctx, undefined, { backupDir: '', logger, openPath: () => {} });
+    await dispatch(server, 'setupPassword', ['1234']);
+    await dispatch(server, 'openShift', [-1]); // validation message: not logged
+    ctx.db.exec('drop table shifts'); // something truly broken
+    await dispatch(server, 'getOpenShift', []);
+    expect(lines).toEqual(['error İşlem başarısız: getOpenShift']);
+    await dispatch(server, 'lock', []);
+    expect(await dispatch(server, 'logRendererError', ['x is undefined'])).toMatchObject({ ok: true });
+    expect(lines.at(-1)).toBe('error Ekran hatası: x is undefined');
+  });
+});

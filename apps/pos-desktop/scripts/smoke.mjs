@@ -24,7 +24,7 @@ if (process.platform === 'linux') {
 
 const dataDir = mkdtempSync(join(tmpdir(), 'crumble-smoke-'));
 const child = spawn(command, args, {
-  env: { ...process.env, CRUMBLE_SMOKE: '1', CRUMBLE_DB_PATH: join(dataDir, 'crumble.sqlite') },
+  env: { ...process.env, CRUMBLE_SMOKE: '1', CRUMBLE_DATA_DIR: dataDir, CRUMBLE_DB_PATH: join(dataDir, 'crumble.sqlite') },
   stdio: ['ignore', 'pipe', 'inherit'],
 });
 

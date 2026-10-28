@@ -5,6 +5,7 @@ import { ChangeHistory } from './settings/ChangeHistory';
 import { Cloud } from './settings/Cloud';
 import { FloorEditor } from './settings/FloorEditor';
 import { Import } from './Import';
+import { Maintenance } from './settings/Maintenance';
 import { Password } from './settings/Password';
 import { Shortcuts } from './settings/Shortcuts';
 
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'cloud', label: 'Bulut bağlantısı', render: () => <Cloud /> },
   { id: 'password', label: 'Kasa şifresi', render: () => <Password /> },
   { id: 'shortcuts', label: 'Kısayollar', render: () => <Shortcuts /> },
+  { id: 'maintenance', label: 'Yedek ve günlük', render: () => <Maintenance /> },
 ] as const;
 
 export type SettingsSection = (typeof SECTIONS)[number]['id'];

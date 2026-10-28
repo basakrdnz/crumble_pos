@@ -66,7 +66,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 4. **İptal/iade** ✅ (kabul: `test/refunds.test.ts` + `e2e/faz4-refunds.e2e.ts`). Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanacak (`supabase/README.md`, henüz yapılmadı). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil** ✅ (kabul: `apps/pos-desktop/e2e/faz6-mobile.e2e.ts`). Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
-7. **Cilalama:** Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
+7. **Cilalama** ✅ (`e2e/faz7-maintenance.e2e.ts`). Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
 8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
 
 **MVP dışı:** Yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme.
@@ -163,7 +163,18 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Bildirim tercihi sadece kaydedilir, push bildirimi yok (plan kapsamında gönderim tanımlı değil).
   - Not: RN'de `textTransform: 'uppercase'` Türkçe bilmez (i→I), kullanma.
   - E2E altyapısı: `e2e/fakeSupabase.ts`, Auth + PostgREST POST/GET alt kümesini gerçek Postgres'e cihaz/ortak rolüyle (RLS açık) çevirir. Gerçek PostgREST ikili dosyası indirilemedi (izin verilmedi), yerine bu kullanılıyor.
-- Henüz yapılmayanlar: `supabase/seed`.
+- **Cilalama (Faz 7):**
+  - Veri klasörü sabit: `%APPDATA%\Crumble POS` (`app.setPath('userData')`). `CRUMBLE_DATA_DIR` bunu değiştirir (testler).
+  - Günlük yedek `src/maintenance/backup.ts`: SQLite online backup ile alınır, açılışta ve saatte bir kontrol edilir. Gün sınırı İstanbul'a göre, son 30 yedek tutulur.
+  - Hata günlüğü `src/maintenance/logger.ts`: günlük dosya, her kayıt tek satır.
+    - Kaydedilenler: ana süreç yakalanmamış hataları, arayüz `error`/`unhandledrejection` olayları (`logRendererError`, kilitliyken de çalışır), senkron hata ve çevrimdışı geçişleri.
+    - `dispatch` beklenmeyen hataları da kaydeder (`error.name !== 'Error'`). Kasiyere gösterilen düz `Error` mesajları kaydedilmez.
+  - Tek örnek kilidi (`requestSingleInstanceLock`). Pencere maksimize açılır.
+  - Paketleme `electron-builder.yml` (NSIS, x64). better-sqlite3 asar dışında, `npmRebuild: false`. Electron sürümü sabit (`45.0.0`, electron-builder sabit sürüm ister).
+  - Sadece main'de `require` edilenler `dependencies`'te (better-sqlite3, bcryptjs, supabase-js). Bundle'a giren React ve `@crumble/shared` `devDependencies`'te.
+  - Linux'ta paketlenmiş uygulama smoke testinden geçti. Windows paketinin içeriği doğrulandı (`Crumble POS.exe`, win32-x64 prebuild). NSIS kurulum dosyasının son adımı Linux'ta Wine istediği için kurulum dosyası **Windows'ta** `pnpm pos:dist` ile üretilir.
+  - Simge yok (açık konu 6), Electron varsayılanı kullanılıyor. `build/icon.ico` eklenirse electron-builder kullanır.
+- Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, kasa şifresi sıfırlama (açık konu 7), push bildirimleri.
 
 ## Komutlar
 
