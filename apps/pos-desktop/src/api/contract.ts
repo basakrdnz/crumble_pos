@@ -1,11 +1,12 @@
 // The API the renderer uses. Implemented in the main process (createApi) and
 // called over IPC through window.crumble.invoke. Arguments and results must be
 // structured-clone friendly (plain data).
-import type { CatalogChange, Category, Product, Shift, ShiftSummary, Tab } from '@crumble/shared';
+import type { CatalogChange, Category, FloorPlan, FloorTable, Product, Shift, ShiftSummary, Tab, TableShape } from '@crumble/shared';
 import type { ImportPreview } from '../catalog/menuCsv';
 import type { NewProduct, ProductPatch } from '../db/catalog';
+import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
-import type { CloseShiftResult, ItemPatch, NewTab, PaymentPart, PayResult, TabDetail } from '../db/sales';
+import type { CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
 
 export interface AuthStatus {
   passwordSet: boolean;
@@ -57,6 +58,22 @@ export interface PosApi {
   setTabDiscount(tabId: string, percent: number | null): TabDetail;
   pay(tabId: string, parts: PaymentPart[]): PayResult;
   voidTab(tabId: string): Tab;
+  listOpenTabSummaries(): OpenTabSummary[];
+  moveTab(tabId: string, tableId: string): TabDetail;
+  setCustomerName(tabId: string, name: string | null): TabDetail;
+
+  // Floor plan (kroki)
+  listFloorPlans(): FloorPlan[];
+  createFloorPlan(name: string): FloorPlan;
+  renameFloorPlan(id: string, name: string): FloorPlan;
+  reorderFloorPlans(orderedIds: string[]): void;
+  deleteFloorPlan(id: string): void;
+  getFloorBackground(planId: string): string | null;
+  setFloorBackground(planId: string, dataUrl: string | null): void;
+  listTables(floorPlanId?: string): FloorTable[];
+  createTable(floorPlanId: string, shape: TableShape, at?: { x: number; y: number }): FloorTable;
+  updateTable(id: string, patch: TablePatch): FloorTable;
+  deleteTable(id: string): void;
 }
 
 export type PosApiMethod = keyof PosApi;

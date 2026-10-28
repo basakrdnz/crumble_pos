@@ -62,7 +62,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 0. **İskelet** ✅ (bkz. aşağıdaki durum). Kabul: Electron headless + Expo web açılır, ikisi de `shared`'dan import eder.
 1. **Katalog ve içe aktarma** ✅ CRUD, toplu fiyat tablosu, CSV içe aktarma, `catalog_changes`. Kabul `e2e/faz1-catalog.e2e.ts` ile gösterildi.
 2. **Vardiya ve hızlı satış** ✅ (kabul: `test/sales.test.ts` örnek gün + `e2e/faz2-sale.e2e.ts`). Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
-3. **Hesap ve kroki:** İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
+3. **Hesap ve kroki** ✅ (kabul: `test/tabs.test.ts` + `e2e/faz3-tabs.e2e.ts`). İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade:** Satır ve satış iadesi, kapanış toplamlarına yansıması.
 5. **Senkron:** Outbox, push, offline davranış, durum göstergesi. Önce Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanır. Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil:** Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
@@ -125,6 +125,17 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Kendi kararım: aynı ürüne tekrar tıklanınca sadece "düz" satırın (fiyatı, indirimi, ikramı ve notu değişmemiş) adedi artar, yoksa yeni satır açılır. Bir değişiklik hesabı alınmış ödemenin altına düşüremez. Tamamı ikram olan hesap ödeme alınmadan kapanır.
   - `onSaleCompleted` (`src/db/events.ts`), hesap `paid` olunca commit sonrası tetiklenir.
   - Kilit ana süreçte uygulanır: kilitliyken sadece `authStatus/setupPassword/unlock/lock` çalışır.
+- **Hesap ve kroki (Faz 3):**
+  - Kroki mantığı `src/db/floor.ts`, çizim `src/components/FloorCanvas.tsx` (görünüm ve düzenleyici). Mantıksal tuval 1200×800 birim (`src/floor/constants.ts`). Ekranda ölçeklenir, sürükleme bırakınca kaydedilir.
+  - Kendi kararlarım:
+    - Bir masada aynı anda tek açık hesap olur. Taşıma sadece boş masaya yapılır.
+    - Masaya tıklanınca hesap hemen değil, ilk ürün eklenince açılır.
+    - İsimle açılan hesap bir masaya taşınabilir (`kind` named kalır). İsmi silinemez.
+    - Yeni şekil ilk boş yere konur. Etiket ilk boş numara olur, kanepe için "Kanepe N".
+    - Açık hesabı olan masa veya bölüm silinemez.
+  - Rehber görsel sadece bu bilgisayarda tutulur (`settings` tablosunda data URL). Senkronlanmaz, `floor_plans.background_image_url` boş kalır.
+  - Masa, bölüm ve şekil değişiklikleri de `catalog_changes`'e yazılır (konum, boyut, renk dahil).
+  - F3 her ekrandan "İsimle hesap aç" penceresini açar (açık vardiya varken).
 - Henüz yapılmayanlar: outbox gönderimi (Faz 5), "void sadece net ödeme 0 iken" DB kuralı (Faz 4), Realtime yayını (Faz 6), `supabase/seed`.
 
 ## Komutlar

@@ -20,6 +20,7 @@ import {
 } from '@crumble/shared';
 import { type Context, fromDb, getRow, insertRow, stamps, tx, updateRow } from './database';
 import { emitSaleCompleted } from './events';
+import { getTable } from './floor';
 
 // ---------------------------------------------------------------------------
 // Shifts
@@ -158,9 +159,24 @@ export interface NewTab {
   customer_name?: string | null;
 }
 
+function requireFreeTable(ctx: Context, tableId: string, exceptTabId?: string): void {
+  const table = getTable(ctx, tableId);
+  const busy = ctx.db
+    .prepare("select id from tabs where table_id = ? and status = 'open' and id <> ?")
+    .get(tableId, exceptTabId ?? '') as { id: string } | undefined;
+  if (busy) throw new Error(`Masa ${table.label} üzerinde zaten açık hesap var.`);
+}
+
 export function openTab(ctx: Context, input: NewTab): Tab {
   return tx(ctx, () => {
     const shift = requireOpenShift(ctx);
+    if (input.kind === 'table') {
+      if (!input.table_id) throw new Error('Masa seçilmedi.');
+      requireFreeTable(ctx, input.table_id);
+    } else if (input.kind === 'named') {
+      if (!input.customer_name?.trim()) throw new Error('İsim girin.');
+    }
+    if (input.table_id && input.kind !== 'table') requireFreeTable(ctx, input.table_id);
     const s = stamps(ctx);
     return insertRow<Tab>(ctx, 'tabs', {
       ...s,
@@ -176,6 +192,52 @@ export function openTab(ctx: Context, input: NewTab): Tab {
       closed_at: null,
     });
   });
+}
+
+/** Moves a tab to another table (or gives a named tab a table). */
+export function moveTab(ctx: Context, tabId: string, tableId: string): Tab {
+  return tx(ctx, () => {
+    requireOpenTab(ctx, tabId);
+    requireFreeTable(ctx, tableId, tabId);
+    return updateRow<Tab>(ctx, 'tabs', tabId, { table_id: tableId });
+  });
+}
+
+/** Sets or clears the customer name; a named tab must keep one. */
+export function setCustomerName(ctx: Context, tabId: string, name: string | null): Tab {
+  return tx(ctx, () => {
+    const tab = requireOpenTab(ctx, tabId);
+    const clean = name?.trim() || null;
+    if (!clean && tab.kind === 'named') throw new Error('İsimle açılan hesabın ismi silinemez.');
+    return updateRow<Tab>(ctx, 'tabs', tabId, { customer_name: clean });
+  });
+}
+
+export interface OpenTabSummary {
+  tab: Tab;
+  tableLabel: string | null;
+  total: number;
+  remaining: number;
+  itemCount: number;
+}
+
+/** Open tabs with their running totals (tabs list, floor map). */
+export function listOpenTabSummaries(ctx: Context): OpenTabSummary[] {
+  return listOpenTabs(ctx)
+    .filter((tab) => tab.kind !== 'quick')
+    .map((tab) => {
+      const detail = getTab(ctx, tab.id);
+      const label = tab.table_id
+        ? (ctx.db.prepare('select label from tables where id = ?').pluck().get(tab.table_id) as string)
+        : null;
+      return {
+        tab,
+        tableLabel: label,
+        total: detail.totals.total,
+        remaining: detail.remaining,
+        itemCount: detail.totals.itemCount,
+      };
+    });
 }
 
 export function listOpenTabs(ctx: Context): Tab[] {

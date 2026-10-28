@@ -18,6 +18,15 @@ const FIELD: Record<string, string> = {
   category_id: 'kategori',
   description: 'açıklama',
   sort_order: 'sıra',
+  label: 'etiket',
+  shape: 'şekil',
+  x: 'konum x',
+  y: 'konum y',
+  width: 'genişlik',
+  height: 'yükseklik',
+  rotation: 'açı',
+  color: 'renk',
+  floor_plan_id: 'bölüm',
 };
 
 function showValue(field: string | null, value: string | null): string {
@@ -31,9 +40,13 @@ export function ChangeHistory() {
   const [changes] = useApiData(() => api.listCatalogChanges(500));
   const [products] = useApiData(() => api.listProducts());
   const [categories] = useApiData(() => api.listCategories());
+  const [plans] = useApiData(() => api.listFloorPlans());
+  const [tables] = useApiData(() => api.listTables());
   const names = new Map<string, string>([
     ...(products ?? []).map((p) => [p.id, p.name] as const),
     ...(categories ?? []).map((c) => [c.id, c.name] as const),
+    ...(plans ?? []).map((p) => [p.id, p.name] as const),
+    ...(tables ?? []).map((t) => [t.id, `Masa ${t.label}`] as const),
   ]);
   return (
     <>

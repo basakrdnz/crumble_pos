@@ -5,15 +5,19 @@ import { api } from './api/client';
 import type { AuthStatus } from './api/contract';
 import { ToastProvider } from './components/Toast';
 import { formatTime } from './format';
+import { FloorPlan } from './screens/FloorPlan';
 import { Login } from './screens/Login';
 import { Sale } from './screens/Sale';
 import { Settings } from './screens/Settings';
 import { ShiftScreen } from './screens/Shift';
+import { Tabs } from './screens/Tabs';
 
-type Screen = 'sale' | 'shift' | 'settings';
+type Screen = 'sale' | 'floor' | 'tabs' | 'shift' | 'settings';
 
 const SCREENS: [Screen, string][] = [
   ['sale', 'Satış'],
+  ['floor', 'Kroki'],
+  ['tabs', 'Hesaplar'],
   ['shift', 'Vardiya'],
   ['settings', 'Ayarlar'],
 ];
@@ -30,6 +34,7 @@ function Shell() {
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [screen, setScreen] = useState<Screen>('sale');
   const [shift, setShift] = useState<Shift | null | undefined>(undefined);
+  const [newTabRequest, setNewTabRequest] = useState(0);
 
   useEffect(() => {
     void api.authStatus().then(setAuth);
@@ -39,6 +44,18 @@ function Shell() {
   useEffect(() => {
     if (auth?.unlocked) void reloadShift();
   }, [auth?.unlocked, reloadShift]);
+
+  // F3: new named tab (plan §5.1), from anywhere.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'F3' || !auth?.unlocked || !shift) return;
+      e.preventDefault();
+      setScreen('tabs');
+      setNewTabRequest((n) => n + 1);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [auth?.unlocked, shift]);
 
   return (
     <div className="app">
@@ -71,6 +88,12 @@ function Shell() {
           <Login status={auth} onChange={setAuth} />
         ) : shift === undefined ? null : screen === 'sale' ? (
           <Sale shift={shift} onShiftChange={() => void reloadShift()} />
+        ) : (screen === 'floor' || screen === 'tabs') && !shift ? (
+          <Sale shift={null} onShiftChange={() => void reloadShift()} />
+        ) : screen === 'floor' ? (
+          <FloorPlan />
+        ) : screen === 'tabs' ? (
+          <Tabs newTabRequest={newTabRequest} />
         ) : screen === 'shift' ? (
           <ShiftScreen shift={shift} onShiftChange={() => void reloadShift()} />
         ) : (

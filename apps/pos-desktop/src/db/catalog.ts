@@ -28,7 +28,7 @@ export function logChange(
 }
 
 /** Applies a patch to a catalog row and logs one catalog_changes row per changed field. */
-function updateWithHistory<T extends { id: string }>(
+export function updateWithHistory<T extends { id: string }>(
   ctx: Context,
   table: 'categories' | 'products' | 'floor_plans' | 'tables',
   entityType: CatalogEntityType,

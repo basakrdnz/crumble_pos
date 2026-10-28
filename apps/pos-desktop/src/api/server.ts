@@ -1,5 +1,6 @@
 import * as auth from '../db/auth';
 import * as catalog from '../db/catalog';
+import * as floor from '../db/floor';
 import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
 import * as sales from '../db/sales';
@@ -79,6 +80,27 @@ export function createApi(ctx: Context): ApiServer {
     },
     pay: (tabId, parts) => sales.pay(ctx, tabId, parts),
     voidTab: (tabId) => sales.voidTab(ctx, tabId),
+    listOpenTabSummaries: () => sales.listOpenTabSummaries(ctx),
+    moveTab: (tabId, tableId) => {
+      sales.moveTab(ctx, tabId, tableId);
+      return sales.getTab(ctx, tabId);
+    },
+    setCustomerName: (tabId, name) => {
+      sales.setCustomerName(ctx, tabId, name);
+      return sales.getTab(ctx, tabId);
+    },
+
+    listFloorPlans: () => floor.listFloorPlans(ctx),
+    createFloorPlan: (name) => floor.createFloorPlan(ctx, name),
+    renameFloorPlan: (id, name) => floor.renameFloorPlan(ctx, id, name),
+    reorderFloorPlans: (ids) => floor.reorderFloorPlans(ctx, ids),
+    deleteFloorPlan: (id) => floor.deleteFloorPlan(ctx, id),
+    getFloorBackground: (id) => floor.getFloorBackground(ctx, id),
+    setFloorBackground: (id, dataUrl) => floor.setFloorBackground(ctx, id, dataUrl),
+    listTables: (planId) => floor.listTables(ctx, planId),
+    createTable: (planId, shape, at) => floor.createTable(ctx, planId, shape, at),
+    updateTable: (id, patch) => floor.updateTable(ctx, id, patch),
+    deleteTable: (id) => floor.deleteTable(ctx, id),
   };
 
   return { api, isUnlocked: () => unlocked };
