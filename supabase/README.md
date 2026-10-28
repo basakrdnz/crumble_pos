@@ -17,6 +17,7 @@ supabase/migrations/20261027000002_immutability.sql
 supabase/migrations/20261027000003_rls.sql
 supabase/migrations/20261028000004_void_rule.sql
 supabase/migrations/20261028000005_device_status.sql
+supabase/migrations/20261028000006_realtime.sql
 ```
 
 İki yol var:

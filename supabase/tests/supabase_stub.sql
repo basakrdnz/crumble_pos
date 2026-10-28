@@ -17,6 +17,9 @@ create function auth.uid() returns uuid language sql stable as $$
   select nullif(auth.jwt() ->> 'sub', '')::uuid;
 $$;
 
+-- Supabase creates this publication for Realtime.
+create publication supabase_realtime;
+
 grant usage on schema auth to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
