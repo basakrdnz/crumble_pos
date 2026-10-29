@@ -4,7 +4,8 @@ import { api } from '../api/client';
 import type { ImportPreview } from '../catalog/menuCsv';
 import { useAction } from '../components/useApi';
 
-const STATUS_LABEL = { tamam: '', teyit_edilecek: 'Teyit edilecek', fiyat_belirlenecek: 'Fiyat belirlenecek' };
+// "teyit edilecek" is not shown in the POS (2026-10-29); only missing prices are.
+const STATUS_LABEL = { tamam: '', teyit_edilecek: '', fiyat_belirlenecek: 'Fiyat belirlenecek' };
 
 export function Import() {
   const [fileName, setFileName] = useState<string>();
@@ -102,7 +103,7 @@ export function Import() {
                   <td>
                     {p.exists && <span className="badge muted">Zaten var</span>}{' '}
                     {STATUS_LABEL[p.status] && (
-                      <span className={`badge ${p.status === 'teyit_edilecek' ? 'warn' : 'muted'}`}>
+                      <span className="badge muted">
                         {STATUS_LABEL[p.status]}
                       </span>
                     )}

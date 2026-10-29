@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, safeStorage, shell } from 'electron';
 import { formatTL } from '@crumble/shared';
 import { IPC_CHANNEL } from '../src/api/contract';
 import { createApi, dispatch } from '../src/api/server';
@@ -50,7 +50,9 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
-  win.setMenuBarVisibility(false);
+  // No application menu: its hidden accelerators would take F11 (tam ekran)
+  // and Ctrl+R, but F11 is "Nakit ödendi" on the sale screen.
+  Menu.setApplicationMenu(null);
   if (!isSmoke) {
     win.once('ready-to-show', () => {
       win.maximize();

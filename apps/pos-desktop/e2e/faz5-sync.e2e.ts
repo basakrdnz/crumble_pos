@@ -61,16 +61,12 @@ describe.skipIf(!bin)('Faz 5: senkron (uygulama + sahte Supabase + gerçek Postg
   it('keeps selling offline: 20 sales wait in the queue', async () => {
     const { page } = run;
     await cloud.stop(); // internet gone
-    await openShiftUi(page, '500');
+    await openShiftUi(page);
     for (let i = 0; i < 20; i++) {
       await pick(page, 'Kahve', i % 2 ? 'Espresso' : 'Cafe Latte');
       await page.locator('.cart-line').first().waitFor();
-      await page.keyboard.press('F12');
-      const dialog = page.getByRole('dialog', { name: 'Ödeme' });
-      await dialog.getByRole('button', { name: i % 3 ? 'Nakit' : 'Kart', exact: true }).click();
-      await dialog.getByRole('button', { name: 'Ödemeyi al (F12)' }).click();
-      await dialog.waitFor({ state: 'detached' });
-      await page.getByText('Sepet boş').waitFor();
+      await page.keyboard.press(i % 3 ? 'F11' : 'F12');
+      await page.getByText('Sepet boş. Soldan ürün seçin.').waitFor();
     }
     await expect.poll(() => page.getByTestId('sync-status').textContent(), { timeout: 20_000 }).toMatch(/Çevrimdışı · \d+ bekliyor/);
     await snap(page, 'faz5-offline');

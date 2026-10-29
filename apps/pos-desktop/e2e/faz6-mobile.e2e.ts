@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { findPgBin, type PgCluster, startCluster } from '../test/pgCluster';
 import { type FakeSupabase, fakeSupabase, PARTNER_USER } from './fakeSupabase';
 import { importMenu, openShiftUi, pick } from './helpers';
-import { launchApp, type RunningApp, snap, typeKeypad, unlock } from './launch';
+import { launchApp, type RunningApp, snap, unlock } from './launch';
 
 const bin = findPgBin();
 const MOBILE = resolve(__dirname, '../../manager-mobile');
@@ -30,11 +30,8 @@ async function posSale(pos: Page, category: string, product: string, method: 'Na
   await pos.getByRole('button', { name: 'Satış', exact: true }).click();
   await pick(pos, category, product);
   await pos.locator(`[data-line="${product}"]`).waitFor();
-  await pos.keyboard.press('F12');
-  const dialog = pos.getByRole('dialog', { name: 'Ödeme' });
-  await dialog.getByRole('button', { name: method, exact: true }).click();
-  await dialog.getByRole('button', { name: 'Ödemeyi al (F12)' }).click();
-  await dialog.waitFor({ state: 'detached' });
+  await pos.getByRole('button', { name: method === 'Nakit' ? /Nakit ödendi/ : /Kartla ödendi/ }).click();
+  await pos.getByText('Sepet boş. Soldan ürün seçin.').waitFor();
 }
 
 // Faz 6 kabul: kasadaki satış birkaç saniye içinde mobilde görünür.
@@ -82,7 +79,7 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await pos.page.getByLabel('Cihaz şifresi').fill('x');
     await pos.page.getByRole('button', { name: 'Bağlan', exact: true }).click();
     await pos.page.getByTestId('sync-status').filter({ hasText: /Senkron ✓/ }).waitFor({ timeout: 20_000 });
-    await openShiftUi(pos.page, '500');
+    await openShiftUi(pos.page);
   }, 240_000);
 
   afterAll(async () => {
@@ -153,16 +150,16 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await phone.goBack();
   });
 
-  it('shift close (counted cash, difference) appears under Vardiyalar', async () => {
+  it('the day end (no cash count) appears under Vardiyalar', async () => {
     await pos.page.getByRole('button', { name: 'Vardiya', exact: true }).click();
-    await pos.page.getByRole('button', { name: 'Vardiyayı kapat' }).click();
-    const dialog = pos.page.getByRole('dialog', { name: 'Vardiyayı kapat' });
-    await typeKeypad(dialog, '710');
-    await dialog.getByRole('button', { name: 'Kapat ve özeti göster' }).click();
+    await pos.page.getByRole('button', { name: 'Gün sonunu al' }).click();
     await pos.page.getByRole('heading', { name: 'Gün sonu özeti' }).waitFor();
 
     await phone.getByText('Vardiyalar').click();
-    await expect.poll(() => phone.getByTestId('shift-diff').first().textContent(), { timeout: 20_000 }).toContain('Fark -5,00 ₺');
+    await expect
+      .poll(() => phone.getByTestId('shift-expected').first().textContent(), { timeout: 20_000 })
+      .toContain('Beklenen nakit 215,00 ₺');
+    expect(await phone.getByTestId('shift-diff').count()).toBe(0);
     await snap(phone, 'faz6-shifts');
   });
 });

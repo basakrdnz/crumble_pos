@@ -23,7 +23,7 @@ export default function Shifts() {
           <Text style={styles.rowLeft}>
             Nakit {formatTL(summary.cashSales)} · Kart {formatTL(summary.cardSales)} · {summary.salesCount} satış
           </Text>
-          <Text style={styles.rowSub}>
+          <Text style={styles.rowSub} testID="shift-expected">
             {shift.opening_cash > 0 ? `Açılış kasası ${formatTL(shift.opening_cash)} · ` : ''}Beklenen nakit{' '}
             {formatTL(shift.expected_cash ?? summary.expectedCash)}
           </Text>

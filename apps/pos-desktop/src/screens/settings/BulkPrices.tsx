@@ -4,76 +4,89 @@ import { api } from '../../api/client';
 import { PriceInput } from '../../components/PriceInput';
 import { useAction, useApiData } from '../../components/useApi';
 
+/** Fiyatlar: every product with its price and a "satışta" switch. */
 export function BulkPrices() {
   const [categories] = useApiData(() => api.listCategories());
   const [products, reload] = useApiData(() => api.listProducts());
-  const [filter, setFilter] = useState<'all' | 'check' | 'inactive'>('all');
+  const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const run = useAction();
 
   const categoryName = useMemo(() => new Map(categories?.map((c) => [c.id, c.name])), [categories]);
+  const query = search.toLocaleLowerCase('tr');
   const rows = (products ?? []).filter(
     (p) =>
-      (filter === 'all' || (filter === 'check' ? p.needs_price_check : !p.is_active)) &&
-      p.name.toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr')),
+      (filter === 'all' || (filter === 'inactive' ? !p.is_active : p.category_id === filter)) &&
+      p.name.toLocaleLowerCase('tr').includes(query),
   );
-  const checkCount = products?.filter((p) => p.needs_price_check).length ?? 0;
+  const inactiveCount = products?.filter((p) => !p.is_active).length ?? 0;
 
   const savePrice = (id: string, price: number) =>
     run(async () => {
       await api.updateProduct(id, { price });
       await reload();
     }, `Fiyat kaydedildi: ${formatTL(price)}`);
+  const setActive = (id: string, isActive: boolean) =>
+    run(async () => {
+      await api.updateProduct(id, { is_active: isActive });
+      await reload();
+    }, isActive ? 'Ürün satışa açıldı.' : 'Ürün satıştan kaldırıldı.');
 
   return (
     <>
-      <h2>Toplu fiyat</h2>
-      <div className="row" style={{ marginBottom: 12 }}>
+      <div className="page-head">
+        <h2>Toplu fiyat</h2>
+        <span className="grow" />
         <input
           className="input"
           placeholder="Ürün ara"
+          aria-label="Ürün ara"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: 240 }}
         />
-        <button className={`btn${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>
+      </div>
+      <div className="row wrap" style={{ marginBottom: 14 }}>
+        <button className={`btn pill small${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>
           Tümü
         </button>
-        <button className={`btn${filter === 'check' ? ' active' : ''}`} onClick={() => setFilter('check')}>
-          Teyit edilecek ({checkCount})
+        {(categories ?? []).map((c) => (
+          <button key={c.id} className={`btn pill small${filter === c.id ? ' active' : ''}`} onClick={() => setFilter(c.id)}>
+            {c.name}
+          </button>
+        ))}
+        <button className={`btn pill small${filter === 'inactive' ? ' active' : ''}`} onClick={() => setFilter('inactive')}>
+          Pasif ({inactiveCount})
         </button>
-        <button className={`btn${filter === 'inactive' ? ' active' : ''}`} onClick={() => setFilter('inactive')}>
-          Pasif
-        </button>
-        <span className="muted">Fiyatı yazıp Enter'a basın. Değişiklik geçmişe kaydedilir.</span>
+        <span className="muted" style={{ fontSize: 13 }}>
+          Fiyatı yazıp Enter'a basın. Değişiklik geçmişe kaydedilir.
+        </span>
       </div>
       <table className="grid" aria-label="Toplu fiyat">
         <thead>
           <tr>
-            <th>Kategori</th>
             <th>Ürün</th>
+            <th>Kategori</th>
             <th className="right">Fiyat (₺)</th>
-            <th>Durum</th>
+            <th className="right">Satışta</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((p) => (
             <tr key={p.id} className={p.is_active ? '' : 'inactive'} data-product={p.name}>
+              <td style={{ fontWeight: 700 }}>{p.name}</td>
               <td className="muted">{categoryName.get(p.category_id)}</td>
-              <td>{p.name}</td>
               <td className="right">
                 <PriceInput value={p.price} onCommit={(price) => void savePrice(p.id, price)} ariaLabel={`${p.name} fiyatı`} />
               </td>
-              <td>
-                {!p.is_active && <span className="badge muted">Pasif</span>}{' '}
-                {p.needs_price_check && (
-                  <>
-                    <span className="badge warn">Teyit edilecek</span>{' '}
-                    <button className="btn small" onClick={() => void savePrice(p.id, p.price)}>
-                      Fiyat doğru
-                    </button>
-                  </>
-                )}
+              <td className="right">
+                <button
+                  role="switch"
+                  aria-checked={p.is_active}
+                  aria-label={`${p.name} satışta`}
+                  className={`switch${p.is_active ? ' on' : ''}`}
+                  onClick={() => void setActive(p.id, !p.is_active)}
+                />
               </td>
             </tr>
           ))}

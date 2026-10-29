@@ -231,20 +231,34 @@ export interface OpenTabSummary {
   total: number;
   remaining: number;
   itemCount: number;
+  /** "2 Cafe Latte, Su" for the tab cards. */
+  itemsText: string;
+  /** Opened in an earlier shift and carried over (devredildi). */
+  carriedOver: boolean;
 }
 
 /** Open tabs with their running totals (tabs list, floor map). */
+function itemsText(items: readonly TabItem[]): string {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (!item.voided_at) counts.set(item.name_snapshot, (counts.get(item.name_snapshot) ?? 0) + item.quantity);
+  }
+  return [...counts].map(([name, n]) => (n > 1 ? `${n} ${name}` : name)).join(', ');
+}
+
 /** Short name of a tab for lists and messages: table label, customer name or "Hızlı satış". */
 export function tabTitle(ctx: Context, tab: Tab): string {
   const label = tab.table_id
     ? (ctx.db.prepare('select label from tables where id = ?').pluck().get(tab.table_id) as string | undefined)
     : undefined;
-  if (label && tab.customer_name) return `${label} · ${tab.customer_name}`;
-  return label ?? tab.customer_name ?? 'Hızlı satış';
+  const place = label === undefined ? undefined : /^\d+$/.test(label) ? `Masa ${label}` : label;
+  if (place && tab.customer_name) return `${place} · ${tab.customer_name}`;
+  return place ?? tab.customer_name ?? 'Hızlı satış';
 }
 
 /** Open table and named tabs; with includeQuick also an unfinished quick sale (for the day end). */
 export function listOpenTabSummaries(ctx: Context, includeQuick = false): OpenTabSummary[] {
+  const shiftId = getOpenShift(ctx)?.id;
   return listOpenTabs(ctx)
     .filter((tab) => includeQuick || tab.kind !== 'quick')
     .map((tab) => {
@@ -259,6 +273,8 @@ export function listOpenTabSummaries(ctx: Context, includeQuick = false): OpenTa
         total: detail.totals.total,
         remaining: detail.remaining,
         itemCount: detail.totals.itemCount,
+        itemsText: itemsText(detail.items),
+        carriedOver: !!shiftId && tab.opened_shift_id !== shiftId,
       };
     });
 }

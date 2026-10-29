@@ -50,7 +50,7 @@ describe('Faz 3: hesap ve kroki', () => {
 
   it('opens a tab by clicking a table, takes a partial payment and keeps it open', async () => {
     const { page } = run;
-    await openShiftUi(page, '0');
+    await openShiftUi(page);
     await page.getByRole('button', { name: 'Kroki', exact: true }).click();
     await page.locator('[data-table="1"]').click();
     await pick(page, 'Kahve', 'Cafe Latte');
@@ -58,12 +58,11 @@ describe('Faz 3: hesap ve kroki', () => {
     await pick(page, 'Yemek', 'Köfte Kase');
     await expect.poll(() => cartTotal(page)).toBe('910,00 ₺');
 
-    await page.keyboard.press('F12');
-    const dialog = page.getByRole('dialog', { name: 'Ödeme' });
-    await dialog.getByText('Bu ödeme').click();
-    await typeKeypad(dialog, '400');
-    await dialog.getByRole('button', { name: 'Ödemeyi al (F12)' }).click();
-    await dialog.waitFor({ state: 'detached' });
+    // Partial payment: type the amount, then the method (no payment dialog).
+    await page.getByTestId('pay-amount').click();
+    await typeKeypad(page.getByRole('complementary', { name: 'İşlemler' }), '400');
+    await page.getByRole('button', { name: 'Uygula (Enter)' }).click();
+    await page.getByRole('button', { name: /Nakit ödendi/ }).click();
     await expect.poll(() => cartTotal(page)).toBe('510,00 ₺');
 
     await page.getByRole('button', { name: '← Geri' }).click();
@@ -75,28 +74,29 @@ describe('Faz 3: hesap ve kroki', () => {
   it('moves the tab to another table and gives it a name', async () => {
     const { page } = run;
     await page.locator('[data-table="1"]').click();
-    await page.getByRole('button', { name: 'Masa değiştir' }).click();
+    await page.getByRole('button', { name: 'Taşı', exact: true }).click();
     await page.getByRole('dialog', { name: 'Masa değiştir' }).getByRole('button', { name: 'Pencere' }).click();
     await page.getByRole('button', { name: 'İsim', exact: true }).click();
     const nameDialog = page.getByRole('dialog', { name: 'Hesap ismi' });
     await nameDialog.getByLabel('İsim soyisim').fill('Zeynep');
     await nameDialog.getByRole('button', { name: 'Tamam' }).click();
-    await page.getByText('Masa Pencere · Zeynep').waitFor();
+    await page.getByText('Pencere · Zeynep').waitFor();
     await page.getByRole('button', { name: '← Geri' }).click();
     await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toContain('Zeynep');
     expect(await page.locator('[data-table="1"]').textContent()).toBe('1');
   });
 
-  it('adds more and closes the tab with the rest (mixed)', async () => {
+  it('adds more and closes the tab: 75 ₺ cash, the rest by card', async () => {
     const { page } = run;
     await page.locator('[data-table="Pencere"]').click();
     await pick(page, 'Çay ve Diğer Sıcaklar', 'Bardak Çay');
     await expect.poll(() => cartTotal(page)).toBe('575,00 ₺');
+    await page.getByTestId('pay-amount').click();
+    await typeKeypad(page.getByRole('complementary', { name: 'İşlemler' }), '75');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('F11');
+    await expect.poll(() => cartTotal(page)).toBe('500,00 ₺');
     await page.keyboard.press('F12');
-    const dialog = page.getByRole('dialog', { name: 'Ödeme' });
-    await dialog.getByRole('button', { name: 'Karma' }).click();
-    await typeKeypad(dialog, '75');
-    await dialog.getByRole('button', { name: 'Ödemeyi al (F12)' }).click();
     // Closing returns to the floor map with the table free again.
     await page.getByRole('tablist', { name: 'Bölümler' }).waitFor();
     await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toBe('Pencere');
@@ -121,8 +121,8 @@ describe('Faz 3: hesap ve kroki', () => {
     const { page } = run;
     await page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     // cash 400 + 75
-    await expect.poll(() => page.locator('[data-summary="Nakit satışlar"]').textContent()).toBe('475,00 ₺');
-    expect(await page.locator('[data-summary="Kart satışlar"]').textContent()).toBe('500,00 ₺');
-    expect(await page.locator('[data-summary="Satış adedi"]').textContent()).toBe('1');
+    await expect.poll(() => page.locator('[data-stat="Nakit"]').textContent()).toBe('475,00 ₺');
+    expect(await page.locator('[data-stat="Kart"]').textContent()).toBe('500,00 ₺');
+    expect(await page.locator('[data-stat="Ciro"]').textContent()).toBe('975,00 ₺');
   });
 });

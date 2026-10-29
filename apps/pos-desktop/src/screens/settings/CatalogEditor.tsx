@@ -122,8 +122,7 @@ export function CatalogEditor() {
                       </td>
                       <td className="num">{formatTL(p.price)}</td>
                       <td>
-                        {p.is_active ? <span className="badge ok">Aktif</span> : <span className="badge muted">Pasif</span>}{' '}
-                        {p.needs_price_check && <span className="badge warn">Teyit edilecek</span>}
+                        {p.is_active ? <span className="badge ok">Aktif</span> : <span className="badge muted">Pasif</span>}
                       </td>
                       <td className="right">
                         <div className="row" style={{ justifyContent: 'flex-end' }}>

@@ -35,11 +35,12 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
   - `shifts`: sadece `closed_at, counted_cash, expected_cash, cash_difference, notes`. Kapanınca donar.
   - Kapanmış satıştaki hata **iade kaydıyla** düzeltilir.
 - **Senkron:** Outbox sırayla gönderilir, UUID ile **idempotent**. Satış/ödeme/vardiya sadece eklenir. Katalogda **son yazan kazanır** (`updated_at`).
-- **Satış ekranı (2026-10-27):** Serbest tutar satırı **yok**, her satır bir ürüne bağlı. Sepetteki satıra tıklanınca yan kolonda işlemler açılır: İptal, Fiyatı değiştir, Adet, İndirim, İkram, not. Yan kolonda telefon tuşları gibi bir sayı tuş takımı bulunur (fare ile tıklanır, klavyeden de yazılabilir; ekran dokunmatik değil). Fiyatı değiştir sadece o satırı etkiler, menü fiyatı değişmez. `list_price` saklanır, `unit_price <> list_price` olan satır raporda işaretli görünür ve fark raporlanır.
-- **İndirim:** Sadece **tam sayı yüzde** (`discount_percent` 1–100). Hazır butonlar %10 ve %15, ayrıca elle yazılan yüzde. Yüzde indirim kuruşa **aşağı** yuvarlanır. Satır indirimi satır toplamından düşer. Sepet indirimi, satır indirimleri düşüldükten sonraki ara toplama uygulanır ve satırlara **dağıtılmaz**. Hesap toplamı = satır toplamları − sepet indirimi. Ürün raporları satır toplamlarını kullanır, sepet indirimi ayrı kalem olarak raporlanır.
-- **İkram:** `is_comp = true` olan satırın tutarı 0 sayılır, ama ikram olarak ayrıca raporlanır.
+- **Satış ekranı (2026-10-27, 2026-10-29 güncel):** Serbest tutar satırı **yok**, her satır bir ürüne bağlı. Sepetteki satıra tıklanınca yan kolonda işlemler açılır: Adet, Fiyat, not, Satırı çıkar. **Satır indirimi ve ikram yok.** Ödeme penceresi yok: sepetin altında **Nakit ödendi (F11)** ve **Kartla ödendi (F12)**. Karma ödeme, "alınan" ve "para üstü" yok. Kısmi ödemede önce tutar yazılır, sonra yöntem seçilir. Yan kolonda telefon tuşları gibi bir sayı tuş takımı bulunur (fare ile tıklanır, klavyeden de yazılabilir; ekran dokunmatik değil). Fiyatı değiştir sadece o satırı etkiler, menü fiyatı değişmez. `list_price` saklanır, `unit_price <> list_price` olan satır raporda işaretli görünür ve fark raporlanır.
+- **İndirim:** Sadece **sepete** ve sadece **tam sayı yüzde** (`tabs.discount_percent` 1–100). Hazır %10 ve %15, ayrıca elle yazılan yüzde. Satır indirimi kodu eski kayıtlar için durur, kasa artık yazmaz. Yüzde indirim kuruşa **aşağı** yuvarlanır. Satır indirimi satır toplamından düşer. Sepet indirimi, satır indirimleri düşüldükten sonraki ara toplama uygulanır ve satırlara **dağıtılmaz**. Hesap toplamı = satır toplamları − sepet indirimi. Ürün raporları satır toplamlarını kullanır, sepet indirimi ayrı kalem olarak raporlanır.
+- **İkram (2026-10-29: kullanılmıyor):** Kasada ikram yok. `is_comp` alanı ve hesabı eski kayıtlar için kalır; raporlar sadece 0'dan büyükse gösterir.
 - **Rapor günü:** Vardiyanın **açılış tarihi**. Ödeme ve iade toplamları, ödemenin/iadenin yapıldığı vardiyaya (`shift_id`) yazılır.
-- **Beklenen nakit** = açılış kasası + nakit ödemeler − nakit iadeler. **Fark** = sayılan − beklenen.
+- **Kasa sayımı yok (2026-10-29):** Açılış kasası sorulmaz (0), kapanışta sayılan nakit ve fark yok. **Beklenen nakit** = açılış kasası (0) + nakit ödemeler − nakit iadeler, bilgi olarak saklanır. Eski sayımlı vardiyalar geçerli kalır.
+- **Gün sonu:** Her açık hesap (yarım hızlı satış dahil) için karar: nakit, kart, **devret** veya iptal. Hepsine karar verilmeden kapanmaz (`closeShift({ carryOverTabIds })`, DB katmanında zorunlu). En çok satanlar yönetim uygulamasında.
 - **void ve refund farkı:** `void` = hiç ödeme alınmamış hesabın iptalidir. `refund` = ödemesi alınmış satışın tamamının veya bir kısmının geri ödenmesidir. Kısmi ödemesi olan hesap void edilemez, önce iade yapılır.
 - Satış tamamlama ve hesap kapatma anlarında bir `onSaleCompleted` olay noktası bırak (ileride yazıcı ve çekmece buraya bağlanacak).
 
@@ -67,9 +68,10 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanacak (`supabase/README.md`, henüz yapılmadı). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil** ✅ (kabul: `apps/pos-desktop/e2e/faz6-mobile.e2e.ts`). Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama** ✅ (`e2e/faz7-maintenance.e2e.ts`). Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
+- **Tasarım yenileme** ✅ (2026-10-29, `e2e/tasarim.e2e.ts`). G2 Orman paleti, sol ray, S2 satış düzeni, P2 ödeme butonları, "Günaydın." girişi. Tasarım planı: Design artifact "Crumble POS Tasarım Planı" (https://claude.ai/artifact/RT83SYTbT3SNzaT5TSEyMC). Kroki görselleri ve şömine sonra.
 8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
 
-**MVP dışı:** Yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme.
+**MVP dışı:** Stok düzenleme ve sayımı (ileride, planı ayrıca çıkarılacak), yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme.
 
 ## Çalışma kuralları
 
@@ -84,11 +86,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. Supabase projesi ve Expo/Apple/Google hesapları var mı? (Supabase kurulumu: `supabase/README.md`)
-6. Uygulama simgesi ve renk teması (yoksa sade nötr tema).
-7. Kasa şifresi: boştayken otomatik kilit olsun mu, kaç dakika sonra? Unutulursa nasıl sıfırlanacak? (Şu an: sadece uygulama açılışında ve "Kilitle" butonuyla soruluyor. Sıfırlama yok.)
+6. Uygulama simgesi (logo bekleniyor; yoksa G2 yeşilinde sade "C"). Renk teması kararlaştı: G2 Orman.
+7. Kasa şifresi: otomatik kilit **olmayacak** (2026-10-28). Unutulursa nasıl sıfırlanacak? (açık; öneriler: ortak hesabın e-postasıyla veya tek seferlik kurtarma kodu.)
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
+11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
+12. Mobil yönetim uygulaması da G2 ile yeniden tasarlanacak (kasa bittikten sonra).
 
 ## Git akışı
 
@@ -174,6 +178,15 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Sadece main'de `require` edilenler `dependencies`'te (better-sqlite3, bcryptjs, supabase-js). Bundle'a giren React ve `@crumble/shared` `devDependencies`'te.
   - Linux'ta paketlenmiş uygulama smoke testinden geçti. Windows paketinin içeriği doğrulandı (`Crumble POS.exe`, win32-x64 prebuild). NSIS kurulum dosyasının son adımı Linux'ta Wine istediği için kurulum dosyası **Windows'ta** `pnpm pos:dist` ile üretilir.
   - Simge yok (açık konu 6), Electron varsayılanı kullanılıyor. `build/icon.ico` eklenirse electron-builder kullanır.
+- **Tasarım (2026-10-29):**
+  - Renkler `src/styles.css` başındaki değişkenler (G2). Yeşil sadece ana eylem (Nakit), seçili satır/ürün ve raydaki aktif sayfa. Kahve/sarı ton kullanma.
+  - Yazı tipleri pakette (`@fontsource-variable/manrope`, `@fontsource/gloock`), internetsiz çalışır. "CRUMBLE" ve "Günaydın." Gloock, gerisi Manrope.
+  - Kabuk: `App.tsx` sol ray (88 px): sayfalar, senkron, vardiya saati, Kilitle. Uygulama menüsü yok (`Menu.setApplicationMenu(null)`), çünkü gizli menü F11'i tam ekrana bağlıyordu.
+  - Satış: `ProductPicker` (arama F2, kategori çipleri, üründe sepetteki adet), `LineActions` (Adet/Fiyat + tuş takımı; satır seçili değilken sepet indirimi "Elle" veya kısmi ödeme tutarı), `Cart` (indirim segmenti, toplam), `TabWorkspace` (Nakit/Kart butonları, F11/F12/Esc). `PaymentDialog` silindi.
+  - Klavye dinleyicileri son render'ı ref ile okur (`keys.current`): pasif effect boyamadan sonra kaydolduğu için hızlı F12 eski tutarla ödeme gönderiyordu (E2E yakaladı).
+  - Gün sonu `screens/Shift.tsx` (`DayEnd`): ödeme ve iptal hemen yapılır, devret ekranda tutulup `closeShift`'e verilir.
+  - Hesap adı `tabTitle`: sayı etiketli masa "Masa 5", diğerleri olduğu gibi ("Kanepe 1", "Pencere").
+  - Yeni migration: SQLite v3 (`shifts` tablosu yeniden kurulur; `migrate()` bunun için foreign key'leri işlem dışında kapatıp `foreign_key_check` yapar) ve `supabase/migrations/20261029000007_shift_without_count.sql`.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, kasa şifresi sıfırlama (açık konu 7), push bildirimleri.
 
 ## Komutlar

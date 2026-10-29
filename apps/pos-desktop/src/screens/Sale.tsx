@@ -1,4 +1,4 @@
-import type { Shift } from '@crumble/shared';
+import type { PaymentMethod, Shift } from '@crumble/shared';
 import { formatTL } from '@crumble/shared';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
@@ -12,7 +12,7 @@ export function Sale({ shift, onShiftChange }: { shift: Shift | null; onShiftCha
   const [categories] = useApiData(() => api.listCategories());
   const [products] = useApiData(() => api.listProducts());
   const [detail, setDetail] = useState<TabDetail | null>(null);
-  const [lastSale, setLastSale] = useState<{ total: number; change: number } | null>(null);
+  const [lastSale, setLastSale] = useState<{ total: number; method: PaymentMethod } | null>(null);
   const run = useAction();
   const toast = useToast();
   // The quick tab being filled. Opening it is async, so rapid clicks must all
@@ -53,10 +53,10 @@ export function Sale({ shift, onShiftChange }: { shift: Shift | null; onShiftCha
       }}
       categories={categories}
       products={products}
-      onClosed={(result, change) => {
+      onClosed={(result, method) => {
         finish();
-        setLastSale({ total: result.detail.totals.total, change });
-        toast.info(`Satış tamamlandı: ${formatTL(result.detail.totals.total)}${change ? ` · Para üstü ${formatTL(change)}` : ''}`);
+        setLastSale({ total: result.detail.totals.total, method });
+        toast.info(`Satış tamamlandı: ${formatTL(result.detail.totals.total)} · ${method === 'cash' ? 'nakit' : 'kart'}`);
       }}
       onCancelTab={() => {
         if (!detail || !window.confirm('Satış iptal edilsin mi? İptal kaydı tutulur.')) return;
@@ -68,13 +68,7 @@ export function Sale({ shift, onShiftChange }: { shift: Shift | null; onShiftCha
       extraActions={
         lastSale && (
           <div className="last-sale" data-testid="last-sale">
-            Son satış {formatTL(lastSale.total)}
-            {lastSale.change > 0 && (
-              <>
-                {' '}
-                · Para üstü <strong>{formatTL(lastSale.change)}</strong>
-              </>
-            )}
+            Son satış {formatTL(lastSale.total)} · {lastSale.method === 'cash' ? 'nakit' : 'kart'}
           </div>
         )
       }
