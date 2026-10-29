@@ -50,7 +50,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 
 ## Menü içe aktarma (Faz 1)
 
-Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada **84 ürün**, 8 kategori var, olduğu gibi aktarılır). Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
+Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada 84 ürün vardı; 2026-10-30'da 20 tek tek bitki çayı satırı çıkarıldı, şimdi **64 ürün**, 8 kategori). Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
 - `fiyat_tl` × 100 → kuruş.
 - Sıcak/buzlu ve boy seçenekleri ayrı ürün olarak, isim aynen aktarılır.
 - `fiyat_belirlenecek` → pasif, fiyat 0.
@@ -93,7 +93,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
 11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
 12. Mobil yönetim uygulaması da G2 ile yeniden tasarlanacak (kasa bittikten sonra).
-13. Bitki çayları: satışta sadece "Bitki Çayı (Küçük/Büyük)" kalacak, kutuda "i" butonu çeşitleri ve içeriklerini gösteren **sadece bilgi** penceresi açacak (işlevi yok). Çeşit listesi ve içerikleri kullanıcıdan gelecek, sonra yapılacak.
+13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin yeşil çaylı bir 250 g türü de var; kullanıcı teyit edecek.
 
 ## Git akışı
 

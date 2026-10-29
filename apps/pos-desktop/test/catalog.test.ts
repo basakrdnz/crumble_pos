@@ -142,9 +142,9 @@ describe('menu import (Faz 1 kabul)', () => {
     const preview = previewMenuImport(ctx, seed);
     expect(preview.errors).toEqual([]);
 
-    expect(applyMenuImport(ctx, seed)).toEqual({ categoriesCreated: 8, productsCreated: 84, productsSkipped: 0 });
+    expect(applyMenuImport(ctx, seed)).toEqual({ categoriesCreated: 8, productsCreated: 64, productsSkipped: 0 });
     const products = listProducts(ctx);
-    expect(products).toHaveLength(84);
+    expect(products).toHaveLength(64);
     expect(listCategories(ctx)).toHaveLength(8);
     expect(products.filter((p) => !p.is_active).map((p) => p.name)).toEqual([
       'Çıtır Kurabiye',
@@ -164,8 +164,8 @@ describe('menu import (Faz 1 kabul)', () => {
   it('is idempotent: a second import creates nothing', () => {
     const ctx = testContext();
     applyMenuImport(ctx, seed);
-    expect(applyMenuImport(ctx, seed)).toEqual({ categoriesCreated: 0, productsCreated: 0, productsSkipped: 84 });
-    expect(listProducts(ctx)).toHaveLength(84);
+    expect(applyMenuImport(ctx, seed)).toEqual({ categoriesCreated: 0, productsCreated: 0, productsSkipped: 64 });
+    expect(listProducts(ctx)).toHaveLength(64);
   });
 
   it('refuses a CSV with errors and writes nothing', () => {

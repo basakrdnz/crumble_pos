@@ -56,6 +56,18 @@ describe('Tasarım: G2 ekran turu', () => {
     await expect.poll(() => cartTotal(page)).toBe('792,00 ₺');
     await page.locator('[data-line="Cafe Latte"]').click();
     await snap(page, 'tasarim-2-satis');
+
+    // Bitki çayı: "i" opens the tea list (information only, the cart does not change).
+    await page.getByRole('tab', { name: 'Çay ve Diğer Sıcaklar' }).click();
+    expect(await page.locator('.product[data-product^="Adaçayı"]').count()).toBe(0);
+    await page.getByRole('button', { name: 'Bitki Çayı (Küçük) bilgi' }).click();
+    const teas = page.getByRole('dialog', { name: 'Bitki çayları' });
+    await expect.poll(() => teas.textContent()).toContain('Calm Tea');
+    expect(await teas.textContent()).toContain('Lavanta, tulsi');
+    await snap(page, 'tasarim-2b-cay-bilgisi');
+    await teas.getByRole('button', { name: 'Kapat' }).click();
+    await page.getByRole('tab', { name: 'Kahve' }).click();
+    await page.locator('[data-line="Cafe Latte"]').click();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: /Kartla ödendi/ }).click();
     await expect.poll(() => page.getByTestId('last-sale').textContent()).toContain('792,00 ₺ · kart');

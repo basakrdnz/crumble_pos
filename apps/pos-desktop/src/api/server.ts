@@ -5,6 +5,7 @@ import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
 import * as refunds from '../db/refunds';
 import * as sales from '../db/sales';
+import * as teaInfo from '../db/teaInfo';
 import { backupNow, listBackups } from '../maintenance/backup';
 import type { Logger } from '../maintenance/logger';
 import type { CloudManager } from '../sync/cloud';
@@ -75,6 +76,9 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     deleteProduct: (id) => catalog.deleteProduct(ctx, id),
 
     listCatalogChanges: (limit) => catalog.listCatalogChanges(ctx, limit),
+
+    getHerbalTeas: () => teaInfo.getHerbalTeas(ctx),
+    setHerbalTeas: (teas) => teaInfo.setHerbalTeas(ctx, teas),
 
     previewMenuImport: (text) => menuImport.previewMenuImport(ctx, text),
     applyMenuImport: (text) => menuImport.applyMenuImport(ctx, text),

@@ -6,6 +6,7 @@ import type { ImportPreview } from '../catalog/menuCsv';
 import type { NewProduct, ProductPatch } from '../db/catalog';
 import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
+import type { HerbalTea } from '../db/teaInfo';
 import type { PartialRefund, RefundInfo, SaleRow } from '../db/refunds';
 import type { BackupFile } from '../maintenance/backup';
 import type { CloudInfo, ConnectInput } from '../sync/cloud';
@@ -40,6 +41,9 @@ export interface PosApi {
   deleteProduct(id: string): void;
 
   listCatalogChanges(limit?: number): CatalogChange[];
+
+  getHerbalTeas(): HerbalTea[];
+  setHerbalTeas(teas: HerbalTea[]): HerbalTea[];
 
   previewMenuImport(csvText: string): ImportPreview;
   applyMenuImport(csvText: string): ImportResult;

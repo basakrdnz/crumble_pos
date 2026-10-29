@@ -53,7 +53,7 @@ describe.skipIf(!bin)('Faz 5: senkron (uygulama + sahte Supabase + gerçek Postg
     await page.getByLabel('Supabase adresi').fill(cloud.url);
     await page.getByRole('button', { name: 'Bağlan', exact: true }).click();
     await expect.poll(() => page.getByTestId('sync-status').textContent(), { timeout: 20_000 }).toMatch(/Senkron ✓/);
-    expect(await count(db, 'select count(*) as n from public.products')).toBe(84);
+    expect(await count(db, 'select count(*) as n from public.products')).toBe(64);
     expect(await count(db, "select count(*) as n from public.device_status where id = 'pos'")).toBe(1);
     await snap(page, 'faz5-cloud');
   });

@@ -126,6 +126,7 @@ Sistem **yazarkasaya veya mali cihaza bağlı değildir**. Yasal fiş bu sistemi
   - `durum = teyit_edilecek` olan ürünler aktif aktarılır. `needs_price_check` alanı veride kalır ama kasa arayüzünde "teyit edilecek" rozeti ve filtresi **gösterilmez** (2026-10-29, kullanıcı fiyatları kendisi düzenler).
   - `not` sütunu ürün açıklaması olarak saklanır (`products.description`, opsiyonel metin). Veri modeline bu alan eklenecek.
   - Varsa Kap! (Vitrin) kategorisi kasada normal kategori olarak görünür.
+  - **Bitki çayları (2026-10-30):** tek tek çay ürünleri (Adaçayı, Papatya, …) CSV'den çıkarıldı; sadece "Bitki Çayı (Küçük)" ve "(Büyük)" satılır. Kutudaki "i" butonu çeşitleri ve içeriklerini gösteren, sadece bilgi amaçlı bir pencere açar (ayarlardan düzenlenir).
 - **Kroki düzenleme** (bkz. 5.3).
 - **Bulut bağlantısı kurulumu** (ilk açılışta cihaz kaydı, bkz. 7).
 
