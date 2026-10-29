@@ -1,6 +1,8 @@
 export const SHORTCUTS: [string, string][] = [
-  ['F12', 'Ödeme penceresini aç / ödemeyi onayla'],
-  ['Esc', 'Pencereyi kapat, satır seçimini kaldır; seçim yoksa satışı iptal et'],
+  ['F11', 'Nakit ödendi (kalan tutar veya yazılan kısmi tutar)'],
+  ['F12', 'Kartla ödendi'],
+  ['F2', 'Ürün ara'],
+  ['Esc', 'Paneli kapat, satır seçimini kaldır; seçim yoksa satışı iptal et'],
   ['F3', 'Yeni hesap (isimle)'],
   ['0–9 , ⌫ Enter', 'Tuş takımı açıkken klavyeden sayı girişi'],
   ['Del', 'Tuş takımını temizle'],

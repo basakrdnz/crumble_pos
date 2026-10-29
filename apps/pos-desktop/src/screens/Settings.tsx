@@ -29,6 +29,7 @@ export function Settings({ initial = 'catalog' }: { initial?: SettingsSection })
   return (
     <>
       <nav className="sidebar" aria-label="Ayarlar">
+        <h2>Ayarlar</h2>
         {SECTIONS.map((s) => (
           <button key={s.id} className={`btn${s.id === section ? ' active' : ''}`} onClick={() => setSection(s.id)}>
             {s.label}

@@ -80,9 +80,9 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     applyMenuImport: (text) => menuImport.applyMenuImport(ctx, text),
 
     getOpenShift: () => sales.getOpenShift(ctx),
-    openShift: (cash) => sales.openShift(ctx, cash),
+    openShift: () => sales.openShift(ctx),
     getShiftSummary: (id) => sales.getShiftSummary(ctx, id),
-    closeShift: (cash, notes) => sales.closeShift(ctx, cash, notes),
+    closeShift: (input) => sales.closeShift(ctx, input),
     listShifts: (limit) => sales.listShifts(ctx, limit),
 
     openTab: (input) => sales.openTab(ctx, input),
@@ -108,7 +108,7 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     },
     pay: (tabId, parts) => sales.pay(ctx, tabId, parts),
     voidTab: (tabId) => sales.voidTab(ctx, tabId),
-    listOpenTabSummaries: () => sales.listOpenTabSummaries(ctx),
+    listOpenTabSummaries: (includeQuick) => sales.listOpenTabSummaries(ctx, includeQuick),
     moveTab: (tabId, tableId) => {
       sales.moveTab(ctx, tabId, tableId);
       return sales.getTab(ctx, tabId);

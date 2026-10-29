@@ -78,6 +78,12 @@ importers:
       '@crumble/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@fontsource-variable/manrope':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/gloock':
+        specifier: 5.3.0
+        version: 5.3.0
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -773,6 +779,12 @@ packages:
   '@expo/xcpretty@4.4.7':
     resolution: {integrity: sha512-EbxYllZ7/ozONVZd425cm4XnolfW+AmSFT5aP7Jdno6oc3WrYQcHz2CO20z/2rwWwYgztmV2PXvYH+BQ8YFjqg==}
     hasBin: true
+
+  '@fontsource-variable/manrope@5.3.0':
+    resolution: {integrity: sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==}
+
+  '@fontsource/gloock@5.3.0':
+    resolution: {integrity: sha512-vGvBRavw/y3aTCsz1uTNydQjCfRLGNOnSpmn/Qs3EZDqPAKBg6Id4OdHGnWLWXQ57IkzuNk/e9+KdMze+azOxA==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -4889,6 +4901,10 @@ snapshots:
       '@babel/code-frame': 7.29.7
       chalk: 4.1.2
       js-yaml: 4.3.2
+
+  '@fontsource-variable/manrope@5.3.0': {}
+
+  '@fontsource/gloock@5.3.0': {}
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:

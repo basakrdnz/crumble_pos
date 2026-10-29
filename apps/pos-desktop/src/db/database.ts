@@ -45,11 +45,23 @@ export function openDatabase(path: string): Db {
 
 export function migrate(db: Db): void {
   const current = db.pragma('user_version', { simple: true }) as number;
-  for (let version = current; version < MIGRATIONS.length; version++) {
-    db.transaction(() => {
-      db.exec(MIGRATIONS[version]!);
-      db.pragma(`user_version = ${version + 1}`);
-    })();
+  if (current >= MIGRATIONS.length) return;
+  // Some migrations rebuild a table that others reference. Foreign keys can
+  // only be switched outside a transaction; each migration checks them before
+  // committing (the SQLite "12 step" table change).
+  const foreignKeys = db.pragma('foreign_keys', { simple: true }) as number;
+  db.pragma('foreign_keys = OFF');
+  try {
+    for (let version = current; version < MIGRATIONS.length; version++) {
+      db.transaction(() => {
+        db.exec(MIGRATIONS[version]!);
+        const broken = db.pragma('foreign_key_check') as unknown[];
+        if (broken.length > 0) throw new Error(`Migration ${version + 1}: foreign key check failed`);
+        db.pragma(`user_version = ${version + 1}`);
+      })();
+    }
+  } finally {
+    db.pragma(`foreign_keys = ${foreignKeys ? 'ON' : 'OFF'}`);
   }
 }
 

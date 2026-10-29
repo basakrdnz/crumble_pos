@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import { formatTime } from '../format';
 import type { SyncStatus } from '../sync/service';
 
-/** Top bar sync state (plan Faz 5 "durum göstergesi"). Polls the main process. */
+/** Sync state in the left rail (plan Faz 5 "durum göstergesi"). Polls the main process. */
 export function SyncIndicator({ onClick }: { onClick(): void }) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   useEffect(() => {
@@ -32,12 +32,13 @@ export function SyncIndicator({ onClick }: { onClick(): void }) {
 
   return (
     <button
-      className={`btn small sync-indicator ${status.state}`}
+      className={`sync-indicator ${status.state}`}
       title={status.lastError ?? undefined}
       data-testid="sync-status"
       onClick={onClick}
     >
-      {text}
+      <span className="dot" />
+      <span>{text}</span>
     </button>
   );
 }

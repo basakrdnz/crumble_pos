@@ -23,7 +23,7 @@ export async function launchApp(dbPath?: string): Promise<RunningApp> {
     env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path) } as Record<string, string>,
   });
   const page = await app.firstWindow();
-  await page.waitForSelector('.topbar');
+  await page.waitForSelector('.app');
   return {
     app,
     page,

@@ -23,17 +23,20 @@ export default function Shifts() {
           <Text style={styles.rowLeft}>
             Nakit {formatTL(summary.cashSales)} · Kart {formatTL(summary.cardSales)} · {summary.salesCount} satış
           </Text>
-          <Text style={styles.rowSub}>
-            Açılış kasası {formatTL(shift.opening_cash)} · Beklenen {formatTL(shift.expected_cash ?? summary.expectedCash)}
+          <Text style={styles.rowSub} testID="shift-expected">
+            {shift.opening_cash > 0 ? `Açılış kasası ${formatTL(shift.opening_cash)} · ` : ''}Beklenen nakit{' '}
+            {formatTL(shift.expected_cash ?? summary.expectedCash)}
           </Text>
-          {shift.closed_at && (
+          {/* Kasa sayımı 2026-10-29'da kalktı: only older shifts have a count. */}
+          {shift.closed_at && shift.counted_cash !== null && (
             <Text style={[styles.rowSub, { color: shift.cash_difference ? colors.danger : colors.ok }]} testID="shift-diff">
               Sayılan {formatTL(shift.counted_cash ?? 0)} · Fark {formatTL(shift.cash_difference ?? 0)}
             </Text>
           )}
           {(summary.discountTotal > 0 || summary.compTotal > 0 || summary.voidTotal > 0) && (
             <Text style={styles.rowSub}>
-              İndirim {formatTL(summary.discountTotal)} · İkram {formatTL(summary.compTotal)} · İptal {formatTL(summary.voidTotal)}
+              İndirim {formatTL(summary.discountTotal)}
+              {summary.compTotal > 0 ? ` · İkram ${formatTL(summary.compTotal)}` : ''} · İptal {formatTL(summary.voidTotal)}
             </Text>
           )}
           {shift.notes ? <Text style={styles.rowSub}>Not: {shift.notes}</Text> : null}

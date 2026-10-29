@@ -166,6 +166,15 @@ select pg_temp.expect_error($$update public.shifts set closed_at = now(), counte
 select pg_temp.expect_ok($$update public.shifts set closed_at = now(), counted_cash = 62500,
   expected_cash = 62000, cash_difference = 500$$, 'close shift');
 select pg_temp.expect_error($$update public.shifts set notes = 'x'$$, 'update closed shift');
+-- Since 2026-10-29 a shift closes without a cash count (migration 0007).
+insert into public.shifts (id, opened_at, opening_cash)
+  values ('30000000-0000-0000-0000-0000000000a2', now(), 0);
+select pg_temp.expect_error($$update public.shifts set closed_at = now()
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'close without expected cash');
+select pg_temp.expect_error($$update public.shifts set closed_at = now(), expected_cash = 0, counted_cash = 10
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'counted cash without difference');
+select pg_temp.expect_ok($$update public.shifts set closed_at = now(), expected_cash = 0
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'close shift without count');
 
 select pg_temp.expect_count($$select count(*) from public.partners$$, 0, 'device cannot read partners');
 commit;

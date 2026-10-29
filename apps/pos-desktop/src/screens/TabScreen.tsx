@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { PromptDialog } from '../components/PromptDialog';
 import { useToast } from '../components/Toast';
 import { useAction, useApiData } from '../components/useApi';
+import { formatTime } from '../format';
 import type { TabDetail } from '../db/sales';
 import { TabWorkspace } from './sale/TabWorkspace';
 
@@ -40,7 +41,7 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
 
   const tableId = detail?.tab.table_id ?? ('tableId' in target ? target.tableId : null);
   const table = tables?.find((t) => t.id === tableId);
-  const title = [table && `Masa ${table.label}`, detail?.tab.customer_name].filter(Boolean).join(' · ') || 'Hesap';
+  const title = [table && tableTitle(table.label), detail?.tab.customer_name].filter(Boolean).join(' · ') || 'Hesap';
 
   if (!categories || !products || !tables) return null;
 
@@ -62,8 +63,14 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
         categories={categories}
         products={products}
         allowPartial
-        onClosed={(result, change) => {
-          toast.info(`Hesap kapandı: ${formatTL(result.detail.totals.total)}${change ? ` · Para üstü ${formatTL(change)}` : ''}`);
+        subtitle={
+          detail
+            ? `Açılış ${formatTime(detail.tab.opened_at)} · ${detail.totals.itemCount} ürün`
+            : 'İlk ürünle hesap açılır'
+        }
+        cancelLabel="Hesabı iptal et"
+        onClosed={(result, method) => {
+          toast.info(`Hesap kapandı: ${formatTL(result.detail.totals.total)} · ${method === 'cash' ? 'nakit' : 'kart'}`);
           onBack();
         }}
         onCancelTab={() => {
@@ -78,15 +85,15 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
             onBack();
           }, 'Hesap iptal edildi.');
         }}
-        extraActions={
-          <div className="row wrap">
-            <button className="btn grow" onClick={onBack}>
+        tools={
+          <div className="tab-tools">
+            <button className="btn small pill" onClick={onBack}>
               ← Geri
             </button>
-            <button className="btn grow" disabled={!detail} onClick={() => setDialog('move')}>
-              Masa değiştir
+            <button className="btn small pill" disabled={!detail} onClick={() => setDialog('move')}>
+              Taşı
             </button>
-            <button className="btn grow" disabled={!detail} onClick={() => setDialog('name')}>
+            <button className="btn small pill" disabled={!detail} onClick={() => setDialog('name')}>
               İsim
             </button>
           </div>
@@ -122,6 +129,11 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
       )}
     </>
   );
+}
+
+/** "5" -> "Masa 5"; labels that already name the seat ("Kanepe 1", "Bar") stay as they are. */
+export function tableTitle(label: string): string {
+  return /^\d+$/.test(label) ? `Masa ${label}` : label;
 }
 
 function MoveDialog({

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'] as const;
 
@@ -14,7 +14,7 @@ export function Keypad({
   allowComma = false,
   maxLength = 9,
   captureKeyboard = true,
-  enterLabel = 'Tamam',
+  enterLabel = 'Uygula',
 }: {
   value: string;
   onChange(next: string): void;
@@ -37,22 +37,26 @@ export function Keypad({
     onChange(value === '0' ? key : value + key);
   };
 
+  // The listener reads the latest render through a ref, so a key pressed
+  // right after an async update never sees a stale value.
+  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
+  keys.current = (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+    if (/^[0-9]$/.test(e.key)) press(e.key);
+    else if (e.key === ',' || e.key === '.') press(',');
+    else if (e.key === 'Backspace') press('⌫');
+    else if (e.key === 'Delete') press('C');
+    else if (e.key === 'Enter' && onEnter) onEnter();
+    else return;
+    e.preventDefault();
+  };
   useEffect(() => {
     if (!captureKeyboard) return;
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
-      if (/^[0-9]$/.test(e.key)) press(e.key);
-      else if (e.key === ',' || e.key === '.') press(',');
-      else if (e.key === 'Backspace') press('⌫');
-      else if (e.key === 'Delete') press('C');
-      else if (e.key === 'Enter' && onEnter) onEnter();
-      else return;
-      e.preventDefault();
-    };
+    const handler = (e: KeyboardEvent) => keys.current(e);
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, [captureKeyboard]);
 
   return (
     <div className="keypad" role="group" aria-label="Tuş takımı">
@@ -60,7 +64,7 @@ export function Keypad({
         <button
           key={key}
           type="button"
-          className="btn key"
+          className={`btn key${key === ',' || key === '⌫' ? ' alt' : ''}`}
           disabled={key === ',' && !allowComma}
           onClick={() => press(key)}
           aria-label={key === '⌫' ? 'Sil' : key}
@@ -68,11 +72,11 @@ export function Keypad({
           {key}
         </button>
       ))}
-      <button type="button" className="btn key" onClick={() => press('C')} aria-label="Temizle">
-        C
+      <button type="button" className={`btn key alt clear${onEnter ? '' : ' enter'}`} onClick={() => press('C')} aria-label="Temizle">
+        Temizle
       </button>
       {onEnter && (
-        <button type="button" className="btn key primary enter" onClick={onEnter}>
+        <button type="button" className="btn key apply enter" onClick={onEnter}>
           {enterLabel}
         </button>
       )}

@@ -7,7 +7,7 @@ import { PromptDialog } from '../../components/PromptDialog';
 import { useAction, useApiData } from '../../components/useApi';
 import { SHAPE_LABEL } from '../../floor/constants';
 
-const SWATCHES = ['#d9c7b8', '#c8d8c0', '#c3d3e6', '#ecd3a8', '#e2c1c8', '#d0d0d0'];
+const SWATCHES = ['#dce8e0', '#c8dccf', '#e9eef5', '#edefeb', '#e3e1dc', '#d0d6d2'];
 
 /** Kroki editor (plan §5.3): sections, shapes, guide image. */
 export function FloorEditor() {
@@ -134,7 +134,7 @@ export function FloorEditor() {
               onSelect={(t) => setSelectedId(t?.id ?? null)}
               onCommit={(id, patch) => void update(id, patch)}
             />
-            <p className="muted">Şekli sürükleyerek taşıyın, mavi köşeden boyutlandırın. Görsel sadece yerleştirmeye yardımcıdır.</p>
+            <p className="muted">Şekli sürükleyerek taşıyın, yeşil köşeden boyutlandırın. Görsel sadece yerleştirmeye yardımcıdır.</p>
           </div>
           <div className="panel">
             {selected ? (

@@ -42,7 +42,7 @@ function day(ctx: Context, sales: number) {
     const line = addProduct(ctx, tab.id, latte.id);
     addProduct(ctx, tab.id, cay.id);
     if (i % 3 === 0) addProduct(ctx, tab.id, latte.id); // quantity 2
-    if (i % 4 === 0) updateItem(ctx, line.id, { discount_percent: 10 });
+    if (i % 4 === 0) updateItem(ctx, line.id, { unit_price: 20000 });
     if (i % 5 === 0) setTabDiscount(ctx, tab.id, 15);
     if (i % 7 === 0) {
       const extra = addProduct(ctx, tab.id, cay.id);
@@ -163,11 +163,11 @@ describe.skipIf(!bin)('sync to Postgres (Faz 5 entegrasyon testi)', () => {
     const cancelled = openTab(ctx, { kind: 'named', customer_name: 'Ayşe' });
     addProduct(ctx, cancelled.id, latte.id);
     voidTab(ctx, cancelled.id);
-    const closed = closeShift(ctx, 90000);
+    const closed = closeShift(ctx);
     await drain(ctx, transport);
 
     const cloudShift = (await admin.query('select * from public.shifts where id = $1', [closed.shift.id])).rows[0];
-    expect(cloudShift).toMatchObject({ counted_cash: 90000, expected_cash: closed.shift.expected_cash });
+    expect(cloudShift).toMatchObject({ counted_cash: null, expected_cash: closed.shift.expected_cash });
     expect((await admin.query('select price from public.products where id = $1', [latte.id])).rows[0].price).toBe(22500);
     expect(await count(admin, `select count(*) as n from public.refunds where tab_id = '${ids[0]}'`)).toBe(1);
     expect((await admin.query('select status from public.tabs where id = $1', [cancelled.id])).rows[0].status).toBe('void');

@@ -3,7 +3,7 @@ import type { TableShape } from '@crumble/shared';
 /** Logical canvas size; shapes are stored in these units and scaled on screen. */
 export const CANVAS = { width: 1200, height: 800 } as const;
 
-export const DEFAULT_TABLE_COLOR = '#d9c7b8';
+export const DEFAULT_TABLE_COLOR = '#dce8e0';
 
 export const SHAPE_DEFAULTS: Record<TableShape, { width: number; height: number }> = {
   circle: { width: 80, height: 80 },

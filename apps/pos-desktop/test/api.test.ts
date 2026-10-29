@@ -17,7 +17,7 @@ describe('API lock', () => {
   it('returns errors as messages and rejects unknown methods', async () => {
     const server = createApi(testContext());
     await dispatch(server, 'setupPassword', ['1234']);
-    expect(await dispatch(server, 'openShift', [-1])).toEqual({ ok: false, error: 'Açılış kasası negatif olamaz.' });
+    expect(await dispatch(server, 'openTab', [{ kind: 'quick' }])).toEqual({ ok: false, error: 'Açık vardiya yok. Önce vardiyayı açın.' });
     expect(await dispatch(server, 'dropDatabase', [])).toMatchObject({ ok: false });
   });
 });
@@ -45,7 +45,7 @@ describe('error logging', () => {
     const ctx = testContext();
     const server = createApi(ctx, undefined, { backupDir: '', logger, openPath: () => {} });
     await dispatch(server, 'setupPassword', ['1234']);
-    await dispatch(server, 'openShift', [-1]); // validation message: not logged
+    await dispatch(server, 'openTab', [{ kind: 'quick' }]); // validation message: not logged
     ctx.db.exec('drop table shifts'); // something truly broken
     await dispatch(server, 'getOpenShift', []);
     expect(lines).toEqual(['error İşlem başarısız: getOpenShift']);

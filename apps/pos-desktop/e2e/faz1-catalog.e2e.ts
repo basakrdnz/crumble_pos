@@ -33,7 +33,8 @@ describe('Faz 1: katalog ve içe aktarma', () => {
     const table = page.getByRole('table', { name: 'Ürünler' });
     await expect.poll(() => table.locator('tbody tr').count()).toBe(14);
     expect(await table.locator('tr', { hasText: 'Çıtır Kurabiye' }).textContent()).toContain('Pasif');
-    expect(await table.locator('tr', { hasText: 'Peynirli Börek' }).textContent()).toContain('Teyit edilecek');
+    // "Teyit edilecek" is no longer shown in the POS (2026-10-29).
+    expect(await table.locator('tr', { hasText: 'Peynirli Börek' }).textContent()).not.toContain('Teyit edilecek');
     await snap(page, 'faz1-catalog');
   });
 
@@ -45,14 +46,18 @@ describe('Faz 1: katalog ve içe aktarma', () => {
     await price.press('Enter');
     await expect.poll(() => page.getByRole('alert').textContent()).toContain('250,00 ₺');
 
-    // Confirming a "teyit edilecek" price clears the badge.
-    await page.getByRole('button', { name: /Teyit edilecek/ }).click();
-    const borek = page.locator('tr[data-product="Peynirli Börek"]');
-    await borek.getByRole('button', { name: 'Fiyat doğru' }).click();
+    // The "satışta" switch takes a product off the sale screen.
+    await page.getByRole('button', { name: 'Pasif (2)' }).click();
+    await expect.poll(() => page.locator('tr[data-product]').count()).toBe(2);
+    await page.getByRole('button', { name: 'Tümü' }).click();
+    await page.getByRole('switch', { name: 'Peynirli Börek satışta' }).click();
+    await page.getByRole('button', { name: 'Pasif (3)' }).click();
     await expect.poll(() => page.locator('tr[data-product]').count()).toBe(3);
+    await page.getByRole('switch', { name: 'Peynirli Börek satışta' }).click();
+    await page.getByRole('button', { name: 'Pasif (2)' }).waitFor();
 
     await page.getByRole('button', { name: 'Değişiklik geçmişi' }).click();
-    const firstRow = page.getByRole('table', { name: 'Değişiklik geçmişi' }).locator('tbody tr').first();
+    const firstRow = page.getByRole('table', { name: 'Değişiklik geçmişi' }).locator('tbody tr', { hasText: 'Mocha' }).first();
     await expect.poll(() => firstRow.textContent()).toContain('Mocha');
     expect(await firstRow.textContent()).toContain('240,00 ₺ → 250,00 ₺');
     await snap(page, 'faz1-history');

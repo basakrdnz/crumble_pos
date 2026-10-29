@@ -99,3 +99,36 @@ describe('SQLite immutability triggers', () => {
     expect(db.prepare("select count(*) as n from sqlite_master where name = 'tabs_void_requires_refund'").get()).toEqual({ n: 1 });
   });
 });
+
+describe('migration v3 (shift closes without a cash count)', () => {
+  it('keeps existing shifts, references and triggers when upgrading a v2 database', async () => {
+    const Database = (await import('better-sqlite3')).default;
+    const { migrate } = await import('../src/db/database');
+    const { MIGRATIONS } = await import('../src/db/schema');
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    // A database as Faz 7 left it (user_version 2), with a counted shift and a tab.
+    for (const sql of MIGRATIONS.slice(0, 2)) db.exec(sql);
+    db.pragma('user_version = 2');
+    const t = "'2026-11-01T08:00:00.000Z'";
+    db.exec(`insert into shifts (id, opened_at, opening_cash, created_at, updated_at) values ('s1', ${t}, 50000, ${t}, ${t})`);
+    db.exec(`update shifts set closed_at = ${t}, counted_cash = 50000, expected_cash = 50000, cash_difference = 0 where id = 's1'`);
+    db.exec(`insert into shifts (id, opened_at, opening_cash, created_at, updated_at) values ('s2', ${t}, 0, ${t}, ${t})`);
+    db.exec(`insert into tabs (id, opened_shift_id, kind, customer_name, opened_at, created_at, updated_at)
+             values ('t1', 's2', 'named', 'Ali', ${t}, ${t}, ${t})`);
+    expect(() => db.exec(`update shifts set closed_at = ${t}, expected_cash = 0 where id = 's2'`)).toThrow();
+
+    migrate(db);
+    expect(db.pragma('user_version', { simple: true })).toBe(MIGRATIONS.length);
+    expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
+    expect(db.prepare('select counted_cash from shifts where id = ?').pluck().get('s1')).toBe(50000);
+    // Close without a count now works; the old rules still hold.
+    db.exec(`update shifts set closed_at = ${t}, expected_cash = 0 where id = 's2'`);
+    expect(() => db.exec(`update shifts set notes = 'x' where id = 's2'`)).toThrow(/Kapanmış vardiya/);
+    expect(() => db.exec(`delete from shifts where id = 's1'`)).toThrow(/silinemez/);
+    expect(() => db.exec(`insert into shifts (id, opened_at, opening_cash, created_at, updated_at)
+      values ('s3', ${t}, 0, ${t}, ${t}), ('s4', ${t}, 0, ${t}, ${t})`)).toThrow(/UNIQUE/);
+    expect(() => db.exec(`insert into tabs (id, opened_shift_id, kind, customer_name, opened_at, created_at, updated_at)
+             values ('t2', 'nope', 'named', 'X', ${t}, ${t}, ${t})`)).toThrow(/FOREIGN KEY/);
+  });
+});

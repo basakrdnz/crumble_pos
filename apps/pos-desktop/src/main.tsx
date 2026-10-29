@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { api } from './api/client';
 import { App } from './App';
+import '@fontsource-variable/manrope';
+import '@fontsource/gloock';
 import './styles.css';
 
 // Renderer crashes go to the error log (Ayarlar → Yedek ve günlük).
