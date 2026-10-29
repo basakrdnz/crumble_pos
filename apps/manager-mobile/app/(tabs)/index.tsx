@@ -37,15 +37,15 @@ export default function Today() {
                   key={s.id}
                   left={`Açılış ${formatTime(s.opened_at)}`}
                   right={s.closed_at ? `Kapanış ${formatTime(s.closed_at)}` : 'Açık'}
-                  sub={`Açılış kasası ${formatTL(s.opening_cash)}`}
+                  sub={s.opening_cash > 0 ? `Açılış kasası ${formatTL(s.opening_cash)}` : undefined}
                   testID="today-shift"
                 />
               ))
             )}
           </Section>
-          <Section title="Bugünkü indirim / ikram / iptal">
+          <Section title="Bugünkü indirim / iptal / iade">
             <Row left="İndirim" right={formatTL(data.totals.discount)} />
-            <Row left="İkram" right={formatTL(data.totals.comp)} />
+            {data.totals.comp > 0 && <Row left="İkram" right={formatTL(data.totals.comp)} />}
             <Row left="İptal" right={formatTL(data.totals.void)} />
             <Row left="İade" right={formatTL(data.totals.refunds)} />
           </Section>

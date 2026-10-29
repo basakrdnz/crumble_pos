@@ -77,7 +77,7 @@ describe('refunds (iade)', () => {
     const ctx = testContext();
     const { shift, tab } = sale(ctx);
     pay(ctx, tab.id, [{ method: 'cash', amount: 46500 }]);
-    closeShift(ctx, 96500);
+    closeShift(ctx);
     expect(() => refundAll(ctx, tab.id)).toThrow(/vardiya/);
     const next = openShift(ctx, 96500);
     refundPart(ctx, tab.id, { amount: 10000, method: 'cash' });

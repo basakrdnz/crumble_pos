@@ -152,7 +152,7 @@ describe('tabs (hesap)', () => {
     const tab = openTab(ctx, { kind: 'table', table_id: t1.id });
     addProduct(ctx, tab.id, latte.id);
     pay(ctx, tab.id, [{ method: 'cash', amount: 1500 }]);
-    closeShift(ctx, 1500);
+    closeShift(ctx, { carryOverTabIds: [tab.id] });
     const s2 = openShift(ctx, 0);
     pay(ctx, tab.id, [{ method: 'cash', amount: 20000 }]);
     expect(getShiftSummary(ctx, s1.id)).toMatchObject({ cashSales: 1500, salesCount: 0 });

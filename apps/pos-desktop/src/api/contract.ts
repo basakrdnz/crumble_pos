@@ -11,7 +11,7 @@ import type { BackupFile } from '../maintenance/backup';
 import type { CloudInfo, ConnectInput } from '../sync/cloud';
 import type { RestoreResult } from '../sync/restore';
 import type { SyncStatus } from '../sync/service';
-import type { CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
+import type { CloseShiftInput, CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
 
 export interface AuthStatus {
   passwordSet: boolean;
@@ -46,9 +46,9 @@ export interface PosApi {
 
   // Shifts
   getOpenShift(): Shift | null;
-  openShift(openingCash: number): Shift;
+  openShift(): Shift;
   getShiftSummary(shiftId: string): ShiftSummary;
-  closeShift(countedCash: number, notes?: string | null): CloseShiftResult;
+  closeShift(input: CloseShiftInput): CloseShiftResult;
   listShifts(limit?: number): Shift[];
 
   // Tabs and sales
@@ -63,7 +63,7 @@ export interface PosApi {
   setTabDiscount(tabId: string, percent: number | null): TabDetail;
   pay(tabId: string, parts: PaymentPart[]): PayResult;
   voidTab(tabId: string): Tab;
-  listOpenTabSummaries(): OpenTabSummary[];
+  listOpenTabSummaries(includeQuick?: boolean): OpenTabSummary[];
   moveTab(tabId: string, tableId: string): TabDetail;
   setCustomerName(tabId: string, name: string | null): TabDetail;
 

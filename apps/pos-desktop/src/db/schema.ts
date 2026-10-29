@@ -255,7 +255,48 @@ when new.status = 'void' and old.status = 'open'
 begin select raise(abort, 'Ödemesi alınmış hesap iptal edilemez. Önce iade yapın.'); end;
 `;
 
+// v3 (2026-10-29, kasa sayımı kaldırıldı): a shift closes without a counted
+// cash amount. SQLite cannot alter a check constraint, so the table is rebuilt
+// (migrate() turns foreign keys off around it) and its triggers recreated.
+const shiftWithoutCount = `
+create table shifts_v3 (
+  id text primary key,
+  opened_at text not null,
+  closed_at text,
+  opening_cash integer not null check (opening_cash >= 0),
+  counted_cash integer check (counted_cash >= 0),
+  expected_cash integer,
+  cash_difference integer,
+  notes text,
+  created_at text not null,
+  updated_at text not null,
+  check (
+    (closed_at is null and counted_cash is null and expected_cash is null and cash_difference is null)
+    or (closed_at is not null and expected_cash is not null
+        and ((counted_cash is null and cash_difference is null)
+             or (counted_cash is not null and cash_difference is not null
+                 and cash_difference = counted_cash - expected_cash)))
+  )
+) strict;
+insert into shifts_v3 (${shiftColumns.join(', ')}) select ${shiftColumns.join(', ')} from shifts;
+drop table shifts;
+alter table shifts_v3 rename to shifts;
+create unique index shifts_single_open_idx on shifts ((1)) where closed_at is null;
+
+create trigger shifts_no_delete before delete on shifts
+begin select raise(abort, 'Kayıt silinemez (shifts).'); end;
+
+create trigger shifts_frozen before update on shifts
+when old.closed_at is not null and (${anyChanged(shiftColumns)})
+begin select raise(abort, 'Kapanmış vardiya değiştirilemez.'); end;
+
+create trigger shifts_immutable_fields before update on shifts
+when ${anyChanged(['id', 'opened_at', 'opening_cash', 'created_at'])}
+begin select raise(abort, 'Vardiyada sadece kapanış alanları değiştirilebilir.'); end;
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
   voidRule,
+  shiftWithoutCount,
 ];

@@ -36,7 +36,8 @@ function requireOpenShift(ctx: Context): Shift {
   return shift;
 }
 
-export function openShift(ctx: Context, openingCash: number): Shift {
+/** Opens a shift. The cash drawer is not counted (2026-10-29), so the opening cash is 0 by default. */
+export function openShift(ctx: Context, openingCash = 0): Shift {
   assertKurus(openingCash);
   if (openingCash < 0) throw new Error('Açılış kasası negatif olamaz.');
   return tx(ctx, () => {
@@ -80,29 +81,39 @@ export interface CloseShiftResult {
   carriedOverTabs: number;
 }
 
+export interface CloseShiftInput {
+  /**
+   * Open tabs the cashier decided to carry over (devret). Every tab still
+   * open must be listed: the day cannot end before each open tab is paid,
+   * voided or carried over (2026-10-29).
+   */
+  carryOverTabIds?: readonly string[];
+  notes?: string | null;
+}
+
 /**
- * Closes the open shift. Open tabs are not closed: they carry over and are
- * paid in a later shift (payments count in the shift they are taken in). The
- * screen asks the user before calling this when tabs are open (plan §5.4).
+ * Closes the open shift (gün sonu). There is no cash count: expected cash is
+ * stored for information, counted cash and difference stay empty. Carried
+ * over tabs stay open and are paid in a later shift (payments count in the
+ * shift they are taken in).
  */
-export function closeShift(ctx: Context, countedCash: number, notes?: string | null): CloseShiftResult {
-  assertKurus(countedCash);
-  if (countedCash < 0) throw new Error('Sayılan nakit negatif olamaz.');
+export function closeShift(ctx: Context, input: CloseShiftInput = {}): CloseShiftResult {
   return tx(ctx, () => {
     const shift = requireOpenShift(ctx);
+    const carry = new Set(input.carryOverTabIds ?? []);
+    const undecided = listOpenTabs(ctx).filter((t) => !carry.has(t.id));
+    if (undecided.length > 0) {
+      throw new Error(`Gün sonu için önce açık hesaplara karar verin: ${undecided.map((t) => tabTitle(ctx, t)).join(', ')}.`);
+    }
     const summary = getShiftSummary(ctx, shift.id);
     const closed = updateRow<Shift>(ctx, 'shifts', shift.id, {
       closed_at: ctx.clock.now(),
-      counted_cash: countedCash,
+      counted_cash: null,
       expected_cash: summary.expectedCash,
-      cash_difference: countedCash - summary.expectedCash,
-      notes: notes?.trim() || null,
+      cash_difference: null,
+      notes: input.notes?.trim() || null,
     });
-    return {
-      shift: closed,
-      summary: { ...summary, countedCash, cashDifference: countedCash - summary.expectedCash },
-      carriedOverTabs: listOpenTabs(ctx).length,
-    };
+    return { shift: closed, summary, carriedOverTabs: carry.size };
   });
 }
 
@@ -215,6 +226,7 @@ export function setCustomerName(ctx: Context, tabId: string, name: string | null
 
 export interface OpenTabSummary {
   tab: Tab;
+  title: string;
   tableLabel: string | null;
   total: number;
   remaining: number;
@@ -222,9 +234,19 @@ export interface OpenTabSummary {
 }
 
 /** Open tabs with their running totals (tabs list, floor map). */
-export function listOpenTabSummaries(ctx: Context): OpenTabSummary[] {
+/** Short name of a tab for lists and messages: table label, customer name or "Hızlı satış". */
+export function tabTitle(ctx: Context, tab: Tab): string {
+  const label = tab.table_id
+    ? (ctx.db.prepare('select label from tables where id = ?').pluck().get(tab.table_id) as string | undefined)
+    : undefined;
+  if (label && tab.customer_name) return `${label} · ${tab.customer_name}`;
+  return label ?? tab.customer_name ?? 'Hızlı satış';
+}
+
+/** Open table and named tabs; with includeQuick also an unfinished quick sale (for the day end). */
+export function listOpenTabSummaries(ctx: Context, includeQuick = false): OpenTabSummary[] {
   return listOpenTabs(ctx)
-    .filter((tab) => tab.kind !== 'quick')
+    .filter((tab) => includeQuick || tab.kind !== 'quick')
     .map((tab) => {
       const detail = getTab(ctx, tab.id);
       const label = tab.table_id
@@ -232,6 +254,7 @@ export function listOpenTabSummaries(ctx: Context): OpenTabSummary[] {
         : null;
       return {
         tab,
+        title: tabTitle(ctx, tab),
         tableLabel: label,
         total: detail.totals.total,
         remaining: detail.remaining,
@@ -305,11 +328,14 @@ function requireEditableItem(ctx: Context, itemId: string): TabItem {
   return item;
 }
 
+/**
+ * What the line actions panel can change. Line discount and ikram are not
+ * used (2026-10-29: discount only on the cart, no ikram); their columns stay
+ * for older records and reports.
+ */
 export interface ItemPatch {
   quantity?: number;
   unit_price?: number;
-  discount_percent?: number | null;
-  is_comp?: boolean;
   note?: string | null;
 }
 
@@ -328,11 +354,6 @@ export function updateItem(ctx: Context, itemId: string, patch: ItemPatch): TabI
       if (patch.unit_price < 0) throw new Error('Fiyat negatif olamaz.');
       changes.unit_price = patch.unit_price;
     }
-    if (patch.discount_percent !== undefined) {
-      if (patch.discount_percent !== null) assertPercent(patch.discount_percent);
-      changes.discount_percent = patch.discount_percent;
-    }
-    if (patch.is_comp !== undefined) changes.is_comp = patch.is_comp;
     if (patch.note !== undefined) changes.note = patch.note?.trim() || null;
     const updated = updateRow<TabItem>(ctx, 'tab_items', itemId, changes);
     assertNotBelowPaid(ctx, updated.tab_id);

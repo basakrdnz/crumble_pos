@@ -37,9 +37,10 @@ describe('shifts', () => {
   it('opens one shift at a time and refuses sales without one', () => {
     const ctx = testContext();
     expect(() => openTab(ctx, { kind: 'quick' })).toThrow(/Açık vardiya yok/);
-    openShift(ctx, 50000);
-    expect(() => openShift(ctx, 0)).toThrow(/Zaten açık/);
-    expect(getOpenShift(ctx)?.opening_cash).toBe(50000);
+    openShift(ctx);
+    expect(() => openShift(ctx)).toThrow(/Zaten açık/);
+    // No cash count (2026-10-29): the opening cash is always 0.
+    expect(getOpenShift(ctx)?.opening_cash).toBe(0);
   });
 });
 
@@ -47,7 +48,7 @@ describe('quick sale', () => {
   it('adds products, raises quantity on repeat clicks and pays in cash', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 50000);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     addProduct(ctx, tab.id, m.latte.id);
     addProduct(ctx, tab.id, m.latte.id);
@@ -72,7 +73,7 @@ describe('quick sale', () => {
   it('starts a new line once the existing one was changed', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     const first = addProduct(ctx, tab.id, m.latte.id);
     updateItem(ctx, first.id, { unit_price: 20000 });
@@ -86,7 +87,7 @@ describe('quick sale', () => {
   it('changes a line price without touching the menu price', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     const line = addProduct(ctx, tab.id, m.tost.id);
     const changed = updateItem(ctx, line.id, { unit_price: 20000 });
@@ -94,38 +95,30 @@ describe('quick sale', () => {
     expect(getTab(ctx, tab.id).totals.priceChange).toBe(5000);
   });
 
-  it('applies %10 / %15 / typed discounts on a line and on the cart', () => {
+  it('applies %10 / %15 / typed discounts on the cart (no line discount)', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     const line = addProduct(ctx, tab.id, m.latte.id);
     addProduct(ctx, tab.id, m.cay.id);
-    updateItem(ctx, line.id, { discount_percent: 10 });
     setTabDiscount(ctx, tab.id, 15);
-    // latte 21500 - 2150 = 19350, çay 6500 -> 25850; cart 15% = 3877,5 -> 3877
-    expect(getTab(ctx, tab.id).totals).toMatchObject({ lineDiscount: 2150, cartDiscount: 3877, total: 21973 });
-    setTabDiscount(ctx, tab.id, 20);
-    expect(getTab(ctx, tab.id).totals.cartDiscount).toBe(5170);
+    // latte 21500 + çay 6500 = 28000; cart 15% = 4200
+    expect(getTab(ctx, tab.id).totals).toMatchObject({ lineDiscount: 0, cartDiscount: 4200, total: 23800 });
+    setTabDiscount(ctx, tab.id, 7);
+    // 7% of 28000 = 1960
+    expect(getTab(ctx, tab.id).totals.cartDiscount).toBe(1960);
     expect(() => setTabDiscount(ctx, tab.id, 0)).toThrow();
-    expect(() => updateItem(ctx, line.id, { discount_percent: 12.5 })).toThrow();
-  });
-
-  it('marks a line as comp (ikram)', () => {
-    const ctx = testContext();
-    const m = menu(ctx);
-    openShift(ctx, 0);
-    const tab = openTab(ctx, { kind: 'quick' });
-    const line = addProduct(ctx, tab.id, m.cay.id);
-    addProduct(ctx, tab.id, m.latte.id);
-    updateItem(ctx, line.id, { is_comp: true });
-    expect(getTab(ctx, tab.id).totals).toMatchObject({ total: 21500, comp: 6500 });
+    expect(() => setTabDiscount(ctx, tab.id, 12.5)).toThrow();
+    // The line panel cannot set a line discount or ikram any more.
+    updateItem(ctx, line.id, { discount_percent: 10, is_comp: true } as never);
+    expect(getTab(ctx, tab.id).items[0]).toMatchObject({ discount_percent: null, is_comp: false });
   });
 
   it('keeps a removed line as a void record', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     const line = addProduct(ctx, tab.id, m.tost.id);
     addProduct(ctx, tab.id, m.cay.id);
@@ -140,7 +133,7 @@ describe('quick sale', () => {
   it('takes a mixed payment as two rows and rejects over- or under-payment', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     addProduct(ctx, tab.id, m.tost.id);
     expect(() => pay(ctx, tab.id, [{ method: 'cash', amount: 30000 }])).toThrow(/fazla/);
@@ -157,20 +150,20 @@ describe('quick sale', () => {
     expect(() => addProduct(ctx, tab.id, m.cay.id)).toThrow(/kapanmış/);
   });
 
-  it('closes an all-comp tab without a payment', () => {
+  it('closes a zero-total tab without a payment', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     const line = addProduct(ctx, tab.id, m.cay.id);
-    updateItem(ctx, line.id, { is_comp: true });
+    updateItem(ctx, line.id, { unit_price: 0 });
     expect(pay(ctx, tab.id, []).detail.tab).toMatchObject({ status: 'paid', total: 0 });
   });
 
   it('refuses an empty tab and inactive products', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     expect(() => pay(ctx, tab.id, [])).toThrow(/ürün yok/);
     expect(() => addProduct(ctx, tab.id, m.pasif.id)).toThrow(/pasif/);
@@ -179,7 +172,7 @@ describe('quick sale', () => {
   it('voids a tab that never took money, not one that did', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const a = openTab(ctx, { kind: 'quick' });
     addProduct(ctx, a.id, m.cay.id);
     expect(voidTab(ctx, a.id)).toMatchObject({ status: 'void' });
@@ -193,7 +186,7 @@ describe('quick sale', () => {
   it('does not let a discount push the tab below what was paid', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'named', customer_name: 'Ayşe' });
     addProduct(ctx, tab.id, m.tost.id);
     pay(ctx, tab.id, [{ method: 'cash', amount: 24000 }]);
@@ -205,7 +198,7 @@ describe('quick sale', () => {
     const ctx = testContext();
     const m = menu(ctx);
     ctx.db.exec('delete from outbox');
-    openShift(ctx, 0);
+    openShift(ctx);
     const tab = openTab(ctx, { kind: 'quick' });
     addProduct(ctx, tab.id, m.cay.id);
     pay(ctx, tab.id, [{ method: 'card', amount: 6500 }]);
@@ -214,12 +207,14 @@ describe('quick sale', () => {
   });
 });
 
-// Faz 2 kabul: örnek bir gün simüle edilir, kapanıştaki beklenen nakit elle hesapla aynıdır.
+// Faz 2 kabul (2026-10-29 güncellemesi: kasa sayımı, açılış kasası, ikram ve
+// satır indirimi yok): örnek bir gün simüle edilir, gün sonundaki beklenen
+// nakit elle hesapla aynıdır.
 describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
-  it('closes the shift with the hand-calculated expected cash', () => {
+  it('closes the day with the hand-calculated expected cash', () => {
     const ctx = testContext();
     const m = menu(ctx);
-    openShift(ctx, 50000); // açılış kasası 500 ₺
+    openShift(ctx);
 
     // 1) 2 latte, nakit 430 ₺
     const s1 = openTab(ctx, { kind: 'quick' });
@@ -233,23 +228,19 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
     addProduct(ctx, s2.id, m.cay.id);
     pay(ctx, s2.id, [{ method: 'card', amount: 31500 }]);
 
-    // 3) americano %10 indirimli (193,50) + ikram çay, nakit
+    // 3) americano + çay, sepete %10 (280 -> 252 ₺), nakit
     const s3 = openTab(ctx, { kind: 'quick' });
-    const a = addProduct(ctx, s3.id, m.americano.id);
-    const c = addProduct(ctx, s3.id, m.cay.id);
-    updateItem(ctx, a.id, { discount_percent: 10 });
-    updateItem(ctx, c.id, { is_comp: true });
-    pay(ctx, s3.id, [{ method: 'cash', amount: 19350 }]);
+    addProduct(ctx, s3.id, m.americano.id);
+    addProduct(ctx, s3.id, m.cay.id);
+    setTabDiscount(ctx, s3.id, 10);
+    pay(ctx, s3.id, [{ method: 'cash', amount: 25200 }]);
 
-    // 4) tost fiyatı 200 ₺'ye çekildi, sepete %15 -> 170 ₺; karma 100 nakit + 70 kart
+    // 4) tost fiyatı 200 ₺'ye çekildi, sepete %15 -> 170 ₺, kart
     const s4 = openTab(ctx, { kind: 'quick' });
     const t = addProduct(ctx, s4.id, m.tost.id);
     updateItem(ctx, t.id, { unit_price: 20000 });
     setTabDiscount(ctx, s4.id, 15);
-    pay(ctx, s4.id, [
-      { method: 'cash', amount: 10000 },
-      { method: 'card', amount: 7000 },
-    ]);
+    pay(ctx, s4.id, [{ method: 'card', amount: 17000 }]);
 
     // 5) yanlış açılan satış iptal edildi
     const s5 = openTab(ctx, { kind: 'quick' });
@@ -263,32 +254,35 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
     voidItem(ctx, wrong.id);
     pay(ctx, s6.id, [{ method: 'cash', amount: 6500 }]);
 
-    // 7) isimli hesap açık kalır (devir)
+    // 7) isimli hesap açık kalır, gün sonunda devredilir
     const open = openTab(ctx, { kind: 'named', customer_name: 'Mehmet' });
     addProduct(ctx, open.id, m.cay.id);
 
-    // Elle hesap: 500 + 430 + 193,50 + 100 + 65 = 1.288,50 ₺
-    const handExpected = 50000 + 43000 + 19350 + 10000 + 6500;
+    // Elle hesap: 430 + 252 + 65 = 747 ₺ (açılış kasası yok)
+    const handExpected = 43000 + 25200 + 6500;
     const summary = getShiftSummary(ctx, getOpenShift(ctx)!.id);
     expect(summary.expectedCash).toBe(handExpected);
     expect(summary).toMatchObject({
-      cashSales: 43000 + 19350 + 10000 + 6500,
-      cardSales: 31500 + 7000,
+      openingCash: 0,
+      cashSales: 43000 + 25200 + 6500,
+      cardSales: 31500 + 17000,
       salesCount: 5,
-      salesTotal: 43000 + 31500 + 19350 + 17000 + 6500,
-      discountTotal: 2150 + 3000,
-      compTotal: 6500,
+      salesTotal: 43000 + 31500 + 25200 + 17000 + 6500,
+      discountTotal: 2800 + 3000,
+      compTotal: 0,
       voidTotal: 21500 + 25000,
       voidedTabCount: 1,
       priceChangeTotal: 5000,
     });
 
-    const closed = closeShift(ctx, 128000, 'kasada 8,50 eksik');
-    expect(closed.shift).toMatchObject({ expected_cash: handExpected, counted_cash: 128000, cash_difference: -850 });
+    // Gün sonu: every open tab needs a decision first.
+    expect(() => closeShift(ctx)).toThrow(/karar verin: Mehmet/);
+    const closed = closeShift(ctx, { carryOverTabIds: [open.id] });
+    expect(closed.shift).toMatchObject({ expected_cash: handExpected, counted_cash: null, cash_difference: null });
     expect(closed.carriedOverTabs).toBe(1);
 
     // The open tab carries over and is paid in the next shift.
-    const next = openShift(ctx, 128000);
+    const next = openShift(ctx);
     expect(listOpenTabs(ctx).map((tab) => tab.customer_name)).toEqual(['Mehmet']);
     pay(ctx, open.id, [{ method: 'cash', amount: 6500 }]);
     expect(getShiftSummary(ctx, next.id).cashSales).toBe(6500);
@@ -297,22 +291,15 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
       closed_shift_id: next.id,
     });
   });
-});
 
-describe('POS password', () => {
-  it('is set once, checked and changed with the old one', () => {
+  it('blocks the day end while a quick sale is unfinished', () => {
     const ctx = testContext();
-    expect(isPasswordSet(ctx)).toBe(false);
-    expect(() => setInitialPassword(ctx, '12')).toThrow(/en az/);
-    setInitialPassword(ctx, 'crumble1');
-    expect(() => setInitialPassword(ctx, 'other')).toThrow();
-    expect(checkPassword(ctx, 'crumble1')).toBe(true);
-    expect(checkPassword(ctx, 'yanlis')).toBe(false);
-    expect(() => changePassword(ctx, 'yanlis', 'yeni1234')).toThrow(/yanlış/);
-    changePassword(ctx, 'crumble1', 'yeni1234');
-    expect(checkPassword(ctx, 'yeni1234')).toBe(true);
-    const stored = ctx.db.prepare("select value from settings where key = 'pos_password_hash'").get() as { value: string };
-    expect(stored.value).not.toContain('yeni1234');
-    expect(stored.value).toMatch(/^\$2[aby]\$/);
+    const m = menu(ctx);
+    openShift(ctx);
+    const quick = openTab(ctx, { kind: 'quick' });
+    addProduct(ctx, quick.id, m.cay.id);
+    expect(() => closeShift(ctx)).toThrow(/Hızlı satış/);
+    voidTab(ctx, quick.id);
+    expect(closeShift(ctx).shift.closed_at).not.toBeNull();
   });
 });
