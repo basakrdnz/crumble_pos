@@ -91,9 +91,9 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
-13. Bitki çayları: satışta sadece "Bitki Çayı (Küçük/Büyük)" kalacak, kutuda "i" butonu çeşitleri ve içeriklerini gösteren **sadece bilgi** penceresi açacak (işlevi yok). Çeşit listesi ve içerikleri kullanıcıdan gelecek, sonra yapılacak.
 11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
 12. Mobil yönetim uygulaması da G2 ile yeniden tasarlanacak (kasa bittikten sonra).
+13. Bitki çayları: satışta sadece "Bitki Çayı (Küçük/Büyük)" kalacak, kutuda "i" butonu çeşitleri ve içeriklerini gösteren **sadece bilgi** penceresi açacak (işlevi yok). Çeşit listesi ve içerikleri kullanıcıdan gelecek, sonra yapılacak.
 
 ## Git akışı
 
