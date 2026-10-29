@@ -12,7 +12,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 ## Uygulamalar ve yetki
 
 - **Kasa (PC, Windows):** Satış, hesap, vardiya, katalog, kroki. Girişte **tek sabit ortak şifre** sorulur, kullanıcı adı yok, rol yok. Şifre yerelde bcrypt/argon2 hash olarak saklanır ve ayarlardan eski şifre sorularak değiştirilir. "Kim açtı/kim değiştirdi" tutulmaz.
-- **Yönetim (mobil):** Sadece ortaklar, e-posta + şifre (Supabase Auth). **Salt okunur.** "Son senkron: HH:MM" gösterir.
+- **Yönetim (mobil):** Sadece ortaklar, e-posta + şifre (Supabase Auth). Salt okunur, **tek istisna menü (2026-10-30 kararı):** telefondan ürün **fiyatı değiştirilir, ürün eklenir ve silinir (soft delete)**. Kategori ve diğer alanlar kasada kalır. Değişiklik kasaya senkronla düşer; aynı üründe en son yapılan kazanır (`updated_at`). Açık hesaplardaki satırlar etkilenmez (satış anı fiyatı saklı). "Son senkron: HH:MM" gösterir.
 - **Bulut kimliği:** Kasa, Supabase'e tek bir cihaz kullanıcısıyla bağlanır (`app_metadata.role = 'device'`, ayrı `devices` tablosu yok). Bu, kasa şifresinden ayrıdır. Ortaklar `partners` tablosundan tanınır. **Service role anahtarı hiçbir istemciye konmaz.**
 
 ## Teknoloji (kesin)
@@ -21,7 +21,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 - Kasa: Electron + React + Vite (`electron-vite`), SQLite (`better-sqlite3`), sadece Windows, fare/klavye odaklı.
 - Bulut: Supabase (Postgres, Auth, Realtime, RLS). Mobil: Expo + expo-router.
 - Ortak kod: `packages/shared` (tipler, para, hesaplar, rapor mantığı).
-- **Offline-önce:** Kasa önce SQLite'a yazar, sonra outbox ile buluta **tek yönlü** push eder. İnternet yokken hiçbir işlem engellenmez. Pull sadece yeni kurulum veya geri yüklemede yapılır. Fark çıkarsa **kasa doğrudur**.
+- **Offline-önce:** Kasa önce SQLite'a yazar, sonra outbox ile buluta push eder. İnternet yokken hiçbir işlem engellenmez. Satış, ödeme, vardiya **tek yönlü** (kasa → bulut); fark çıkarsa **kasa doğrudur**. **İstisna: ürünler** telefondan da değişebildiği için kasa buluttaki daha yeni ürün değişikliklerini çeker (son yazan kazanır). Bunun dışında pull sadece yeni kurulum veya geri yüklemede.
 
 ## Kurallar (hata önleme)
 
@@ -71,7 +71,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 - **Tasarım yenileme** ✅ (2026-10-29, `e2e/tasarim.e2e.ts`). G2 Orman paleti, sol ray, S2 satış düzeni, P2 ödeme butonları, "Günaydın." girişi. Tasarım planı: Design artifact "Crumble POS Tasarım Planı" (https://claude.ai/artifact/RT83SYTbT3SNzaT5TSEyMC). Kroki görselleri ve şömine sonra.
 8. **(Sonra) Ortak satış görünümü:** Crumble online siparişleri + kasa satışları (bkz. açık konu 9–10).
 
-**MVP dışı:** Stok düzenleme ve sayımı (ileride, planı ayrıca çıkarılacak), yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme.
+**MVP dışı:** Stok düzenleme ve sayımı (ileride, planı ayrıca çıkarılacak), yazıcı/çekmece, barkod, stok/reçete, paket servis, ürün varyasyonu/ekstra (sıcak/buzlu sonraki sürümde gelecek; o zaman `tab_items.product_id` eski ürüne bağlı kalacak), ürün bazlı hesap bölme, kişi bazlı giriş/roller, mali entegrasyon, mobilde düzenleme (menüde fiyat/ekle/sil hariç, 2026-10-30).
 
 ## Çalışma kuralları
 
@@ -94,6 +94,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
 12. Mobil yönetim uygulaması da G2 ile yeniden tasarlanacak (kasa bittikten sonra).
 13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin yeşil çaylı bir 250 g türü de var; kullanıcı teyit edecek.
+14. Telefondan menü (2026-10-30): kapsam fiyat, ürün ekle, ürün sil; çakışmada en son yapılan. Tasarım sayfasında "Menü" ekranları; uygulama mobil tasarımla birlikte. Gerekecekler: partner için `products` insert/update RLS (sadece izinli alanlar), kasada ürün çekme (pull), `catalog_changes`'e kaynak (kasa/telefon) bilgisi (yeni migration).
 
 ## Git akışı
 

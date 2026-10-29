@@ -132,6 +132,8 @@ Sistem **yazarkasaya veya mali cihaza bağlı değildir**. Yasal fiş bu sistemi
 
 ## 6. Yönetim uygulaması (mobil) – ekranlar
 
+**Güncelleme (2026-10-30):** Telefondan menüde **fiyat değiştirme, ürün ekleme ve ürün silme (soft delete)** yapılabilir. Bu tek yazma istisnasıdır; satış, vardiya ve rapor tarafı salt okunur kalır. Değişiklik buluta yazılır, kasa bunu çeker ve yerel kataloğuna uygular. Aynı ürün iki yerde değişirse en son yapılan kazanır (`updated_at`). Değişiklik geçmişinde kaynağı (kasa/telefon) görünür. Açık hesaplardaki satırlar etkilenmez.
+
 Giriş: e-posta + şifre (Supabase Auth). Sadece ortak hesaplar.
 
 1. **Bugün:** Canlı. Bugünkü ciro, nakit/kart dağılımı, satış adedi, bugünkü vardiyanın açılış saati ve (kapandıysa) kapanış saati, açık hesap sayısı.
