@@ -2,12 +2,13 @@ import { formatTL } from '@crumble/shared';
 import { useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { PriceInput } from '../../components/PriceInput';
-import { useAction, useApiData } from '../../components/useApi';
+import { useAction, useApiData, useCatalogVersion } from '../../components/useApi';
 
 /** Fiyatlar: every product with its price and a "satışta" switch. */
 export function BulkPrices() {
+  const catalogVersion = useCatalogVersion();
   const [categories] = useApiData(() => api.listCategories());
-  const [products, reload] = useApiData(() => api.listProducts());
+  const [products, reload] = useApiData(() => api.listProducts(), [catalogVersion]);
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const run = useAction();

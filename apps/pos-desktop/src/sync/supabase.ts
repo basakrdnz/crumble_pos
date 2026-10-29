@@ -3,7 +3,7 @@
 // kept in the local settings table through `storage`, never the password.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { SyncedTable } from '../db/database';
-import { type CloudReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from './transport';
+import { type CatalogPuller, type CloudReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from './transport';
 
 export interface CloudConfig {
   url: string;
@@ -42,8 +42,18 @@ export async function signInDevice(client: SupabaseClient, email: string, passwo
   }
 }
 
-export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader {
+export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader & CatalogPuller {
+  const since = async (table: string, column: string, value: string, filter?: [string, string]) => {
+    let query = client.from(table).select('*').gt(column, value);
+    if (filter) query = query.eq(filter[0], filter[1]);
+    const { data, error } = await query.order(column).order('id').limit(1000);
+    const syncError = asSyncError(error);
+    if (syncError) throw syncError;
+    return (data ?? []) as Record<string, unknown>[];
+  };
   return {
+    pullProducts: (value) => since('products', 'updated_at', value),
+    pullMobileChanges: (value) => since('catalog_changes', 'created_at', value, ['source', 'mobile']),
     async push(table: SyncedTable, rows: Record<string, unknown>[], mode: PushMode) {
       let response;
       try {

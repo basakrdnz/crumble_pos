@@ -190,23 +190,18 @@ export interface Kpis {
   /** Discount as a share of sales before discount, in tenths of a percent (31 = %3,1). */
   discountPermille: number;
   void: Kurus;
-  /** Average table/named tab duration in minutes (paid), null without any. */
-  avgTabMinutes: number | null;
 }
 
 /** Raporlar · Kıyas indicators for one period (sales at closing time). */
 export function periodKpis(data: Pick<ReportData, 'tabs'>, totals: { discount: Kurus; void: Kurus }): Kpis {
   const paid = data.tabs.filter((t) => t.status === 'paid');
   const revenue = sumKurus(paid.map((t) => t.total ?? 0));
-  const seated = paid.filter((t) => t.kind !== 'quick' && t.closed_at);
-  const minutes = seated.map((t) => (Date.parse(t.closed_at!) - Date.parse(t.opened_at)) / 60_000);
   return {
     revenue,
     sales: paid.length,
     avgBasket: paid.length ? Math.round(revenue / paid.length) : 0,
     discountPermille: revenue + totals.discount > 0 ? Math.round((totals.discount / (revenue + totals.discount)) * 1000) : 0,
     void: totals.void,
-    avgTabMinutes: minutes.length ? Math.round(minutes.reduce((a, b) => a + b, 0) / minutes.length) : null,
   };
 }
 

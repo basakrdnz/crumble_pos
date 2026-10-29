@@ -3,7 +3,7 @@ import { formatTL } from '@crumble/shared';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { PriceInput } from '../../components/PriceInput';
-import { useAction, useApiData } from '../../components/useApi';
+import { useAction, useApiData, useCatalogVersion } from '../../components/useApi';
 
 function move<T>(items: readonly T[], index: number, delta: number): T[] {
   const next = [...items];
@@ -14,8 +14,9 @@ function move<T>(items: readonly T[], index: number, delta: number): T[] {
 }
 
 export function CatalogEditor() {
+  const catalogVersion = useCatalogVersion();
   const [categories, reloadCategories] = useApiData(() => api.listCategories());
-  const [products, reloadProducts] = useApiData(() => api.listProducts());
+  const [products, reloadProducts] = useApiData(() => api.listProducts(), [catalogVersion]);
   const [selectedId, setSelectedId] = useState<string>();
   const [newCategory, setNewCategory] = useState('');
   const [editing, setEditing] = useState<Product | 'new'>();

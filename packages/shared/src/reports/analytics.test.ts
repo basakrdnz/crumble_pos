@@ -85,13 +85,13 @@ describe('Saatler: heatmap from shift hours', () => {
 });
 
 describe('Kıyas and Ürünler', () => {
-  it('computes basket, discount rate and seated time', () => {
+  it('computes basket and discount rate', () => {
     const tabs = [
       sale('2026-11-02', '12:00', 20000),
       sale('2026-11-02', '13:00', 10000, { kind: 'table', opened_at: at('2026-11-02', '12:20') }),
     ];
     expect(periodKpis({ tabs }, { discount: 1000, void: 500 })).toEqual({
-      revenue: 30000, sales: 2, avgBasket: 15000, discountPermille: 32, void: 500, avgTabMinutes: 40,
+      revenue: 30000, sales: 2, avgBasket: 15000, discountPermille: 32, void: 500,
     });
   });
 

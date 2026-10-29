@@ -135,6 +135,8 @@ export interface CatalogChange extends BaseRow {
   old_value: string | null;
   new_value: string | null;
   changed_at: UtcTimestamp;
+  /** Where the change was made: the POS or the manager app (2026-10-30). */
+  source: 'pos' | 'mobile';
 }
 
 export interface Partner extends BaseRow {

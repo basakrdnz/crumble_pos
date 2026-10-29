@@ -295,8 +295,15 @@ when ${anyChanged(['id', 'opened_at', 'opening_cash', 'created_at'])}
 begin select raise(abort, 'Vardiyada sadece kapanış alanları değiştirilebilir.'); end;
 `;
 
+// v4 (2026-10-30, telefondan menü): the manager app may change prices and add
+// or delete products; its changes come back with source = 'mobile'.
+const catalogSource = `
+alter table catalog_changes add column source text not null default 'pos' check (source in ('pos', 'mobile'));
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
   voidRule,
   shiftWithoutCount,
+  catalogSource,
 ];

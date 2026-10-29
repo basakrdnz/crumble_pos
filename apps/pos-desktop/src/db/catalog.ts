@@ -24,6 +24,7 @@ export function logChange(
     old_value: asText(old_value),
     new_value: asText(new_value),
     changed_at: ctx.clock.now(),
+    source: 'pos',
   });
 }
 

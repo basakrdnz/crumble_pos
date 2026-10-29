@@ -3,7 +3,8 @@
 // sale: all writes go to SQLite first (plan §3 offline-first).
 import type { Context } from '../db/database';
 import { pendingCount, pruneSent, pushPending } from './engine';
-import type { SyncTransport } from './transport';
+import { pullCatalog } from './pull';
+import type { CatalogPuller, SyncTransport } from './transport';
 
 export type SyncState = 'disabled' | 'idle' | 'syncing' | 'offline' | 'error';
 
@@ -12,15 +13,19 @@ export interface SyncStatus {
   pending: number;
   lastSyncAt: string | null;
   lastError: string | null;
+  /** Goes up when products changed by the phone were pulled in (screens reload the menu). */
+  catalogVersion: number;
 }
 
 const MIN_DELAY = 10_000;
 const MAX_DELAY = 5 * 60_000;
 const NUDGE_DELAY = 1_500;
 const HEARTBEAT_EVERY = 60_000;
+/** Idle round: push leftovers and pull the phone's menu changes. */
+const IDLE_DELAY = 20_000;
 
 export class SyncService {
-  private transport: SyncTransport | null = null;
+  private transport: (SyncTransport & Partial<CatalogPuller>) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private failures = 0;
@@ -31,7 +36,7 @@ export class SyncService {
     private readonly ctx: Context,
     private readonly onStatus: (status: SyncStatus) => void = () => {},
   ) {
-    this.status = { state: 'disabled', pending: pendingCount(ctx), lastSyncAt: null, lastError: null };
+    this.status = { state: 'disabled', pending: pendingCount(ctx), lastSyncAt: null, lastError: null, catalogVersion: 0 };
   }
 
   getStatus(): SyncStatus {
@@ -39,7 +44,7 @@ export class SyncService {
   }
 
   /** Starts (or stops, with null) syncing to the given transport. */
-  setTransport(transport: SyncTransport | null): void {
+  setTransport(transport: (SyncTransport & Partial<CatalogPuller>) | null): void {
     this.transport = transport;
     this.failures = 0;
     this.update({ state: transport ? 'idle' : 'disabled', lastError: null });
@@ -97,12 +102,21 @@ export class SyncService {
           }
         }
         pruneSent(this.ctx);
-        this.update({ state: 'idle', lastSyncAt: now, lastError: null });
+        let catalogVersion = this.status.catalogVersion;
+        if (transport.pullProducts && transport.pullMobileChanges) {
+          try {
+            const pulled = await pullCatalog(this.ctx, transport as CatalogPuller);
+            if (pulled.products > 0) catalogVersion++;
+          } catch {
+            // Pulling is best effort; the next round tries again.
+          }
+        }
+        this.update({ state: 'idle', lastSyncAt: now, lastError: null, catalogVersion });
       }
     } finally {
       this.running = false;
     }
-    const delay = this.failures === 0 ? HEARTBEAT_EVERY : Math.min(MAX_DELAY, MIN_DELAY * 2 ** (this.failures - 1));
+    const delay = this.failures === 0 ? IDLE_DELAY : Math.min(MAX_DELAY, MIN_DELAY * 2 ** (this.failures - 1));
     if (this.transport === transport) this.schedule(delay);
   }
 }

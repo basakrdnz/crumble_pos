@@ -15,6 +15,7 @@ import {
   type Shift,
   type Tab,
   type TabItem,
+  tabTotals,
 } from '@crumble/shared';
 import { supabase } from './supabase';
 
@@ -64,6 +65,13 @@ export async function loadReportData(from: Day, to: Day): Promise<ReportData> {
 
 export async function loadOpenTabs(): Promise<Tab[]> {
   return all<Tab>(() => supabase.from('tabs').select('*').eq('status', 'open').order('opened_at').order('id'));
+}
+
+/** Open tabs with their running total (tabs.total is only set at close). */
+export async function loadOpenTabTotals(): Promise<{ tab: Tab; total: number }[]> {
+  const tabs = await loadOpenTabs();
+  const items = await byIds<TabItem>('tab_items', 'tab_id', tabs.map((t) => t.id));
+  return tabs.map((tab) => ({ tab, total: tabTotals(items.filter((i) => i.tab_id === tab.id), tab.discount_percent).total }));
 }
 
 export interface DeviceStatus {

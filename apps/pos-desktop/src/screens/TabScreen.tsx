@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { PromptDialog } from '../components/PromptDialog';
 import { useToast } from '../components/Toast';
-import { useAction, useApiData } from '../components/useApi';
+import { useAction, useApiData, useCatalogVersion } from '../components/useApi';
 import { formatTime } from '../format';
 import type { TabDetail } from '../db/sales';
 import { TabWorkspace } from './sale/TabWorkspace';
@@ -16,8 +16,9 @@ export type TabTarget = { tabId: string } | { tableId: string } | { customerName
  * moving to another table, attaching a name and cancelling (plan §5.2).
  */
 export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): void }) {
+  const catalogVersion = useCatalogVersion();
   const [categories] = useApiData(() => api.listCategories());
-  const [products] = useApiData(() => api.listProducts());
+  const [products] = useApiData(() => api.listProducts(), [catalogVersion]);
   const [tables] = useApiData(() => api.listTables());
   const [detail, setDetail] = useState<TabDetail | null>(null);
   const [dialog, setDialog] = useState<'move' | 'name' | null>(null);

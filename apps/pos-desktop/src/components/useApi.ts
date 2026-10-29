@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { api } from '../api/client';
 import { useToast } from './Toast';
 
 /** Loads data from the API and reloads on demand. */
@@ -35,4 +36,27 @@ export function useAction() {
     },
     [toast],
   );
+}
+
+/**
+ * Changes when the phone's menu changes were pulled in (telefondan menü):
+ * screens that show products pass it as a reload dependency.
+ */
+export function useCatalogVersion(): number {
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = () =>
+      api
+        .getSyncStatus()
+        .then((s) => alive && setVersion(s.catalogVersion))
+        .catch(() => {});
+    void tick();
+    const id = window.setInterval(tick, 5000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
+  return version;
 }
