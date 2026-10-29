@@ -20,7 +20,7 @@ export async function openShiftUi(page: Page) {
 
 export async function pick(page: Page, category: string, product: string) {
   await page.getByRole('tab', { name: category }).click();
-  await page.getByRole('button', { name: new RegExp(`^${product.replace(/[()]/g, '\\$&')}`) }).click();
+  await page.locator(`.product[data-product="${product}"] .product-main`).click();
 }
 
 export const cartTotal = (page: Page) => page.getByTestId('cart-total').textContent();

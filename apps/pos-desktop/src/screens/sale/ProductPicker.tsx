@@ -11,6 +11,7 @@ export function ProductPicker({
   products,
   inCart,
   onPick,
+  onDecrease,
   disabled,
 }: {
   categories: Category[];
@@ -18,6 +19,8 @@ export function ProductPicker({
   /** product id -> quantity in the current cart */
   inCart: ReadonlyMap<string, number>;
   onPick(product: Product): void;
+  /** One less of this product: lowers the last line, or removes it at 1. */
+  onDecrease(product: Product): void;
   disabled?: boolean;
 }) {
   const visible = categories.filter((c) => products.some((p) => p.category_id === c.id && p.is_active));
@@ -92,17 +95,25 @@ export function ProductPicker({
         {shown.map((p) => {
           const qty = inCart.get(p.id) ?? 0;
           return (
-            <button key={p.id} className={`product${qty ? ' in-cart' : ''}`} disabled={disabled} onClick={() => onPick(p)}>
-              <span className="name">{p.name}</span>
-              <span className="foot">
+            <div key={p.id} className={`product${qty ? ' in-cart' : ''}`} data-product={p.name}>
+              <button className="product-main" disabled={disabled} onClick={() => onPick(p)}>
+                <span className="name">{p.name}</span>
                 <span className="price">{formatTL(p.price)}</span>
-                {qty > 0 && (
+              </button>
+              {qty > 0 && (
+                <span className="qty-ctrl" role="group" aria-label={`${p.name} adedi`}>
+                  <button aria-label={`${p.name} azalt`} disabled={disabled} onClick={() => onDecrease(p)}>
+                    −
+                  </button>
                   <span className="qty" aria-label={`Sepette ${qty}`}>
                     {qty}
                   </span>
-                )}
-              </span>
-            </button>
+                  <button aria-label={`${p.name} artır`} disabled={disabled} onClick={() => onPick(p)}>
+                    +
+                  </button>
+                </span>
+              )}
+            </div>
           );
         })}
         {shown.length === 0 && <div className="empty">Ürün yok.</div>}

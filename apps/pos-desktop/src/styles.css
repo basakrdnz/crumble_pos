@@ -237,19 +237,30 @@ kbd {
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
 }
 .product {
-  height: 92px; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 14px; text-align: left;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-box); cursor: pointer;
+  position: relative; height: 92px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-box);
 }
-.product:hover:not(:disabled) { border-color: var(--sel-line); }
-.product:active:not(:disabled) { transform: scale(0.98); }
+.product:hover { border-color: var(--sel-line); }
 .product.in-cart { background: var(--sel-bg); border-color: var(--sel-line); }
-.product .name { font-weight: 700; line-height: 19px; }
-.product .foot { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-.product .price { color: var(--muted); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
-.product .qty {
-  min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--primary); color: var(--on-primary);
-  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+.product-main {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 14px;
+  text-align: left; background: transparent; border: none; border-radius: inherit; cursor: pointer;
 }
+.product-main:active:not(:disabled) { transform: scale(0.98); }
+.product .name { font-weight: 700; line-height: 19px; }
+.product .price { color: var(--muted); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+/* In the cart: a full-width "− qty +" bar replaces the price at the bottom
+   (the tile is too narrow for both; the price is in the cart line). */
+.product.in-cart .price { visibility: hidden; }
+.qty-ctrl {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; height: 30px; display: flex; align-items: center; justify-content: space-between;
+  padding: 2px; border-radius: 999px; background: var(--primary);
+}
+.qty-ctrl button {
+  width: 34px; height: 26px; border: none; border-radius: 999px; background: transparent; color: var(--on-primary);
+  font-size: 18px; font-weight: 800; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.qty-ctrl button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); }
+.product .qty { color: var(--on-primary); font-size: 14px; font-weight: 800; text-align: center; }
 
 .actions-col {
   width: 288px; flex: none; border-left: 1px solid var(--line); background: var(--surface);

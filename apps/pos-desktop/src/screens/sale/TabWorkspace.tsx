@@ -122,6 +122,20 @@ export function TabWorkspace({
       setDetail(await api.addProduct(tab.tab.id, product.id));
     });
 
+  // "−" on a tile: the newest line of that product loses one; a line at 1 is
+  // removed (kept as a void record, like "Satırı çıkar").
+  const decrease = (product: Product) =>
+    run(async () => {
+      const line = detail?.items.filter((i) => i.product_id === product.id && !i.voided_at).at(-1);
+      if (!line) return;
+      if (line.quantity > 1) {
+        setDetail(await api.updateItem(line.id, { quantity: line.quantity - 1 }));
+      } else {
+        setDetail(await api.voidItem(line.id, null));
+        if (selectedId === line.id) setSelectedId(null);
+      }
+    });
+
   const setCartDiscount = async (percent: number | null) => {
     if (!detail) return;
     const next = await run(() => api.setTabDiscount(detail.tab.id, percent));
@@ -130,7 +144,7 @@ export function TabWorkspace({
 
   return (
     <div className="sale">
-      <ProductPicker categories={categories} products={products} inCart={inCart} onPick={(p) => void pick(p)} />
+      <ProductPicker categories={categories} products={products} inCart={inCart} onPick={(p) => void pick(p)} onDecrease={(p) => void decrease(p)} />
       <LineActions
         item={selected}
         entry={selected ? null : entry}

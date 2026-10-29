@@ -40,7 +40,13 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     expect(await page.locator('.cart-line').count()).toBe(1);
     expect(await total(page)).toBe('430,00 ₺');
     // The tile shows how many are in the cart.
-    expect(await page.getByRole('button', { name: /^Cafe Latte/ }).getByLabel('Sepette 2').count()).toBe(1);
+    const tile = page.locator('.product[data-product="Cafe Latte"]');
+    expect(await tile.getByLabel('Sepette 2').count()).toBe(1);
+    // − / + on the tile change the quantity without opening the line panel.
+    await tile.getByRole('button', { name: 'Cafe Latte artır' }).click();
+    await expect.poll(() => total(page)).toBe('645,00 ₺');
+    await tile.getByRole('button', { name: 'Cafe Latte azalt' }).click();
+    await expect.poll(() => total(page)).toBe('430,00 ₺');
     await page.keyboard.press('F11');
     await expect.poll(() => page.getByTestId('last-sale').textContent()).toContain('430,00 ₺ · nakit');
   });
@@ -79,6 +85,13 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     await page.getByLabel('İptal nedeni').fill('yanlış ürün');
     await page.getByRole('button', { name: 'Çıkar', exact: true }).click();
     await page.locator('[data-line="Karışık Tost"]').waitFor({ state: 'detached' });
+
+    // − at quantity 1 removes the line (void record).
+    await pick(page, 'Kahve', 'Espresso');
+    await page.locator('[data-line="Espresso"]').waitFor();
+    await page.getByRole('button', { name: 'Espresso azalt' }).click();
+    await page.locator('[data-line="Espresso"]').waitFor({ state: 'detached' });
+    expect(await page.locator('.product[data-product="Espresso"] .qty-ctrl').count()).toBe(0);
 
     // 200 + 215 + 65 = 480, sepet %10 = 48 -> 432
     await page.getByRole('button', { name: 'Sepet %10' }).click();
@@ -130,7 +143,7 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     expect(await cell('Kart satışlar')).toBe('712,40 ₺'); // 422,40 + 290
     expect(await cell('Satış adedi')).toBe('4');
     expect(await cell('İndirim toplamı')).toBe('105,60 ₺'); // 48 + 57,60
-    expect(await cell('İptal toplamı')).toBe('525,00 ₺ (1 hesap)'); // karışık tost 285 + mocha 240
+    expect(await cell('İptal toplamı')).toBe('635,00 ₺ (1 hesap)'); // karışık tost 285 + espresso 110 + mocha 240
     expect(await cell('Fiyat değişikliği farkı')).toBe('50,00 ₺');
     await snap(page, 'faz2-end-of-day');
     await page.getByRole('button', { name: 'Tamam' }).click();
