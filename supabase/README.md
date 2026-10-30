@@ -54,7 +54,7 @@ from auth.users u;
 
 ## 5. Kasayı bağlama
 
-Kasada **Ayarlar → Bulut bağlantısı**: adres, anon key, cihaz e-postası ve şifresi → **Bağlan**.
+Kasada **Ayarlar → Bulut bağlantısı**: adres (sonu `/rest/v1/` olsa da olur), publishable key, cihaz e-postası ve şifresi → **Bağlan**.
 
 - Şifre kasada saklanmaz. Sadece oturum saklanır (Windows'ta şifreli).
 - Bağlantıdan önce yapılan tüm kayıtlar sırayla gönderilir. Sol raydaki gösterge durumu gösterir.
