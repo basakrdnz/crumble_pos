@@ -23,7 +23,7 @@ export const CRUMBLE_TABLES: readonly {
   { label: '3', shape: 'rectangle' as TableShape, x: 900, y: 185, width: 240, height: 110 },
   { label: '4', shape: 'rectangle' as TableShape, x: 110, y: 470, width: 150, height: 115 },
   { label: '5', shape: 'rectangle' as TableShape, x: 430, y: 420, width: 210, height: 90 },
-  { label: '6', shape: 'rectangle' as TableShape, x: 910, y: 420, width: 150, height: 90 },
+  { label: '6', shape: 'rectangle' as TableShape, x: 905, y: 415, width: 170, height: 100 },
   { label: '7', shape: 'rectangle' as TableShape, x: 430, y: 560, width: 240, height: 115 },
   { label: '8', shape: 'rectangle' as TableShape, x: 890, y: 555, width: 250, height: 105 },
 ].map((t) => ({ ...t, id: `6b1d0c55-7a3e-4f0e-9d2a-0c0f1aa0000${t.label}` }));

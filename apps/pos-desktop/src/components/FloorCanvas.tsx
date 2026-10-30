@@ -148,8 +148,9 @@ export function FloorCanvas({
                 <strong>{table.label}</strong>
               </span>
             ) : (
-              <span className="floor-card" style={{ transform: `rotate(${-t.rotation}deg)` }}>
+              <span className={`floor-card${busy?.name ? ' named' : ''}`} style={{ transform: `rotate(${-t.rotation}deg)` }}>
                 <strong className="floor-title">{title(table.label)}</strong>
+                {busy?.name && <span className="floor-name">{busy.name}</span>}
                 {busy ? (
                   <span className="floor-foot">
                     <span className="floor-total">{formatTL(busy.total)}</span>
@@ -158,7 +159,6 @@ export function FloorCanvas({
                 ) : (
                   <span className="floor-foot muted-foot">Boş</span>
                 )}
-                {busy?.name && <span className="floor-name">{busy.name}</span>}
               </span>
             )}
             {editable && selectedId === table.id && (

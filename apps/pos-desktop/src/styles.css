@@ -394,18 +394,25 @@ table.summary tr.diff td, td.diff { color: var(--danger); font-weight: 800; }
 .floor-label { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-align: center; pointer-events: none; font-size: 14px; font-weight: 800; }
 /* Live map cards (tasarım A, 2026-10-30): sizes follow the canvas scale (--s). */
 .floor-card {
-  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
-  padding: calc(var(--s) * 14px) calc(var(--s) * 18px); pointer-events: none; min-width: 0;
+  position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; container-type: size;
+  padding: calc(var(--s) * 12px) calc(var(--s) * 16px); pointer-events: none; min-width: 0;
 }
+.floor-card > * { flex-shrink: 0; }
 .floor-title { font-size: max(12px, calc(var(--s) * 25px)); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.floor-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: max(11px, calc(var(--s) * 18px)); }
+.floor-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: max(11px, calc(var(--s) * 18px)); white-space: nowrap; min-width: 0; }
 .floor-foot.muted-foot { color: var(--muted); font-weight: 600; }
-.floor-total { font-weight: 800; font-variant-numeric: tabular-nums; }
-.floor-time { font-size: 0.85em; font-weight: 600; opacity: 0.85; }
-.floor-name { font-size: max(10px, calc(var(--s) * 14px)); font-weight: 600; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floor-total { font-weight: 800; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.floor-time { font-size: 0.85em; font-weight: 600; opacity: 0.85; overflow: hidden; }
+.floor-name { margin-top: calc(var(--s) * 2px); font-size: max(11px, calc(var(--s) * 16px)); font-weight: 700; opacity: 0.92; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Small cards (a named tab on a short table; the container is the content box): tighter so all three lines fit. */
+@container (max-height: 58px) {
+  .floor-card.named > .floor-title { font-size: max(12px, calc(var(--s) * 20px)); }
+  .floor-card.named > .floor-name { margin-top: 0; line-height: 1.15; }
+  .floor-card.named > .floor-foot { line-height: 1.15; }
+}
 /* Şömine önü masa: half circle with the fireplace above it. */
-.floor-table.shape-hearth .floor-card { align-items: center; justify-content: center; text-align: center; gap: calc(var(--s) * 4px); padding-bottom: calc(var(--s) * 26px); }
-.floor-table.shape-hearth .floor-foot { justify-content: center; }
+.floor-table.shape-hearth .floor-card { align-items: center; text-align: center; padding: calc(var(--s) * 14px) calc(var(--s) * 22px) calc(var(--s) * 22px); }
+.floor-table.shape-hearth .floor-foot { margin-top: calc(var(--s) * 4px); justify-content: center; gap: 10px; }
 .hearth-mark {
   position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, calc(var(--s) * -10px)); white-space: nowrap; pointer-events: none;
   padding: calc(var(--s) * 6px) calc(var(--s) * 14px); border-radius: calc(var(--s) * 10px); border: 2px solid #c8612f; background: #f7e6da;
