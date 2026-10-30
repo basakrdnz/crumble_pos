@@ -66,7 +66,7 @@ describe('Tasarım: G2 ekran turu', () => {
     const { page } = run;
     // A new POS starts with the Crumble floor plan: 8 tables, 2 at the fireplace.
     await page.getByRole('button', { name: 'Kroki', exact: true }).click();
-    expect(await page.locator('.floor-table').count()).toBe(8);
+    await expect.poll(() => page.locator('.floor-table').count()).toBe(8);
     expect(await page.locator('[data-table="2"]').textContent()).toContain('Şömine');
     await page.getByRole('button', { name: 'Masa 2', exact: true }).click();
     await pick(page, 'Kahve', 'Türk Kahvesi');
