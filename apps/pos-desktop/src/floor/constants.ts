@@ -8,7 +8,7 @@ export const DEFAULT_TABLE_COLOR = '#dce8e0';
 export const SHAPE_DEFAULTS: Record<TableShape, { width: number; height: number }> = {
   circle: { width: 80, height: 80 },
   square: { width: 80, height: 80 },
-  rectangle: { width: 140, height: 80 },
+  rectangle: { width: 210, height: 110 },
   rounded_rectangle: { width: 200, height: 70 },
   hearth: { width: 220, height: 115 },
 };

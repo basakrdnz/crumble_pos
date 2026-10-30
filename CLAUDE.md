@@ -203,6 +203,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Yeni kasada ilk açılışta kroki kendiliğinden kurulur (`seedCrumbleFloor`, `src/floor/crumble.ts`, `electron/main.ts`). Bir kez çalışır (`settings.crumble_floor_seeded`), sonra editörde düzenlenir.
   - Satırlar sabit UUID ve sabit eski zamanla (`2026-10-30T00:00Z`) yazılır. Bulutta `floor_plans` ve `tables` için de son yazan kazanır trigger'ı var. Böylece yeni kurulumun dokunulmamış kopyası buluttaki düzenlemeyi ezmez.
   - Geri yükleme: sadece bu kroki varsa kasa hâlâ "boş" sayılır (`isLocalEmpty`). Bulutun kopyası yerel kopyanın üzerine yazılır, bulutun zaten bildiği satırlar kuyruktan çıkar.
+  - Masalar Masa 1 boyutunda (210×110), sadece 2 (şömine önü) 220×115. Editörde yeni dikdörtgen de 210×110 gelir.
   - Görünüm A: beyaz kart "Masa N" + "Boş" ya da tutar ve açık kalma süresi (dk). Dolu masa yeşil. Yazı boyları tuval ölçeğine bağlı (`--s`).
   - E2E: `launchApp()` krokiyi kurmaz (`CRUMBLE_NO_FLOOR_SEED=1`). `tasarim.e2e.ts` `seedFloor: true` ile gerçek salonu kullanır.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
