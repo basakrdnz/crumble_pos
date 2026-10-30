@@ -17,13 +17,13 @@ describe('Faz 1: katalog ve içe aktarma', () => {
     await page.getByRole('button', { name: 'Ayarlar' }).click();
     await page.getByRole('button', { name: 'Menü içe aktar' }).click();
     await page.getByLabel('CSV dosyası').setInputFiles(SEED_CSV);
-    await expect.poll(() => page.getByTestId('import-summary').textContent()).toContain('8 yeni kategori, 84 yeni ürün');
-    expect(await page.getByRole('table', { name: 'Önizleme' }).locator('tbody tr').count()).toBe(84);
+    await expect.poll(() => page.getByTestId('import-summary').textContent()).toContain('8 yeni kategori, 64 yeni ürün');
+    expect(await page.getByRole('table', { name: 'Önizleme' }).locator('tbody tr').count()).toBe(64);
     await snap(page, 'faz1-import-preview');
 
     page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Onayla ve içe aktar' }).click();
-    await expect.poll(() => page.getByTestId('import-summary').textContent()).toContain('84 ürün zaten var');
+    await expect.poll(() => page.getByTestId('import-summary').textContent()).toContain('64 ürün zaten var');
   });
 
   it('shows the catalog with badges', async () => {

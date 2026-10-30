@@ -13,14 +13,17 @@ export interface RunningApp {
   close(): Promise<void>;
 }
 
-/** Launches the built app (out/) against a fresh temporary database. */
-export async function launchApp(dbPath?: string): Promise<RunningApp> {
+/**
+ * Launches the built app (out/) against a fresh temporary database. The
+ * Crumble floor plan is left out unless `seedFloor` is set.
+ */
+export async function launchApp(dbPath?: string, { seedFloor = false } = {}): Promise<RunningApp> {
   const dir = dbPath ? undefined : mkdtempSync(join(tmpdir(), 'crumble-e2e-'));
   const path = dbPath ?? join(dir!, 'crumble.sqlite');
   const app = await electron.launch({
     executablePath: require('electron') as string,
     args: [resolve(__dirname, '..'), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
-    env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path) } as Record<string, string>,
+    env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path), CRUMBLE_NO_FLOOR_SEED: seedFloor ? '0' : '1' } as Record<string, string>,
   });
   const page = await app.firstWindow();
   await page.waitForSelector('.app');
@@ -43,14 +46,12 @@ export async function snap(page: Page, name: string): Promise<void> {
   if (dir) await page.screenshot({ path: join(dir, `${name}.png`) });
 }
 
-export const TEST_PASSWORD = '1234';
+export const TEST_PASSWORD = '1010'; // the default POS password
 
-/** Sets the POS password on first run, or logs in. */
+/** Logs in. */
 export async function unlock(page: Page, password = TEST_PASSWORD): Promise<void> {
   await page.getByLabel('Şifre', { exact: true }).fill(password);
-  const repeat = page.getByLabel('Şifre tekrar');
-  if (await repeat.count()) await repeat.fill(password);
-  await page.getByRole('button', { name: /Şifreyi kaydet|Giriş/ }).click();
+  await page.getByRole('button', { name: 'Giriş' }).click();
   await page.getByRole('button', { name: 'Kilitle' }).waitFor();
 }
 

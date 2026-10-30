@@ -5,6 +5,7 @@ import type { Context } from '../db/database';
 import * as menuImport from '../db/menuImport';
 import * as refunds from '../db/refunds';
 import * as sales from '../db/sales';
+import * as teaInfo from '../db/teaInfo';
 import { backupNow, listBackups } from '../maintenance/backup';
 import type { Logger } from '../maintenance/logger';
 import type { CloudManager } from '../sync/cloud';
@@ -40,17 +41,13 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     if (!maintenance) throw new Error('Bakım işlemleri bu ortamda yok.');
     return maintenance;
   };
+  auth.ensurePassword(ctx);
   let unlocked = false;
-  const status = (): AuthStatus => ({ passwordSet: auth.isPasswordSet(ctx), unlocked });
+  const status = (): AuthStatus => ({ unlocked });
   const tabOf = (itemId: string) => sales.getTab(ctx, ctx.db.prepare('select tab_id from tab_items where id = ?').pluck().get(itemId) as string);
 
   const api: PosApi = {
     authStatus: status,
-    setupPassword: (password) => {
-      auth.setInitialPassword(ctx, password);
-      unlocked = true;
-      return status();
-    },
     unlock: (password) => {
       if (!auth.checkPassword(ctx, password)) throw new Error('Şifre yanlış.');
       unlocked = true;
@@ -75,6 +72,9 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     deleteProduct: (id) => catalog.deleteProduct(ctx, id),
 
     listCatalogChanges: (limit) => catalog.listCatalogChanges(ctx, limit),
+
+    getHerbalTeas: () => teaInfo.getHerbalTeas(ctx),
+    setHerbalTeas: (teas) => teaInfo.setHerbalTeas(ctx, teas),
 
     previewMenuImport: (text) => menuImport.previewMenuImport(ctx, text),
     applyMenuImport: (text) => menuImport.applyMenuImport(ctx, text),

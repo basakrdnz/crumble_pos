@@ -83,7 +83,7 @@ describe('Faz 3: hesap ve kroki', () => {
     await page.getByText('Pencere · Zeynep').waitFor();
     await page.getByRole('button', { name: '← Geri' }).click();
     await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toContain('Zeynep');
-    expect(await page.locator('[data-table="1"]').textContent()).toBe('1');
+    expect(await page.locator('[data-table="1"]').textContent()).toBe('Masa 1Boş'); // free again
   });
 
   it('adds more and closes the tab: 75 ₺ cash, the rest by card', async () => {
@@ -99,7 +99,7 @@ describe('Faz 3: hesap ve kroki', () => {
     await page.keyboard.press('F12');
     // Closing returns to the floor map with the table free again.
     await page.getByRole('tablist', { name: 'Bölümler' }).waitFor();
-    await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toBe('Pencere');
+    await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toBe('PencereBoş');
   });
 
   it('F3 opens a named tab from anywhere', async () => {

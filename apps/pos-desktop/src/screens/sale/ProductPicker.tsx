@@ -1,6 +1,8 @@
 import type { Category, Product } from '@crumble/shared';
 import { formatTL } from '@crumble/shared';
 import { useEffect, useRef, useState } from 'react';
+import { TeaInfoDialog } from '../../components/TeaInfoDialog';
+import { isHerbalTeaProduct } from '../../db/teaInfo';
 
 /**
  * Search (F2) and category chips on top, product tiles below (plan §5.1). A
@@ -26,6 +28,7 @@ export function ProductPicker({
   const visible = categories.filter((c) => products.some((p) => p.category_id === c.id && p.is_active));
   const [categoryId, setCategoryId] = useState<string>();
   const [search, setSearch] = useState('');
+  const [teaInfo, setTeaInfo] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!visible.some((c) => c.id === categoryId)) setCategoryId(visible[0]?.id);
@@ -100,6 +103,11 @@ export function ProductPicker({
                 <span className="name">{p.name}</span>
                 <span className="price">{formatTL(p.price)}</span>
               </button>
+              {isHerbalTeaProduct(p.name) && (
+                <button className="info-btn" aria-label={`${p.name} bilgi`} title="Çay çeşitleri" onClick={() => setTeaInfo(true)}>
+                  i
+                </button>
+              )}
               {qty > 0 && (
                 <span className="qty-ctrl" role="group" aria-label={`${p.name} adedi`}>
                   <button aria-label={`${p.name} azalt`} disabled={disabled} onClick={() => onDecrease(p)}>
@@ -118,6 +126,7 @@ export function ProductPicker({
         })}
         {shown.length === 0 && <div className="empty">Ürün yok.</div>}
       </div>
+      {teaInfo && <TeaInfoDialog onClose={() => setTeaInfo(false)} />}
     </section>
   );
 }

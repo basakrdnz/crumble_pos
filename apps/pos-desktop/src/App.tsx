@@ -120,7 +120,7 @@ function Shell() {
       </span>
       <main className="main">
         {!auth ? null : !auth.unlocked ? (
-          <Login status={auth} onChange={setAuth} />
+          <Login onChange={setAuth} />
         ) : shift === undefined ? null : screen === 'sale' ? (
           <Sale shift={shift} onShiftChange={() => void reloadShift()} />
         ) : (screen === 'floor' || screen === 'tabs') && !shift ? (

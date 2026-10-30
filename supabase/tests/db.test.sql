@@ -191,6 +191,55 @@ select pg_temp.expect_count($$with u as (update public.categories set name = 'X'
   0, 'partner update affects no rows');
 commit;
 
+-- ===== Telefondan menü (migration 0008): price, add, delete via functions =====
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000d001","app_metadata":{"role":"device"}}', true);
+insert into public.products (id, category_id, name, price, updated_at)
+  values ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Americano', 10000, now() - interval '1 day');
+select pg_temp.expect_error($$select public.menu_set_price('20000000-0000-0000-0000-000000000002', 1)$$, 'device cannot use menu functions');
+commit;
+
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001"}', true);
+select pg_temp.expect_ok($$select public.menu_set_price('20000000-0000-0000-0000-000000000002', 11000)$$, 'partner sets a price');
+select pg_temp.expect_count($$select count(*) from public.products where id = '20000000-0000-0000-0000-000000000002' and price = 11000$$, 1, 'price changed');
+select pg_temp.expect_count($$select count(*) from public.catalog_changes where entity_id = '20000000-0000-0000-0000-000000000002'
+  and source = 'mobile' and field = 'price' and old_value = '10000' and new_value = '11000'$$, 1, 'price change logged as mobile');
+select pg_temp.expect_error($$select public.menu_set_price('20000000-0000-0000-0000-000000000002', -1)$$, 'negative price');
+select pg_temp.expect_ok($$select public.menu_add_product('20000000-0000-0000-0000-000000000003',
+  '10000000-0000-0000-0000-000000000001', '  Mocha  ', 15000)$$, 'partner adds a product');
+select pg_temp.expect_count($$select count(*) from public.products where id = '20000000-0000-0000-0000-000000000003'
+  and name = 'Mocha' and is_active and deleted_at is null$$, 1, 'added product is active');
+select pg_temp.expect_error($$select public.menu_add_product('20000000-0000-0000-0000-000000000004',
+  '10000000-0000-0000-0000-000000000099', 'X', 100)$$, 'unknown category');
+select pg_temp.expect_ok($$select public.menu_delete_product('20000000-0000-0000-0000-000000000003')$$, 'partner deletes a product');
+select pg_temp.expect_count($$select count(*) from public.products where id = '20000000-0000-0000-0000-000000000003' and deleted_at is not null$$,
+  1, 'delete is soft');
+select pg_temp.expect_error($$select public.menu_set_price('20000000-0000-0000-0000-000000000003', 100)$$, 'price of a deleted product');
+select pg_temp.expect_count($$with u as (update public.products set name = 'X' returning 1) select count(*) from u$$,
+  0, 'partner still cannot update tables directly');
+commit;
+
+-- Last writer wins: an older POS row does not overwrite the phone's change.
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000d001","app_metadata":{"role":"device"}}', true);
+insert into public.products (id, category_id, name, price, updated_at)
+  values ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Americano', 9000, now() - interval '1 hour')
+  on conflict (id) do update set price = excluded.price, updated_at = excluded.updated_at;
+select pg_temp.expect_count($$select count(*) from public.products where id = '20000000-0000-0000-0000-000000000002' and price = 11000$$,
+  1, 'older upsert ignored');
+insert into public.products (id, category_id, name, price, updated_at)
+  values ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Americano', 12000, now() + interval '1 minute')
+  on conflict (id) do update set price = excluded.price, updated_at = excluded.updated_at;
+select pg_temp.expect_count($$select count(*) from public.products where id = '20000000-0000-0000-0000-000000000002' and price = 12000$$,
+  1, 'newer upsert applied');
+commit;
+
 -- ===== As a stranger claiming device in user_metadata (user-editable) =====
 begin;
 set local role authenticated;
@@ -199,6 +248,7 @@ select set_config('request.jwt.claims',
 select pg_temp.expect_count($$select count(*) from public.payments$$, 0, 'stranger reads nothing');
 select pg_temp.expect_error($$insert into public.categories (id, name)
   values ('10000000-0000-0000-0000-000000000002', 'X')$$, 'stranger insert (user_metadata is not trusted)');
+select pg_temp.expect_error($$select public.menu_delete_product('20000000-0000-0000-0000-000000000002')$$, 'stranger cannot use menu functions');
 commit;
 
 -- ===== As anon =====
@@ -216,5 +266,15 @@ select pg_temp.expect_error($$update public.tabs set total = 1$$, 'service_role 
 select pg_temp.expect_error($$update public.shifts set notes = 'x'$$, 'service_role update closed shift');
 select pg_temp.expect_error($$delete from public.partners$$, 'service_role delete partner');
 commit;
+
+-- ===== Table shapes: 'hearth' (şömine önü masa) is allowed =====
+begin;
+insert into public.floor_plans (id, name, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0001', 'Salon', now(), now());
+insert into public.tables (id, floor_plan_id, label, shape, x, y, width, height, color, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0002', '00000000-0000-0000-0000-0000000f0001', '2', 'hearth', 0, 0, 220, 110, '#ffffff', now(), now());
+select pg_temp.expect_error($$insert into public.tables (id, floor_plan_id, label, shape, x, y, width, height, color, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0003', '00000000-0000-0000-0000-0000000f0001', '9', 'star', 0, 0, 10, 10, '#ffffff', now(), now())$$, 'unknown table shape');
+rollback;
 
 \echo 'ALL DATABASE TESTS PASSED'

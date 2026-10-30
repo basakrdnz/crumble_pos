@@ -8,10 +8,12 @@ import { Import } from './Import';
 import { Maintenance } from './settings/Maintenance';
 import { Password } from './settings/Password';
 import { Shortcuts } from './settings/Shortcuts';
+import { TeaInfo } from './settings/TeaInfo';
 
 const SECTIONS = [
   { id: 'catalog', label: 'Kategori ve ürünler', render: () => <CatalogEditor /> },
   { id: 'prices', label: 'Toplu fiyat', render: () => <BulkPrices /> },
+  { id: 'teas', label: 'Bitki çayı bilgisi', render: () => <TeaInfo /> },
   { id: 'import', label: 'Menü içe aktar', render: () => <Import /> },
   { id: 'floor', label: 'Kroki düzenle', render: () => <FloorEditor /> },
   { id: 'history', label: 'Değişiklik geçmişi', render: () => <ChangeHistory /> },

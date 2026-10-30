@@ -17,7 +17,7 @@ export type TabStatus = (typeof TAB_STATUSES)[number];
 /** Discounts are whole percentages only: presets or typed on the keypad. */
 export const DISCOUNT_PRESETS = [10, 15] as const;
 
-export const TABLE_SHAPES = ['circle', 'square', 'rectangle', 'rounded_rectangle'] as const;
+export const TABLE_SHAPES = ['circle', 'square', 'rectangle', 'rounded_rectangle', 'hearth'] as const;
 export type TableShape = (typeof TABLE_SHAPES)[number];
 
 export const CATALOG_ENTITY_TYPES = ['product', 'category', 'table', 'floor_plan'] as const;
@@ -135,6 +135,8 @@ export interface CatalogChange extends BaseRow {
   old_value: string | null;
   new_value: string | null;
   changed_at: UtcTimestamp;
+  /** Where the change was made: the POS or the manager app (2026-10-30). */
+  source: 'pos' | 'mobile';
 }
 
 export interface Partner extends BaseRow {

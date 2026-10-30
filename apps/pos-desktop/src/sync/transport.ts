@@ -38,3 +38,12 @@ export interface SyncTransport {
 export interface CloudReader {
   readAll(table: SyncedTable): Promise<Record<string, unknown>[]>;
 }
+
+/**
+ * Catalog changes made on the phone (2026-10-30): products changed after
+ * `since` and the phone's catalog_changes rows created after `since`.
+ */
+export interface CatalogPuller {
+  pullProducts(since: string): Promise<Record<string, unknown>[]>;
+  pullMobileChanges(since: string): Promise<Record<string, unknown>[]>;
+}

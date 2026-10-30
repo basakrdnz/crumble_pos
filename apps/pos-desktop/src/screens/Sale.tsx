@@ -3,14 +3,15 @@ import { formatTL } from '@crumble/shared';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
-import { useAction, useApiData } from '../components/useApi';
+import { useAction, useApiData, useCatalogVersion } from '../components/useApi';
 import type { TabDetail } from '../db/sales';
 import { OpenShiftPanel } from './Shift';
 import { TabWorkspace } from './sale/TabWorkspace';
 
 export function Sale({ shift, onShiftChange }: { shift: Shift | null; onShiftChange(): void }) {
+  const catalogVersion = useCatalogVersion();
   const [categories] = useApiData(() => api.listCategories());
-  const [products] = useApiData(() => api.listProducts());
+  const [products] = useApiData(() => api.listProducts(), [catalogVersion]);
   const [detail, setDetail] = useState<TabDetail | null>(null);
   const [lastSale, setLastSale] = useState<{ total: number; method: PaymentMethod } | null>(null);
   const run = useAction();

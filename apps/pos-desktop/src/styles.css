@@ -248,6 +248,21 @@ kbd {
 .product-main:active:not(:disabled) { transform: scale(0.98); }
 .product .name { font-weight: 700; line-height: 19px; }
 .product .price { color: var(--muted); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+/* "i" on the Bitki Çayı tiles (top right). */
+.info-btn {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--info-ink); font-family: 'Gloock', Georgia, serif; font-size: 14px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.info-btn:hover { border-color: var(--info-ink); background: var(--info-bg); }
+.product:has(.info-btn) .name { padding-right: 24px; }
+.tea-info { width: 520px; }
+.tea-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tea-list li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--r-btn); background: var(--bg); }
+.tea-list strong { font-size: 15px; }
+.tea-list span { font-size: 13px; color: var(--muted); line-height: 19px; }
+.tea-row { display: grid; grid-template-columns: 200px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+
 /* In the cart: a full-width "− qty +" bar replaces the price at the bottom
    (the tile is too narrow for both; the price is in the cart line). */
 .product.in-cart .price { visibility: hidden; }
@@ -371,13 +386,38 @@ table.summary tr.diff td, td.diff { color: var(--danger); font-weight: 800; }
 }
 /* On the live map tables are neutral when free and green when busy; the
    editor shows the colour chosen for each shape. */
-.floor:not(.editable) .floor-table { background: var(--empty) !important; border-color: var(--empty-line); color: var(--muted); }
-.floor:not(.editable) .floor-table.busy { background: var(--primary) !important; color: #fff; border-color: transparent; }
+.floor:not(.editable) .floor-table { background: var(--surface) !important; border: 2px solid var(--empty-line); color: var(--ink); }
+.floor:not(.editable) .floor-table:hover { border-color: var(--primary); }
+.floor:not(.editable) .floor-table.busy { background: var(--primary) !important; color: #fff; border-color: var(--primary); }
 .floor-table.selected { outline: 3px solid var(--ink); outline-offset: 2px; }
 .floor.editable .floor-table { cursor: move; }
 .floor-label { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-align: center; pointer-events: none; font-size: 14px; font-weight: 800; }
-.floor-total { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.floor-name { font-size: 11px; font-weight: 600; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Live map cards (tasarım A, 2026-10-30): sizes follow the canvas scale (--s). */
+.floor-card {
+  position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; container-type: size;
+  padding: calc(var(--s) * 12px) calc(var(--s) * 16px); pointer-events: none; min-width: 0;
+}
+.floor-card > * { flex-shrink: 0; }
+.floor-title { font-size: max(12px, calc(var(--s) * 25px)); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.floor-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: max(11px, calc(var(--s) * 18px)); white-space: nowrap; min-width: 0; }
+.floor-foot.muted-foot { color: var(--muted); font-weight: 600; }
+.floor-total { font-weight: 800; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.floor-time { font-size: 0.85em; font-weight: 600; opacity: 0.85; overflow: hidden; }
+.floor-name { margin-top: calc(var(--s) * 2px); font-size: max(11px, calc(var(--s) * 16px)); font-weight: 700; opacity: 0.92; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Small cards (a named tab on a short table; the container is the content box): tighter so all three lines fit. */
+@container (max-height: 58px) {
+  .floor-card.named > .floor-title { font-size: max(12px, calc(var(--s) * 20px)); }
+  .floor-card.named > .floor-name { margin-top: 0; line-height: 1.15; }
+  .floor-card.named > .floor-foot { line-height: 1.15; }
+}
+/* Şömine önü masa: half circle with the fireplace above it. */
+.floor-table.shape-hearth .floor-card { align-items: center; text-align: center; padding: calc(var(--s) * 14px) calc(var(--s) * 22px) calc(var(--s) * 22px); }
+.floor-table.shape-hearth .floor-foot { margin-top: calc(var(--s) * 4px); justify-content: center; gap: 10px; }
+.hearth-mark {
+  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, calc(var(--s) * -10px)); white-space: nowrap; pointer-events: none;
+  padding: calc(var(--s) * 6px) calc(var(--s) * 14px); border-radius: calc(var(--s) * 10px); border: 2px solid #c8612f; background: #f7e6da;
+  color: #c8612f; font-size: max(11px, calc(var(--s) * 17px)); font-weight: 800;
+}
 .floor-legend { display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: var(--muted); }
 .floor-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .resize-handle {

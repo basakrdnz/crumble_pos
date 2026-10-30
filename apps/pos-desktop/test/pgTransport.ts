@@ -3,7 +3,14 @@
 // immutability triggers apply exactly as they would on Supabase.
 import type pg from 'pg';
 import type { SyncedTable } from '../src/db/database';
-import { type CloudReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from '../src/sync/transport';
+import {
+  type CatalogPuller,
+  type CloudReader,
+  type DeviceHeartbeat,
+  type PushMode,
+  SyncError,
+  type SyncTransport,
+} from '../src/sync/transport';
 
 export const DEVICE_USER = '00000000-0000-0000-0000-00000000d001';
 const DEVICE_CLAIMS = JSON.stringify({ sub: DEVICE_USER, role: 'authenticated', app_metadata: { role: 'device' } });
@@ -36,9 +43,26 @@ async function upsert(client: pg.Client, table: string, rows: Record<string, unk
   );
 }
 
-export function pgTransport(client: pg.Client): SyncTransport & CloudReader & { online: boolean } {
+export function pgTransport(client: pg.Client): SyncTransport & CloudReader & CatalogPuller & { online: boolean } {
   const transport = {
     online: true,
+    async pullProducts(since: string) {
+      if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
+      return asDevice(client, async () =>
+        (await client.query('select * from public.products where updated_at > $1 order by updated_at, id limit 1000', [since])).rows,
+      );
+    },
+    async pullMobileChanges(since: string) {
+      if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
+      return asDevice(client, async () =>
+        (
+          await client.query(
+            "select * from public.catalog_changes where source = 'mobile' and created_at > $1 order by created_at, id limit 1000",
+            [since],
+          )
+        ).rows,
+      );
+    },
     async push(table: SyncedTable, rows: Record<string, unknown>[], mode: PushMode) {
       if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
       try {

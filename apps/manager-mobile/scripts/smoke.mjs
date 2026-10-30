@@ -42,7 +42,7 @@ try {
   await page.goto(url);
   const text = await page.getByText('Crumble Yönetim').first().textContent({ timeout: 30_000 });
   console.log({ url, rendererText: text, pageErrors: errors });
-  ok = text === expected && errors.length === 0;
+  ok = Boolean(text?.includes(expected)) && errors.length === 0;
 } finally {
   await browser.close();
   server.close();

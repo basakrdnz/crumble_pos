@@ -6,16 +6,27 @@ import { CANVAS } from '../floor/constants';
 export interface TableStatus {
   total: number;
   name: string | null;
+  /** When the tab was opened (ISO); the card shows how long it has been open. */
+  openedAt: string;
 }
 
 type Patch = Partial<Pick<FloorTable, 'x' | 'y' | 'width' | 'height'>>;
 
 const RADIUS: Record<FloorTable['shape'], string> = {
   circle: '50%',
-  square: '6px',
-  rectangle: '6px',
+  square: '16px',
+  rectangle: '16px',
   rounded_rectangle: '28px',
+  hearth: '0 0 50% 50% / 0 0 100% 100%',
 };
+
+/** "Masa 5" for a numbered table, the label itself otherwise ("Kanepe 1"). */
+const title = (label: string) => (/^\d+$/.test(label) ? `Masa ${label}` : label);
+
+function minutesSince(iso: string, now: number): string {
+  const minutes = Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000));
+  return minutes < 60 ? `${minutes} dk` : `${Math.floor(minutes / 60)} sa ${minutes % 60} dk`;
+}
 
 /**
  * Draws one floor plan section. View mode: occupied tables are highlighted
@@ -43,6 +54,14 @@ export function FloorCanvas({
   const [scale, setScale] = useState(1);
   const [draft, setDraft] = useState<{ id: string; patch: Patch } | null>(null);
   const drag = useRef<{ id: string; mode: 'move' | 'resize'; startX: number; startY: number; table: FloorTable } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // The open-for minutes on busy tables move on by themselves.
+  useEffect(() => {
+    if (editable) return;
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [editable]);
 
   useEffect(() => {
     const el = box.current;
@@ -87,7 +106,7 @@ export function FloorCanvas({
     <div
       ref={box}
       className={`floor${editable ? ' editable' : ''}`}
-      style={{ height: CANVAS.height * scale }}
+      style={{ height: CANVAS.height * scale, ['--s' as string]: scale }}
       onPointerDown={() => onSelect(null)}
       onPointerMove={move}
       onPointerUp={end}
@@ -103,7 +122,7 @@ export function FloorCanvas({
             role="button"
             aria-label={`Masa ${table.label}`}
             data-table={table.label}
-            className={`floor-table${busy ? ' busy' : ''}${selectedId === table.id ? ' selected' : ''}`}
+            className={`floor-table shape-${t.shape}${busy ? ' busy' : ''}${selectedId === table.id ? ' selected' : ''}`}
             style={{
               left: t.x * scale,
               top: t.y * scale,
@@ -119,15 +138,29 @@ export function FloorCanvas({
               if (!editable) onSelect(table);
             }}
           >
-            <span className="floor-label" style={{ transform: `rotate(${-t.rotation}deg)` }}>
-              <strong>{table.label}</strong>
-              {busy && (
-                <>
-                  <span className="floor-total">{formatTL(busy.total)}</span>
-                  {busy.name && <span className="floor-name">{busy.name}</span>}
-                </>
-              )}
-            </span>
+            {t.shape === 'hearth' && (
+              <span className="hearth-mark" aria-hidden>
+                🔥 Şömine
+              </span>
+            )}
+            {editable ? (
+              <span className="floor-label" style={{ transform: `rotate(${-t.rotation}deg)` }}>
+                <strong>{table.label}</strong>
+              </span>
+            ) : (
+              <span className={`floor-card${busy?.name ? ' named' : ''}`} style={{ transform: `rotate(${-t.rotation}deg)` }}>
+                <strong className="floor-title">{title(table.label)}</strong>
+                {busy?.name && <span className="floor-name">{busy.name}</span>}
+                {busy ? (
+                  <span className="floor-foot">
+                    <span className="floor-total">{formatTL(busy.total)}</span>
+                    <span className="floor-time">{minutesSince(busy.openedAt, now)}</span>
+                  </span>
+                ) : (
+                  <span className="floor-foot muted-foot">Boş</span>
+                )}
+              </span>
+            )}
             {editable && selectedId === table.id && (
               <span className="resize-handle" onPointerDown={(e) => start(e, table, 'resize')} aria-label="Boyutlandır" />
             )}

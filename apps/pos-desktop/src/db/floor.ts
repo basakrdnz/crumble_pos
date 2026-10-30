@@ -4,6 +4,7 @@ import type { FloorPlan, FloorTable, TableShape } from '@crumble/shared';
 import { TABLE_SHAPES } from '@crumble/shared';
 import { logChange, updateWithHistory } from './catalog';
 import { CANVAS, DEFAULT_TABLE_COLOR, SHAPE_DEFAULTS } from '../floor/constants';
+import { CRUMBLE_FLOOR_ID, CRUMBLE_FLOOR_STAMP, CRUMBLE_TABLES } from '../floor/crumble';
 import { type Context, getRow, insertRow, stamps, tx, updateRow } from './database';
 
 function cleanName(name: string): string {
@@ -205,5 +206,40 @@ export function deleteTable(ctx: Context, id: string): void {
     if (openTabOnTable(ctx, id)) throw new Error(`Masa ${table.label} üzerinde açık hesap var.`);
     updateRow<FloorTable>(ctx, 'tables', id, { deleted_at: ctx.clock.now() });
     logChange(ctx, 'table', id, 'delete', null, table.label, null);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Crumble salonu: set up once on a new POS (see floor/crumble.ts)
+// ---------------------------------------------------------------------------
+
+const SEEDED_KEY = 'crumble_floor_seeded';
+
+/** Creates the Crumble floor plan on a POS that has never had one. Returns true if it did. */
+export function seedCrumbleFloor(ctx: Context): boolean {
+  return tx(ctx, () => {
+    if (ctx.db.prepare('select 1 from settings where key = ?').get(SEEDED_KEY)) return false;
+    ctx.db.prepare("insert into settings (key, value) values (?, '1')").run(SEEDED_KEY);
+    if (ctx.db.prepare('select 1 from floor_plans limit 1').get()) return false;
+    const stamp = { created_at: CRUMBLE_FLOOR_STAMP, updated_at: CRUMBLE_FLOOR_STAMP };
+    insertRow<FloorPlan>(ctx, 'floor_plans', {
+      id: CRUMBLE_FLOOR_ID,
+      ...stamp,
+      name: 'Salon',
+      sort_order: 0,
+      background_image_url: null,
+      deleted_at: null,
+    });
+    for (const t of CRUMBLE_TABLES) {
+      insertRow<FloorTable>(ctx, 'tables', {
+        ...t,
+        ...stamp,
+        floor_plan_id: CRUMBLE_FLOOR_ID,
+        rotation: 0,
+        color: DEFAULT_TABLE_COLOR,
+        deleted_at: null,
+      });
+    }
+    return true;
   });
 }

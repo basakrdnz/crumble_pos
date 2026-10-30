@@ -59,6 +59,7 @@ export function ChangeHistory() {
             <th>Kayıt</th>
             <th>İşlem</th>
             <th>Eski → Yeni</th>
+            <th>Kaynak</th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +76,9 @@ export function ChangeHistory() {
                 {c.action === 'update'
                   ? `${showValue(c.field, c.old_value)} → ${showValue(c.field, c.new_value)}`
                   : ''}
+              </td>
+              <td>
+                <span className={`badge ${c.source === 'mobile' ? 'info' : 'muted'}`}>{c.source === 'mobile' ? 'Telefon' : 'Kasa'}</span>
               </td>
             </tr>
           ))}

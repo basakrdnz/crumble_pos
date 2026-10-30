@@ -2,8 +2,18 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../lib/auth';
 import { isConfigured } from '../lib/supabase';
-import { colors } from './theme';
+import { colors, fonts } from './theme';
 
+const hourFormat = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', hour: 'numeric', hourCycle: 'h23' });
+
+function greeting(): string {
+  const hour = Number(hourFormat.format(new Date()));
+  if (hour >= 5 && hour < 12) return 'Günaydın.';
+  if (hour >= 12 && hour < 18) return 'İyi günler.';
+  return 'İyi akşamlar.';
+}
+
+/** "Günaydın." on the forest green, the form in a sheet below (same language as the POS). */
 export function Login() {
   const { signIn, error } = useAuth();
   const [email, setEmail] = useState('');
@@ -21,15 +31,21 @@ export function Login() {
 
   return (
     <View style={s.wrap}>
-      <View style={s.box}>
-        <Text style={s.title}>Crumble Yönetim</Text>
-        <Text style={s.muted}>Ortak hesabıyla giriş yapın.</Text>
+      <View style={s.hero}>
+        <Text style={s.brand}>CRUMBLE</Text>
+        <View>
+          <Text style={s.greet}>{greeting()}</Text>
+          <Text style={s.heroText}>Yönetim paneli. Ortak hesabınla giriş yap.</Text>
+        </View>
+      </View>
+      <View style={s.sheet}>
         {!isConfigured && (
           <Text style={s.error}>Supabase adresi ayarlanmamış (EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY).</Text>
         )}
         <TextInput
           style={s.input}
           placeholder="E-posta"
+          placeholderTextColor={colors.muted}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -39,6 +55,7 @@ export function Login() {
         <TextInput
           style={s.input}
           placeholder="Şifre"
+          placeholderTextColor={colors.muted}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -50,21 +67,33 @@ export function Login() {
             {error}
           </Text>
         )}
-        <Pressable style={[s.button, (!email || !password || busy) && { opacity: 0.5 }]} disabled={!email || !password || busy} onPress={() => void submit()} accessibilityRole="button">
+        <Pressable
+          style={[s.button, (!email || !password || busy) && { opacity: 0.5 }]}
+          disabled={!email || !password || busy}
+          onPress={() => void submit()}
+          accessibilityRole="button"
+        >
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Giriş</Text>}
         </Pressable>
+        <Text style={s.foot}>Crumble Yönetim · sadece ortaklar</Text>
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 16 },
-  box: { width: '100%', maxWidth: 380, backgroundColor: colors.panel, borderRadius: 12, padding: 20, gap: 10, borderWidth: 1, borderColor: colors.border },
-  title: { fontSize: 24, fontWeight: '700', color: colors.text },
-  muted: { color: colors.muted },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 16, backgroundColor: '#fff' },
-  error: { color: colors.danger },
-  button: { backgroundColor: colors.accent, borderRadius: 8, padding: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  wrap: { flex: 1, backgroundColor: colors.forest },
+  hero: { flex: 1, padding: 28, paddingTop: 64, justifyContent: 'space-between', paddingBottom: 40 },
+  brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 16, letterSpacing: 3 },
+  greet: { fontFamily: fonts.brand, color: '#fff', fontSize: 44, lineHeight: 50 },
+  heroText: { fontFamily: fonts.semibold, color: colors.forestMuted, fontSize: 15, lineHeight: 23, marginTop: 10 },
+  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36, gap: 12 },
+  input: {
+    height: 52, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 16, fontSize: 16,
+    backgroundColor: '#fff', fontFamily: fonts.semibold, color: colors.text,
+  },
+  error: { color: colors.danger, fontFamily: fonts.semibold },
+  button: { height: 54, backgroundColor: colors.accent, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: '#fff', fontFamily: fonts.heavy, fontSize: 16 },
+  foot: { fontSize: 12, color: colors.muted, textAlign: 'center', fontFamily: fonts.semibold },
 });

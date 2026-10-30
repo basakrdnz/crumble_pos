@@ -15,6 +15,7 @@ import {
   type Shift,
   type Tab,
   type TabItem,
+  tabTotals,
 } from '@crumble/shared';
 import { supabase } from './supabase';
 
@@ -64,6 +65,13 @@ export async function loadReportData(from: Day, to: Day): Promise<ReportData> {
 
 export async function loadOpenTabs(): Promise<Tab[]> {
   return all<Tab>(() => supabase.from('tabs').select('*').eq('status', 'open').order('opened_at').order('id'));
+}
+
+/** Open tabs with their running total (tabs.total is only set at close). */
+export async function loadOpenTabTotals(): Promise<{ tab: Tab; total: number }[]> {
+  const tabs = await loadOpenTabs();
+  const items = await byIds<TabItem>('tab_items', 'tab_id', tabs.map((t) => t.id));
+  return tabs.map((tab) => ({ tab, total: tabTotals(items.filter((i) => i.tab_id === tab.id), tab.discount_percent).total }));
 }
 
 export interface DeviceStatus {
@@ -129,3 +137,22 @@ export async function loadSale(tabId: string): Promise<SaleDetail | null> {
   ]);
   return { tab, items, payments, refunds };
 }
+
+// ---------------------------------------------------------------------------
+// Telefondan menü (2026-10-30): the only writes. They go through the menu_*
+// database functions (partners only), which also log the change as "mobile".
+// The POS pulls them within about 20 seconds when it is online.
+// ---------------------------------------------------------------------------
+
+async function rpc(fn: string, args: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message);
+}
+
+export const setProductPrice = (productId: string, price: number) =>
+  rpc('menu_set_price', { p_product: productId, p_price: price });
+
+export const addMenuProduct = (id: string, categoryId: string, name: string, price: number) =>
+  rpc('menu_add_product', { p_id: id, p_category: categoryId, p_name: name, p_price: price });
+
+export const deleteMenuProduct = (productId: string) => rpc('menu_delete_product', { p_product: productId });

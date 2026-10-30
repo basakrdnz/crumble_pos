@@ -6,6 +6,7 @@ import type { ImportPreview } from '../catalog/menuCsv';
 import type { NewProduct, ProductPatch } from '../db/catalog';
 import type { TablePatch } from '../db/floor';
 import type { ImportResult } from '../db/menuImport';
+import type { HerbalTea } from '../db/teaInfo';
 import type { PartialRefund, RefundInfo, SaleRow } from '../db/refunds';
 import type { BackupFile } from '../maintenance/backup';
 import type { CloudInfo, ConnectInput } from '../sync/cloud';
@@ -14,14 +15,12 @@ import type { SyncStatus } from '../sync/service';
 import type { CloseShiftInput, CloseShiftResult, ItemPatch, NewTab, OpenTabSummary, PaymentPart, PayResult, TabDetail } from '../db/sales';
 
 export interface AuthStatus {
-  passwordSet: boolean;
   unlocked: boolean;
 }
 
 export interface PosApi {
   // Login (allowed while locked)
   authStatus(): AuthStatus;
-  setupPassword(password: string): AuthStatus;
   unlock(password: string): AuthStatus;
   lock(): AuthStatus;
   changePassword(current: string, next: string): void;
@@ -40,6 +39,9 @@ export interface PosApi {
   deleteProduct(id: string): void;
 
   listCatalogChanges(limit?: number): CatalogChange[];
+
+  getHerbalTeas(): HerbalTea[];
+  setHerbalTeas(teas: HerbalTea[]): HerbalTea[];
 
   previewMenuImport(csvText: string): ImportPreview;
   applyMenuImport(csvText: string): ImportResult;
@@ -111,7 +113,7 @@ export const READ_ONLY = /^(get|list|auth|preview|is|read|open|log|backup)/;
 export type PosApiMethod = keyof PosApi;
 
 /** Methods that work while the POS is locked. */
-export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'setupPassword', 'unlock', 'lock', 'logRendererError'];
+export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'unlock', 'lock', 'logRendererError'];
 
 export type IpcResult = { ok: true; value: unknown } | { ok: false; error: string };
 

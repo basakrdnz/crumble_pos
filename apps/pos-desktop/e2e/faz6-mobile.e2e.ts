@@ -134,6 +134,10 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await snap(phone, 'faz6-products');
     await phone.getByRole('tab', { name: /Raporlar/ }).click();
     await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
+    await snap(phone, 'faz6-reports');
+    await phone.getByRole('tab', { name: 'Saatler', exact: true }).click();
+    await phone.getByText('Yoğunluk haritası', { exact: false }).waitFor();
+    await snap(phone, 'faz6-reports-hours');
   });
 
   it('change history shows a POS price change (old -> new)', async () => {
@@ -150,11 +154,56 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await phone.goBack();
   });
 
+  it('telefondan menü: price, new product and removal reach the POS', async () => {
+    await phone.getByRole('tab', { name: /Ürünler/ }).click();
+    await phone.getByRole('tab', { name: 'Menü', exact: true }).click();
+    await phone.getByLabel('Ürün ara').fill('Cafe Latte');
+    await phone.getByTestId('menu-row').filter({ hasText: 'Cafe Latte' }).click();
+    await phone.getByLabel('Yeni fiyat').fill('225');
+    await phone.waitForTimeout(500); // let the sheet finish sliding in for the screenshot
+    await snap(phone, 'faz6-menu-price');
+    await phone.getByRole('button', { name: 'Fiyatı kaydet' }).click();
+    await expect.poll(() => phone.getByTestId('menu-row').filter({ hasText: 'Cafe Latte' }).textContent()).toContain('225,00 ₺');
+
+    await phone.getByLabel('Ürün ara').fill('Americano');
+    await phone.getByTestId('menu-row').filter({ hasText: 'Americano' }).click();
+    await phone.getByRole('button', { name: 'Ürünü menüden kaldır' }).click();
+    await phone.getByRole('button', { name: 'Emin misin? Menüden kaldır' }).click();
+    await expect.poll(() => phone.getByTestId('menu-row').count()).toBe(0);
+
+    await phone.getByLabel('Ürün ara').fill('');
+    await phone.getByRole('button', { name: '+ Ürün ekle' }).click();
+    await phone.getByLabel('Ürün adı').fill('Fındıklı Latte');
+    await phone.getByLabel('Yeni ürün').getByRole('button', { name: 'Kahve', exact: true }).click();
+    await phone.getByLabel('Fiyat', { exact: true }).fill('245');
+    await phone.getByRole('button', { name: 'Ürünü ekle' }).click();
+    await phone.getByTestId('menu-row').filter({ hasText: 'Fındıklı Latte' }).waitFor();
+    await snap(phone, 'faz6-menu');
+
+    // The POS pulls product changes when idle (20 s) and the sale screen refreshes.
+    const started = Date.now();
+    await pos.page.getByRole('button', { name: 'Satış', exact: true }).click();
+    await pos.page.getByRole('tab', { name: 'Kahve' }).click();
+    const tile = (name: string) => pos.page.locator(`.product[data-product="${name}"]`);
+    await expect.poll(() => tile('Fındıklı Latte').count(), { timeout: 45_000, interval: 500 }).toBe(1);
+    console.log(`telefondan kasaya: ${((Date.now() - started) / 1000).toFixed(1)} sn`);
+    expect(await tile('Fındıklı Latte').locator('.price').textContent()).toBe('245,00 ₺');
+    expect(await tile('Cafe Latte').locator('.price').textContent()).toBe('225,00 ₺');
+    expect(await tile('Americano').count()).toBe(0);
+    await snap(pos.page, 'faz6-pos-menu');
+
+    // Kasa → Değişiklik geçmişi marks them as coming from the phone.
+    await pos.page.getByRole('button', { name: 'Ayarlar', exact: true }).click();
+    await pos.page.getByRole('button', { name: 'Değişiklik geçmişi' }).click();
+    await expect.poll(() => pos.page.getByText('Telefon', { exact: true }).count()).toBe(3);
+  });
+
   it('the day end (no cash count) appears under Vardiyalar', async () => {
     await pos.page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await pos.page.getByRole('button', { name: 'Gün sonunu al' }).click();
     await pos.page.getByRole('heading', { name: 'Gün sonu özeti' }).waitFor();
 
+    await phone.getByRole('tab', { name: /Diğer/ }).click();
     await phone.getByText('Vardiyalar').click();
     await expect
       .poll(() => phone.getByTestId('shift-expected').first().textContent(), { timeout: 20_000 })

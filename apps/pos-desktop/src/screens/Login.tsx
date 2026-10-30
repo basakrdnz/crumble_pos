@@ -14,22 +14,13 @@ function greeting(now = new Date()): string {
   return 'İyi akşamlar.';
 }
 
-export function Login({ status, onChange }: { status: AuthStatus; onChange(status: AuthStatus): void }) {
+export function Login({ onChange }: { onChange(status: AuthStatus): void }) {
   const [password, setPassword] = useState('');
-  const [repeat, setRepeat] = useState('');
   const run = useAction();
-  const setup = !status.passwordSet;
 
   const submit = async () => {
-    if (setup && password !== repeat) {
-      await run(async () => {
-        throw new Error('Şifreler aynı değil.');
-      });
-      return;
-    }
-    const next = await run(() => (setup ? api.setupPassword(password) : api.unlock(password)));
+    const next = await run(() => api.unlock(password));
     setPassword('');
-    setRepeat('');
     if (next) onChange(next);
   };
 
@@ -38,12 +29,8 @@ export function Login({ status, onChange }: { status: AuthStatus; onChange(statu
       <section className="login-hero">
         <div className="brand">CRUMBLE</div>
         <div>
-          <h1>{setup ? 'Hoş geldin.' : greeting()}</h1>
-          <p>
-            {setup
-              ? 'İlk kurulum: kasa şifresini belirle. Bu şifreyi tüm çalışanlar kullanacak.'
-              : 'Kasa kilitli. Devam etmek için kasa şifresini gir.'}
-          </p>
+          <h1>{greeting()}</h1>
+          <p>Kasa kilitli. Devam etmek için kasa şifresini gir.</p>
         </div>
         <small>Crumble Cafe · Çankaya</small>
       </section>
@@ -55,7 +42,7 @@ export function Login({ status, onChange }: { status: AuthStatus; onChange(statu
             void submit();
           }}
         >
-          <h2>{setup ? 'Kasa şifresini belirle' : 'Kasa şifresi'}</h2>
+          <h2>Kasa şifresi</h2>
           <input
             className="input"
             type="password"
@@ -65,19 +52,9 @@ export function Login({ status, onChange }: { status: AuthStatus; onChange(statu
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {setup && (
-            <input
-              className="input"
-              type="password"
-              placeholder="Şifre (tekrar)"
-              aria-label="Şifre tekrar"
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value)}
-            />
-          )}
-          {!setup && <Keypad value={password} onChange={setPassword} maxLength={32} captureKeyboard={false} />}
+          <Keypad value={password} onChange={setPassword} maxLength={32} captureKeyboard={false} />
           <button className="btn primary big" disabled={!password}>
-            {setup ? 'Şifreyi kaydet' : 'Giriş'}
+            Giriş
           </button>
         </form>
       </div>
