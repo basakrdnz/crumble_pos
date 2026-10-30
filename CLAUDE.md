@@ -115,6 +115,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - `partners` de silinemez (kullanıcı: herkes tek ortak hesapla giriyor, kişi bazlı erişim kaldırmaya gerek yok). Sadece admin yönetir, API yazma yetkisi yok.
   - Migration'lar henüz hiçbir yere uygulanmadığı için Faz 0 içinde yerinde düzenlendi. **İlk uygulamadan sonra mevcut migration'ları asla düzenleme, yeni migration ekle.**
   - `pnpm db:test` geçici yerel Postgres kümesinde stub + migration + `supabase/tests/db.test.sql` çalıştırır.
+  - Yeni proje kurulumu için `supabase/setup.sql`: tüm migration'lar tek transaction'da (`supabase/bundle.sh` üretir). `db:test` dosya güncel değilse başarısız olur. Yeni migration ekleyince `supabase/bundle.sh` çalıştır.
 - **Kasa kod yapısı (Faz 1):**
   - `src/db/schema.ts`: yerel SQLite şeması, Supabase ile aynı tablolar ve değişmezlik trigger'ları, ayrıca `outbox` ve `settings`. Migration'lar `PRAGMA user_version` ile sırayla uygulanır ve sadece eklenir.
   - `src/db/database.ts`: `insertRow`/`updateRow` her yazımda tam satırı outbox'a koyar. Bunlar her zaman `tx()` içinde çağrılır.

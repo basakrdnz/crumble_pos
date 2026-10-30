@@ -32,3 +32,10 @@ for f in "$migrations"/*.sql; do
   run "$psql_cmd -f '$f'"
 done
 run "$psql_cmd -f '$here/db.test.sql'"
+
+# supabase/setup.sql (the one-paste setup) must match the migrations.
+"$here/../bundle.sh" "$work/setup.sql"
+if ! diff -q "$work/setup.sql" "$here/../setup.sql" >/dev/null; then
+  echo "supabase/setup.sql is out of date: run supabase/bundle.sh" >&2
+  exit 1
+fi
