@@ -43,14 +43,12 @@ export async function snap(page: Page, name: string): Promise<void> {
   if (dir) await page.screenshot({ path: join(dir, `${name}.png`) });
 }
 
-export const TEST_PASSWORD = '1234';
+export const TEST_PASSWORD = '1010'; // the default POS password
 
-/** Sets the POS password on first run, or logs in. */
+/** Logs in. */
 export async function unlock(page: Page, password = TEST_PASSWORD): Promise<void> {
   await page.getByLabel('Şifre', { exact: true }).fill(password);
-  const repeat = page.getByLabel('Şifre tekrar');
-  if (await repeat.count()) await repeat.fill(password);
-  await page.getByRole('button', { name: /Şifreyi kaydet|Giriş/ }).click();
+  await page.getByRole('button', { name: 'Giriş' }).click();
   await page.getByRole('button', { name: 'Kilitle' }).waitFor();
 }
 

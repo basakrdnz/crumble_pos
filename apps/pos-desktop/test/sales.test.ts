@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { changePassword, checkPassword, isPasswordSet, setInitialPassword } from '../src/db/auth';
 import { createCategory, createProduct } from '../src/db/catalog';
 import type { Context } from '../src/db/database';
 import { onSaleCompleted } from '../src/db/events';

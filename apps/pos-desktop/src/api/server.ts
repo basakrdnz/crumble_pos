@@ -41,17 +41,13 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     if (!maintenance) throw new Error('Bakım işlemleri bu ortamda yok.');
     return maintenance;
   };
+  auth.ensurePassword(ctx);
   let unlocked = false;
-  const status = (): AuthStatus => ({ passwordSet: auth.isPasswordSet(ctx), unlocked });
+  const status = (): AuthStatus => ({ unlocked });
   const tabOf = (itemId: string) => sales.getTab(ctx, ctx.db.prepare('select tab_id from tab_items where id = ?').pluck().get(itemId) as string);
 
   const api: PosApi = {
     authStatus: status,
-    setupPassword: (password) => {
-      auth.setInitialPassword(ctx, password);
-      unlocked = true;
-      return status();
-    },
     unlock: (password) => {
       if (!auth.checkPassword(ctx, password)) throw new Error('Şifre yanlış.');
       unlocked = true;

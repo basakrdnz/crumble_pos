@@ -87,13 +87,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. Supabase projesi ve Expo/Apple/Google hesapları var mı? (Supabase kurulumu: `supabase/README.md`)
 6. Uygulama simgesi (logo bekleniyor; yoksa G2 yeşilinde sade "C"). Renk teması kararlaştı: G2 Orman.
-7. Kasa şifresi: otomatik kilit **olmayacak** (2026-10-28). Unutulursa nasıl sıfırlanacak? (açık; öneriler: ortak hesabın e-postasıyla veya tek seferlik kurtarma kodu.)
+7. ~~Kasa şifresi~~ Karar (2026-10-30): otomatik kilit yok. Şifre baştan **1010**, ilk kurulumda sorulmaz, ayarlardan değiştirilebilir. Unutulursa geliştirici koddan sıfırlar, sıfırlama akışı yok.
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
 11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
 12. ~~Mobil G2 tasarımı~~ Yapıldı (2026-10-30): B1 (koyu yeşil üst alan) + M1 (beyaz alt sekme), kıyaslar ve saat analizi.
-13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin yeşil çaylı bir 250 g türü de var; kullanıcı teyit edecek.
+13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin türü bilinmiyor, kullanıcı için önemli değil.
 14. ~~Telefondan menü~~ Yapıldı (2026-10-30): fiyat, ürün ekle, ürün sil; çakışmada en son yapılan kazanır. Ayrıntı aşağıda "Mobil yenileme ve telefondan menü".
 
 ## Git akışı
@@ -130,7 +130,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - İptal toplamı = kapanan hesaplardaki iptal satırları + void hesapların tüm kalemleri. İkram ve iptal değeri satış fiyatından (`unit_price`) hesaplanır.
   - Kendi kararım: aynı ürüne tekrar tıklanınca sadece "düz" satırın (fiyatı, indirimi, ikramı ve notu değişmemiş) adedi artar, yoksa yeni satır açılır. Bir değişiklik hesabı alınmış ödemenin altına düşüremez. Tamamı ikram olan hesap ödeme alınmadan kapanır.
   - `onSaleCompleted` (`src/db/events.ts`), hesap `paid` olunca commit sonrası tetiklenir.
-  - Kilit ana süreçte uygulanır: kilitliyken sadece `authStatus/setupPassword/unlock/lock` çalışır.
+  - Kilit ana süreçte uygulanır: kilitliyken sadece `authStatus/unlock/lock` çalışır. Şifre yoksa `ensurePassword` 1010'u yazar (`DEFAULT_PASSWORD`, `src/db/auth.ts`), ilk kurulum ekranı yok.
 - **Hesap ve kroki (Faz 3):**
   - Kroki mantığı `src/db/floor.ts`, çizim `src/components/FloorCanvas.tsx` (görünüm ve düzenleyici). Mantıksal tuval 1200×800 birim (`src/floor/constants.ts`). Ekranda ölçeklenir, sürükleme bırakınca kaydedilir.
   - Kendi kararlarım:
@@ -199,7 +199,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Dikkat: telefon yazımında `updated_at` sunucu saatidir, kasada kasanın saati. Kasa saati ileri giderse kasadaki değişiklik haksız yere kazanabilir. Kasa saatinin otomatik ayarlı olması yeterli.
   - "kasaya gidiyor" rozeti yaklaşık: telefon değişikliği kasanın son heartbeat'inden yeniyse gösterilir.
   - E2E: `fakeSupabase.ts` `POST /rest/v1/rpc/<fn>` (sadece menü fonksiyonları) destekler. `faz6-mobile.e2e.ts` telefonda fiyat/ekle/sil yapıp kasada görünmesini ölçer (~20 sn).
-- Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, kasa şifresi sıfırlama (açık konu 7), push bildirimleri.
+- Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
 
 ## Komutlar
 
