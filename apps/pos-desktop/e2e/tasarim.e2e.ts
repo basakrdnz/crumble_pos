@@ -1,24 +1,13 @@
-import type { Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cartTotal, importMenu, openShiftUi, pick } from './helpers';
 import { launchApp, type RunningApp, snap, typeKeypad, unlock } from './launch';
 
 // Tasarım yenileme (2026-10-29): walks every main screen at the cafe's screen
 // size and saves screenshots (CRUMBLE_SCREENSHOTS) for review.
-const call = (page: Page, method: string, ...args: unknown[]) =>
-  page.evaluate(
-    async ([m, a]) => {
-      const r = (await window.crumble.invoke(m as string, a as unknown[])) as { ok: boolean; value?: unknown; error?: string };
-      if (!r.ok) throw new Error(r.error);
-      return r.value as never;
-    },
-    [method, args] as const,
-  );
-
 describe('Tasarım: G2 ekran turu', () => {
   let run: RunningApp;
   beforeAll(async () => {
-    run = await launchApp();
+    run = await launchApp(undefined, { seedFloor: true }); // Crumble salonu
     await run.app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0]!;
       win.unmaximize();
@@ -75,21 +64,10 @@ describe('Tasarım: G2 ekran turu', () => {
 
   it('floor plan, table tab with partial payment and the tab cards', async () => {
     const { page } = run;
-    const plan = await call(page, 'createFloorPlan', 'Salon');
-    const id = (plan as { id: string }).id;
-    for (const [shape, x, y] of [
-      ['circle', 120, 120],
-      ['circle', 420, 120],
-      ['square', 720, 120],
-      ['square', 120, 420],
-      ['rounded_rectangle', 420, 460],
-      ['rectangle', 820, 460],
-    ] as const) {
-      await call(page, 'createTable', id, shape, { x, y });
-    }
-    await call(page, 'createFloorPlan', 'Bahçe');
-
+    // A new POS starts with the Crumble floor plan: 8 tables, 2 at the fireplace.
     await page.getByRole('button', { name: 'Kroki', exact: true }).click();
+    expect(await page.locator('.floor-table').count()).toBe(8);
+    expect(await page.locator('[data-table="2"]').textContent()).toContain('Şömine');
     await page.getByRole('button', { name: 'Masa 2', exact: true }).click();
     await pick(page, 'Kahve', 'Türk Kahvesi');
     await pick(page, 'Kahve', 'Türk Kahvesi');

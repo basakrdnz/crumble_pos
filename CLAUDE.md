@@ -46,7 +46,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 
 ## Veri modeli (özet, ayrıntı plan §8)
 
-`categories`, `products` (+`description`, `needs_price_check`), `floor_plans`, `tables` (shape: circle/square/rectangle/rounded_rectangle), `shifts`, `tabs` (tek sipariş varlığı; ayrı `sales` tablosu yok; satış = `paid` tab; kind: quick/table/named), `tab_items` (`name_snapshot`, `unit_price` satış anını saklar), `payments`, `refunds`, `catalog_changes` (kullanıcı alanı yok), `partners`, `outbox` (sadece yerel). Hesap toplamı hesaplanır, kapanışta `tabs.total` olarak dondurulur.
+`categories`, `products` (+`description`, `needs_price_check`), `floor_plans`, `tables` (shape: circle/square/rectangle/rounded_rectangle/hearth), `shifts`, `tabs` (tek sipariş varlığı; ayrı `sales` tablosu yok; satış = `paid` tab; kind: quick/table/named), `tab_items` (`name_snapshot`, `unit_price` satış anını saklar), `payments`, `refunds`, `catalog_changes` (kullanıcı alanı yok), `partners`, `outbox` (sadece yerel). Hesap toplamı hesaplanır, kapanışta `tabs.total` olarak dondurulur.
 
 ## Menü içe aktarma (Faz 1)
 
@@ -81,7 +81,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 ## Açık konular (kullanıcıya sorulacak)
 
-1. Kroki arka plan görseli ve kafe ölçüleri (sonra verilecek, şimdilik boş kroki).
+1. ~~Kroki~~ Yapıldı (2026-10-30): kullanıcının çizimine göre "Salon", 8 masa, 2 numara şömine önü. Kasa krokide gösterilmez. Görünüm A (sade kartlar).
 2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
@@ -91,7 +91,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
-11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
+11. ~~Kroki şekilleri~~ Yapıldı (2026-10-30): yeni şekil `hearth` (şömine önü yarım daire, üstünde "🔥 Şömine"). SQLite v5 + `20261030000009_hearth_shape.sql`.
 12. ~~Mobil G2 tasarımı~~ Yapıldı (2026-10-30): B1 (koyu yeşil üst alan) + M1 (beyaz alt sekme), kıyaslar ve saat analizi.
 13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin türü bilinmiyor, kullanıcı için önemli değil.
 14. ~~Telefondan menü~~ Yapıldı (2026-10-30): fiyat, ürün ekle, ürün sil; çakışmada en son yapılan kazanır. Ayrıntı aşağıda "Mobil yenileme ve telefondan menü".
@@ -199,6 +199,12 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Dikkat: telefon yazımında `updated_at` sunucu saatidir, kasada kasanın saati. Kasa saati ileri giderse kasadaki değişiklik haksız yere kazanabilir. Kasa saatinin otomatik ayarlı olması yeterli.
   - "kasaya gidiyor" rozeti yaklaşık: telefon değişikliği kasanın son heartbeat'inden yeniyse gösterilir.
   - E2E: `fakeSupabase.ts` `POST /rest/v1/rpc/<fn>` (sadece menü fonksiyonları) destekler. `faz6-mobile.e2e.ts` telefonda fiyat/ekle/sil yapıp kasada görünmesini ölçer (~20 sn).
+- **Crumble salonu (2026-10-30):**
+  - Yeni kasada ilk açılışta kroki kendiliğinden kurulur (`seedCrumbleFloor`, `src/floor/crumble.ts`, `electron/main.ts`). Bir kez çalışır (`settings.crumble_floor_seeded`), sonra editörde düzenlenir.
+  - Satırlar sabit UUID ve sabit eski zamanla (`2026-10-30T00:00Z`) yazılır. Bulutta `floor_plans` ve `tables` için de son yazan kazanır trigger'ı var. Böylece yeni kurulumun dokunulmamış kopyası buluttaki düzenlemeyi ezmez.
+  - Geri yükleme: sadece bu kroki varsa kasa hâlâ "boş" sayılır (`isLocalEmpty`). Bulutun kopyası yerel kopyanın üzerine yazılır, bulutun zaten bildiği satırlar kuyruktan çıkar.
+  - Görünüm A: beyaz kart "Masa N" + "Boş" ya da tutar ve açık kalma süresi (dk). Dolu masa yeşil. Yazı boyları tuval ölçeğine bağlı (`--s`).
+  - E2E: `launchApp()` krokiyi kurmaz (`CRUMBLE_NO_FLOOR_SEED=1`). `tasarim.e2e.ts` `seedFloor: true` ile gerçek salonu kullanır.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
 
 ## Komutlar

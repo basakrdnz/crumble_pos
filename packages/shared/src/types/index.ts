@@ -17,7 +17,7 @@ export type TabStatus = (typeof TAB_STATUSES)[number];
 /** Discounts are whole percentages only: presets or typed on the keypad. */
 export const DISCOUNT_PRESETS = [10, 15] as const;
 
-export const TABLE_SHAPES = ['circle', 'square', 'rectangle', 'rounded_rectangle'] as const;
+export const TABLE_SHAPES = ['circle', 'square', 'rectangle', 'rounded_rectangle', 'hearth'] as const;
 export type TableShape = (typeof TABLE_SHAPES)[number];
 
 export const CATALOG_ENTITY_TYPES = ['product', 'category', 'table', 'floor_plan'] as const;

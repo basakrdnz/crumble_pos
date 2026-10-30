@@ -10,6 +10,7 @@ export const SHAPE_DEFAULTS: Record<TableShape, { width: number; height: number 
   square: { width: 80, height: 80 },
   rectangle: { width: 140, height: 80 },
   rounded_rectangle: { width: 200, height: 70 },
+  hearth: { width: 220, height: 115 },
 };
 
 export const SHAPE_LABEL: Record<TableShape, string> = {
@@ -17,4 +18,5 @@ export const SHAPE_LABEL: Record<TableShape, string> = {
   square: 'Kare',
   rectangle: 'Dikdörtgen',
   rounded_rectangle: 'Kanepe / koltuk',
+  hearth: 'Şömine önü',
 };

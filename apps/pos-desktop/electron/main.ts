@@ -4,6 +4,7 @@ import { formatTL } from '@crumble/shared';
 import { IPC_CHANNEL } from '../src/api/contract';
 import { createApi, dispatch } from '../src/api/server';
 import { createContext, openDatabase } from '../src/db/database';
+import { seedCrumbleFloor } from '../src/db/floor';
 import { dailyBackup } from '../src/maintenance/backup';
 import { createLogger } from '../src/maintenance/logger';
 import { CloudManager, plainBox, type SecretBox } from '../src/sync/cloud';
@@ -105,6 +106,8 @@ if (!isSmoke && !app.requestSingleInstanceLock()) {
     logger.log('info', `Crumble POS ${app.getVersion()} başladı`);
     const db = openDatabase(databasePath());
     const ctx = createContext(db);
+    // Crumble salonu on a new POS (tests turn it off to start with an empty floor).
+    if (process.env.CRUMBLE_NO_FLOOR_SEED !== '1') seedCrumbleFloor(ctx);
     let lastState: SyncState = 'disabled';
     const sync = new SyncService(ctx, (status) => {
       if (status.state !== lastState && (status.state === 'error' || status.state === 'offline')) {

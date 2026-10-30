@@ -267,4 +267,14 @@ select pg_temp.expect_error($$update public.shifts set notes = 'x'$$, 'service_r
 select pg_temp.expect_error($$delete from public.partners$$, 'service_role delete partner');
 commit;
 
+-- ===== Table shapes: 'hearth' (şömine önü masa) is allowed =====
+begin;
+insert into public.floor_plans (id, name, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0001', 'Salon', now(), now());
+insert into public.tables (id, floor_plan_id, label, shape, x, y, width, height, color, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0002', '00000000-0000-0000-0000-0000000f0001', '2', 'hearth', 0, 0, 220, 110, '#ffffff', now(), now());
+select pg_temp.expect_error($$insert into public.tables (id, floor_plan_id, label, shape, x, y, width, height, color, created_at, updated_at)
+  values ('00000000-0000-0000-0000-0000000f0003', '00000000-0000-0000-0000-0000000f0001', '9', 'star', 0, 0, 10, 10, '#ffffff', now(), now())$$, 'unknown table shape');
+rollback;
+
 \echo 'ALL DATABASE TESTS PASSED'

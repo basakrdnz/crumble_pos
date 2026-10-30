@@ -301,9 +301,37 @@ const catalogSource = `
 alter table catalog_changes add column source text not null default 'pos' check (source in ('pos', 'mobile'));
 `;
 
+// v5 (2026-10-30, Crumble salonu): a table in front of the fireplace is drawn
+// as a half circle with a fire mark ('hearth'). The check is rebuilt like v3.
+const tableColumns = ['id', 'floor_plan_id', 'label', 'shape', 'x', 'y', 'width', 'height', 'rotation', 'color', 'created_at', 'updated_at', 'deleted_at'];
+const hearthShape = `
+create table tables_v5 (
+  id text primary key,
+  floor_plan_id text not null references floor_plans (id),
+  label text not null,
+  shape text not null check (shape in ('circle', 'square', 'rectangle', 'rounded_rectangle', 'hearth')),
+  x real not null,
+  y real not null,
+  width real not null check (width > 0),
+  height real not null check (height > 0),
+  rotation real not null default 0,
+  color text not null,
+  created_at text not null,
+  updated_at text not null,
+  deleted_at text
+) strict;
+insert into tables_v5 (${tableColumns.join(', ')}) select ${tableColumns.join(', ')} from tables;
+drop table tables;
+alter table tables_v5 rename to tables;
+
+create trigger tables_no_delete before delete on tables
+begin select raise(abort, 'Kayıt silinemez (tables).'); end;
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
   voidRule,
   shiftWithoutCount,
   catalogSource,
+  hearthShape,
 ];

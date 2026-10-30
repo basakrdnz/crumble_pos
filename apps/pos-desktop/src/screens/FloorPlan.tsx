@@ -34,7 +34,7 @@ export function FloorPlan() {
 
   const status = new Map<string, TableStatus>();
   for (const o of open) {
-    if (o.tab.table_id) status.set(o.tab.table_id, { total: o.remaining, name: o.tab.customer_name });
+    if (o.tab.table_id) status.set(o.tab.table_id, { total: o.remaining, name: o.tab.customer_name, openedAt: o.tab.opened_at });
   }
 
   const tables_ = tables.filter((t) => t.floor_plan_id === planId);
@@ -76,7 +76,7 @@ export function FloorPlan() {
             />
             <div className="floor-legend">
               <span>
-                <i style={{ background: 'var(--empty)', border: '1px solid var(--empty-line)' }} />
+                <i style={{ background: 'var(--surface)', border: '1px solid var(--empty-line)' }} />
                 Boş
               </span>
               <span>

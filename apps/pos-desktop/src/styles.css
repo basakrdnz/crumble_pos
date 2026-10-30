@@ -386,13 +386,31 @@ table.summary tr.diff td, td.diff { color: var(--danger); font-weight: 800; }
 }
 /* On the live map tables are neutral when free and green when busy; the
    editor shows the colour chosen for each shape. */
-.floor:not(.editable) .floor-table { background: var(--empty) !important; border-color: var(--empty-line); color: var(--muted); }
-.floor:not(.editable) .floor-table.busy { background: var(--primary) !important; color: #fff; border-color: transparent; }
+.floor:not(.editable) .floor-table { background: var(--surface) !important; border: 2px solid var(--empty-line); color: var(--ink); }
+.floor:not(.editable) .floor-table:hover { border-color: var(--primary); }
+.floor:not(.editable) .floor-table.busy { background: var(--primary) !important; color: #fff; border-color: var(--primary); }
 .floor-table.selected { outline: 3px solid var(--ink); outline-offset: 2px; }
 .floor.editable .floor-table { cursor: move; }
 .floor-label { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-align: center; pointer-events: none; font-size: 14px; font-weight: 800; }
-.floor-total { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.floor-name { font-size: 11px; font-weight: 600; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Live map cards (tasarım A, 2026-10-30): sizes follow the canvas scale (--s). */
+.floor-card {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
+  padding: calc(var(--s) * 14px) calc(var(--s) * 18px); pointer-events: none; min-width: 0;
+}
+.floor-title { font-size: max(12px, calc(var(--s) * 25px)); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.floor-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: max(11px, calc(var(--s) * 18px)); }
+.floor-foot.muted-foot { color: var(--muted); font-weight: 600; }
+.floor-total { font-weight: 800; font-variant-numeric: tabular-nums; }
+.floor-time { font-size: 0.85em; font-weight: 600; opacity: 0.85; }
+.floor-name { font-size: max(10px, calc(var(--s) * 14px)); font-weight: 600; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Şömine önü masa: half circle with the fireplace above it. */
+.floor-table.shape-hearth .floor-card { align-items: center; justify-content: center; text-align: center; gap: calc(var(--s) * 4px); padding-bottom: calc(var(--s) * 26px); }
+.floor-table.shape-hearth .floor-foot { justify-content: center; }
+.hearth-mark {
+  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, calc(var(--s) * -10px)); white-space: nowrap; pointer-events: none;
+  padding: calc(var(--s) * 6px) calc(var(--s) * 14px); border-radius: calc(var(--s) * 10px); border: 2px solid #c8612f; background: #f7e6da;
+  color: #c8612f; font-size: max(11px, calc(var(--s) * 17px)); font-weight: 800;
+}
 .floor-legend { display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: var(--muted); }
 .floor-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .resize-handle {
