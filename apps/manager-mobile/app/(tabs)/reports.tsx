@@ -107,6 +107,7 @@ function Hours() {
   const map = data ? heatmap(data.report.tabs, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
   const hours = map ? Array.from({ length: map.toHour - map.fromHour + 1 }, (_, i) => map.fromHour + i) : [];
   const max = map ? Math.max(1, ...map.cells.flat().map((c) => c?.revenue ?? 0)) : 1;
+  const anyOpen = map ? map.cells.some((row) => row.some(Boolean)) : false;
   return (
     <>
       <Chips>
@@ -121,7 +122,7 @@ function Hours() {
         ))}
       </Chips>
       {error && <Text style={styles.error}>{error}</Text>}
-      {map && (map.busiest ? (
+      {map && (anyOpen ? (
         <>
           <Card>
             <Label>Yoğunluk haritası · saat başı ortalama ciro</Label>
@@ -143,20 +144,22 @@ function Hours() {
             </View>
             <Text style={[styles.rowSub, { marginTop: 6 }]}>Saatler vardiya açılışı ile gün sonu arasından; boş kutu = o saatte kapalıydı.</Text>
           </Card>
-          <View style={styles.grid}>
-            <Stat
-              label="En yoğun"
-              value={`${WEEKDAYS_SHORT[map.busiest.weekday]} ${hh(map.busiest.hour)}–${hh(map.busiest.hour + 2)}`}
-              sub={`${formatTL(map.busiest.revenue)} · ${map.busiest.sales} satış`}
-              testID="busiest"
-            />
-            <Stat
-              label="En ölü"
-              value={`${WEEKDAYS_SHORT[map.quietest!.weekday]} ${hh(map.quietest!.hour)}–${hh(map.quietest!.hour + 2)}`}
-              sub={`${formatTL(map.quietest!.revenue)} · ${map.quietest!.sales} satış`}
-              testID="quietest"
-            />
-          </View>
+          {map.busiest && (
+            <View style={styles.grid}>
+              <Stat
+                label="En yoğun"
+                value={`${WEEKDAYS_SHORT[map.busiest.weekday]} ${hh(map.busiest.hour)}–${hh(map.busiest.hour + 2)}`}
+                sub={`${formatTL(map.busiest.revenue)} · ${map.busiest.sales} satış`}
+                testID="busiest"
+              />
+              <Stat
+                label="En ölü"
+                value={`${WEEKDAYS_SHORT[map.quietest!.weekday]} ${hh(map.quietest!.hour)}–${hh(map.quietest!.hour + 2)}`}
+                sub={`${formatTL(map.quietest!.revenue)} · ${map.quietest!.sales} satış`}
+                testID="quietest"
+              />
+            </View>
+          )}
           <Section title="Günlere göre saat başı ortalama">
             {map.cells.map((row, d) => {
               const open = row.filter(Boolean);

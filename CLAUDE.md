@@ -92,9 +92,9 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
 10. **Faz 8'de netleşecek:** Ortak görünüm hangi uygulamada olacak, ürünler iki menü arasında nasıl eşleşecek? Ayrıca online ödenmiş sipariş teslim edilirken kasada tekrar satış girilmemeli, yoksa ciro iki kez sayılır.
 11. Kroki: masa şekilleri/yerleşimi için kullanıcı görsel gönderecek; ortadaki şömine ateş simgesiyle gösterilecek (şema `tables.shape` buna henüz izin vermiyor, o zaman yeni migration gerekir).
-12. Mobil yönetim uygulaması da G2 ile yeniden tasarlanacak (kasa bittikten sonra).
+12. ~~Mobil G2 tasarımı~~ Yapıldı (2026-10-30): B1 (koyu yeşil üst alan) + M1 (beyaz alt sekme), kıyaslar ve saat analizi.
 13. ~~Bitki çayları~~ Yapıldı (2026-10-30): satışta sadece "Bitki Çayı (Küçük/Büyük)", kutudaki "i" sadece bilgi penceresi açar. Çeşitler kullanıcıdan (Chado, 250 g): Yılbaşı Çayı, Turmeric Chai, Digestea, Immuni-Tea, Rooibos Chai, Calm Tea. İçerikler Chado ürün sayfalarından, Ayarlar → Bitki çayı bilgisi'nden düzenlenir (`src/db/teaInfo.ts`, `settings` tablosu, senkronlanmaz). Immuni-Tea'nin yeşil çaylı bir 250 g türü de var; kullanıcı teyit edecek.
-14. Telefondan menü (2026-10-30): kapsam fiyat, ürün ekle, ürün sil; çakışmada en son yapılan. Tasarım sayfasında "Menü" ekranları; uygulama mobil tasarımla birlikte. Gerekecekler: partner için `products` insert/update RLS (sadece izinli alanlar), kasada ürün çekme (pull), `catalog_changes`'e kaynak (kasa/telefon) bilgisi (yeni migration).
+14. ~~Telefondan menü~~ Yapıldı (2026-10-30): fiyat, ürün ekle, ürün sil; çakışmada en son yapılan kazanır. Ayrıntı aşağıda "Mobil yenileme ve telefondan menü".
 
 ## Git akışı
 
@@ -190,6 +190,15 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Gün sonu `screens/Shift.tsx` (`DayEnd`): ödeme ve iptal hemen yapılır, devret ekranda tutulup `closeShift`'e verilir.
   - Hesap adı `tabTitle`: sayı etiketli masa "Masa 5", diğerleri olduğu gibi ("Kanepe 1", "Pencere").
   - Yeni migration: SQLite v3 (`shifts` tablosu yeniden kurulur; `migrate()` bunun için foreign key'leri işlem dışında kapatıp `foreign_key_check` yapar) ve `supabase/migrations/20261029000007_shift_without_count.sql`.
+- **Mobil yenileme ve telefondan menü (2026-10-30):**
+  - Tema `components/theme.ts` (G2), ortak parçalar `components/ui.tsx` (Screen, Stat, Delta, Segmented, Columns, HeatGrid…). Yazı tipleri `@expo-google-fonts/manrope` + `gloock`, `_layout.tsx`'te yüklenir.
+  - Analiz `packages/shared/src/reports/analytics.ts`: saat bazlı her şey satış (hesap kapanış) saatine göre. Hafta pazartesi başlar. "Açık saat" = vardiya açılışı ile gün sonu arası (kafenin saatleri değişken). Yorum metni yok, sadece sayılar (kullanıcı). Ortalama masa süresi kaldırıldı; saat analizinde "Son 4 hafta" yerine "Bu ay".
+  - Bugün: şu ana kadarki ciro, dün aynı saate ve geçen hafta aynı güne göre. Raporlar: Özet / Saatler (ısı haritası, en yoğun/en ölü iki saat) / Ürünler (değişim, gün bölümleri) / Kıyas (gün/hafta/ay).
+  - Menü: Ürünler → Menü (`components/Menu.tsx`). Telefon tabloya doğrudan yazmaz, `menu_set_price`, `menu_add_product`, `menu_delete_product` fonksiyonlarını çağırır (`20261030000008_mobile_menu.sql`, security definer, sadece ortak). Fonksiyonlar `catalog_changes`'e `source = 'mobile'` yazar. Fiyatı 0 olan pasif ürüne fiyat girilince aktif olur ve "teyit edilecek" kalkar.
+  - Son yazan kazanır: buluttaki `products_last_writer_wins` trigger'ı, `updated_at`'i eski olan güncellemeyi yok sayar. Kasa `src/sync/pull.ts` ile `updated_at` imleci üzerinden ürünleri ve telefon değişikliklerini çeker (başarılı push sonrası ve boştayken 20 sn'de bir). Çekilenler outbox'a yazılmaz. Ekranlar `useCatalogVersion()` ile yenilenir. SQLite migration v4: `catalog_changes.source`.
+  - Dikkat: telefon yazımında `updated_at` sunucu saatidir, kasada kasanın saati. Kasa saati ileri giderse kasadaki değişiklik haksız yere kazanabilir. Kasa saatinin otomatik ayarlı olması yeterli.
+  - "kasaya gidiyor" rozeti yaklaşık: telefon değişikliği kasanın son heartbeat'inden yeniyse gösterilir.
+  - E2E: `fakeSupabase.ts` `POST /rest/v1/rpc/<fn>` (sadece menü fonksiyonları) destekler. `faz6-mobile.e2e.ts` telefonda fiyat/ekle/sil yapıp kasada görünmesini ölçer (~20 sn).
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, kasa şifresi sıfırlama (açık konu 7), push bildirimleri.
 
 ## Komutlar

@@ -2,7 +2,8 @@
 // migrations, for end-to-end tests:
 // - Auth: password sign-in for the device user and a partner user.
 // - PostgREST: POST upserts (the POS sync) and a GET subset (the manager app:
-//   select, eq/neq/gt/gte/lt/lte/in/is filters, order, limit/offset).
+//   select, eq/neq/gt/gte/lt/lte/in/is filters, order, limit/offset), and
+//   POST /rpc/<fn> for the menu functions (telefondan menü).
 // Every query runs as the signed-in user (role authenticated + JWT claims),
 // so RLS and the immutability triggers apply. stop() simulates the internet
 // going away. Realtime is not emulated: the manager app falls back to polling.
@@ -42,6 +43,7 @@ const READABLE = new Set([
   'categories', 'products', 'floor_plans', 'tables', 'shifts', 'tabs', 'tab_items', 'payments', 'refunds',
   'catalog_changes', 'partners', 'device_status',
 ]);
+const RPCS = new Set(['menu_set_price', 'menu_add_product', 'menu_delete_product']);
 const OPS: Record<string, string> = { eq: '=', neq: '<>', gt: '>', gte: '>=', lt: '<', lte: '<=' };
 
 function ident(name: string): string {
@@ -126,14 +128,31 @@ export function fakeSupabase(pool: pg.Pool, port: number, users: { device: strin
           return claims ? send(200, { id: claims.sub, email: claims.email, app_metadata: claims.app_metadata, aud: 'authenticated', role: 'authenticated' }) : send(401, { message: 'no session' });
         }
 
-        const rest = /^\/rest\/v1\/(\w+)$/.exec(url.pathname);
+        const rest = /^\/rest\/v1\/(rpc\/)?(\w+)$/.exec(url.pathname);
         if (!rest) return send(404, { message: `not found: ${req.method} ${url.pathname}` });
-        const table = rest[1]!;
+        const table = rest[2]!;
         const claims = claimsOf(req.headers.authorization);
         if (!claims) return send(401, { message: 'JWT required', code: 'PGRST301' });
 
         const client = await pool.connect();
         try {
+          if (rest[1]) {
+            if (req.method !== 'POST' || !RPCS.has(table)) return send(404, { message: 'unknown function' });
+            const args = JSON.parse(body || '{}') as Record<string, unknown>;
+            const names = Object.keys(args).map(ident);
+            const sql = `select public.${table}(${names.map((n, i) => `${n} => $${i + 1}`).join(', ')})`;
+            await client.query('begin');
+            try {
+              await client.query('set local role authenticated');
+              await client.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(claims)]);
+              await client.query(sql, Object.values(args));
+              await client.query('commit');
+              return send(204);
+            } catch (e) {
+              await client.query('rollback');
+              throw e;
+            }
+          }
           if (req.method === 'POST') {
             if (claims.sub !== DEVICE_USER) return send(403, { message: 'permission denied', code: '42501' });
             const transport = pgTransport(client);

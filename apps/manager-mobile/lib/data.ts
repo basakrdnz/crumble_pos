@@ -137,3 +137,22 @@ export async function loadSale(tabId: string): Promise<SaleDetail | null> {
   ]);
   return { tab, items, payments, refunds };
 }
+
+// ---------------------------------------------------------------------------
+// Telefondan menü (2026-10-30): the only writes. They go through the menu_*
+// database functions (partners only), which also log the change as "mobile".
+// The POS pulls them within about 20 seconds when it is online.
+// ---------------------------------------------------------------------------
+
+async function rpc(fn: string, args: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message);
+}
+
+export const setProductPrice = (productId: string, price: number) =>
+  rpc('menu_set_price', { p_product: productId, p_price: price });
+
+export const addMenuProduct = (id: string, categoryId: string, name: string, price: number) =>
+  rpc('menu_add_product', { p_id: id, p_category: categoryId, p_name: name, p_price: price });
+
+export const deleteMenuProduct = (productId: string) => rpc('menu_delete_product', { p_product: productId });
