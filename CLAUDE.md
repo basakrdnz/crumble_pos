@@ -65,7 +65,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 2. **Vardiya ve hızlı satış** ✅ (kabul: `test/sales.test.ts` örnek gün + `e2e/faz2-sale.e2e.ts`). Vardiya aç/kapat, satış ekranı, satır işlemleri paneli + sayı tuş takımı, fiyatı değiştir, indirim (%10/%15/elle), ikram, nakit/kart/karma ödeme (F12), Esc iptal, F3 yeni hesap. Kabul: örnek gün simülasyonunda beklenen nakit, elle yapılan hesapla aynı çıkar.
 3. **Hesap ve kroki** ✅ (kabul: `test/tabs.test.ts` + `e2e/faz3-tabs.e2e.ts`). İsimle/masa hesabı, taşıma, kısmi/toplu ödeme, kroki gösterimi ve editörü, çoklu bölüm. Başlangıçta boş kroki. Kabul: masa → hesap → ürün → kısmi ödeme → kapat.
 4. **İptal/iade** ✅ (kabul: `test/refunds.test.ts` + `e2e/faz4-refunds.e2e.ts`). Satır ve satış iadesi, kapanış toplamlarına yansıması.
-5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Supabase projesine migration'lar **kullanıcıyla birlikte** uygulanacak (`supabase/README.md`, henüz yapılmadı). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
+5. **Senkron** ✅ (kabul: `test/sync.integration.test.ts` gerçek Postgres + `e2e/faz5-sync.e2e.ts`). Outbox, push, offline davranış, durum göstergesi. Migration'lar kullanıcıyla birlikte Supabase projesine uygulandı (2026-10-30, `supabase/README.md`). Kabul: offline'da yapılan 20 satış, bağlantı gelince buluta **tam bir kez** düşer.
 6. **Mobil** ✅ (kabul: `apps/pos-desktop/e2e/faz6-mobile.e2e.ts`). Giriş, Bugün, Satışlar, Ürün raporu, Vardiyalar, Raporlar, Değişiklik Geçmişi. Kabul: kasadaki satış birkaç saniyede mobilde görünür.
 7. **Cilalama** ✅ (`e2e/faz7-maintenance.e2e.ts`). Windows installer, günlük yerel `.sqlite` yedeği, kısayol listesi, hata günlüğü.
 - **Tasarım yenileme** ✅ (2026-10-29, `e2e/tasarim.e2e.ts`). G2 Orman paleti, sol ray, S2 satış düzeni, P2 ödeme butonları, "Günaydın." girişi. Tasarım planı: Design artifact "Crumble POS Tasarım Planı" (https://claude.ai/artifact/RT83SYTbT3SNzaT5TSEyMC). Kroki görselleri ve şömine sonra.
@@ -85,7 +85,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
-5. Supabase projesi ve Expo/Apple/Google hesapları var mı? (Supabase kurulumu: `supabase/README.md`)
+5. ~~Supabase projesi~~ Kuruldu (2026-10-30, bkz. uygulama notları). Expo/Apple/Google hesapları hâlâ sorulacak.
 6. Uygulama simgesi (logo bekleniyor; yoksa G2 yeşilinde sade "C"). Renk teması kararlaştı: G2 Orman.
 7. ~~Kasa şifresi~~ Karar (2026-10-30): otomatik kilit yok. Şifre baştan **1010**, ilk kurulumda sorulmaz, ayarlardan değiştirilebilir. Unutulursa geliştirici koddan sıfırlar, sıfırlama akışı yok.
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
@@ -108,12 +108,12 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 - `@crumble/shared` derlenmeden TS kaynağı olarak tüketilir (`exports: ./src/index.ts`). Electron main/preload'da bundle'a dahil edilir (`electron.vite.config.ts` → `externalizeDeps.exclude`). Metro bunu kendisi transpile eder.
 - **better-sqlite3 rebuild:** Plan §3 bir rebuild adımı istiyordu, ama gerek kalmadı. v13 Node-API kullanıyor ve `win32-x64` dahil hazır binary ile geliyor. Node-API ABI-kararlı olduğu için Electron'da yeniden derleme gerekmez (`pos:smoke` bunu doğrular). `pnpm-workspace.yaml` → `ignoredBuiltDependencies: better-sqlite3`. İleride Node-API olmayan bir native modül eklenirse `@electron/rebuild` gerekir (header'lar `electronjs.org`'dan iner).
 - Expo SDK 58, React 19.3, RN 0.88. Paket eklerken `npx expo install` kullan (bulut oturumunda `EXPO_OFFLINE=1` gerekebilir). Rotalar `apps/manager-mobile/app/` altında. Uygulama adı şimdilik "Crumble Yönetim", ikonlar Expo şablonundan.
-- Supabase SQL (`supabase/migrations`), **hiçbir projeye uygulanmadı**:
+- Supabase SQL (`supabase/migrations`), **2026-10-30'da kullanıcının Supabase projesine (`crumble`, Europe) `setup.sql` ile uygulandı** (9 migration). Kasa cihazı `kasa@crumble.local` (device), ortak hesabı `ortak@crumble.local` (partners). Proje oluştururken "Automatically expose new tables" açık bırakıldı: migration'lar Supabase'in varsayılan tablo izinlerine (stub'daki `alter default privileges`) dayanıyor, RLS ve revoke'larla daraltıyor.
   - `private` şeması: `is_device()` (JWT `app_metadata.role`), `is_partner()` (security definer) ve trigger fonksiyonları.
   - Birebir aynı içerikli (no-op) update her zaman serbest. Böylece senkronda yeniden gönderilen upsert idempotent kalır. Zaten var olan `tab_items` id'sinin yeniden insert'i de `ON CONFLICT` ile sorunsuz geçer. Faz 5'te insert-only tablolar için `ON CONFLICT DO NOTHING` kullan.
   - Şemada fazladan kısıtlar var: tek açık vardiya (partial unique index), `cash_difference = counted − expected`, `paid` ⇒ `closed_at`/`closed_shift_id`/`total` dolu, `void` ⇒ `closed_at`/`closed_shift_id` dolu, `tab_items.product_id` zorunlu, iade kalemi aynı hesaba ait (composite FK), iptal edilmiş kalem bir daha değişmez. Kullanıcı bunları onayladı.
   - `partners` de silinemez (kullanıcı: herkes tek ortak hesapla giriyor, kişi bazlı erişim kaldırmaya gerek yok). Sadece admin yönetir, API yazma yetkisi yok.
-  - Migration'lar henüz hiçbir yere uygulanmadığı için Faz 0 içinde yerinde düzenlendi. **İlk uygulamadan sonra mevcut migration'ları asla düzenleme, yeni migration ekle.**
+  - **Migration'lar artık uygulandı: mevcut migration'ları asla düzenleme, yeni migration ekle.** Yeni migration kullanıcıya SQL Editor'de sadece o dosya çalıştırılmak üzere verilir (`setup.sql` sadece yeni proje içindir).
   - `pnpm db:test` geçici yerel Postgres kümesinde stub + migration + `supabase/tests/db.test.sql` çalıştırır.
   - Yeni proje kurulumu için `supabase/setup.sql`: tüm migration'lar tek transaction'da (`supabase/bundle.sh` üretir). `db:test` dosya güncel değilse başarısız olur. Yeni migration ekleyince `supabase/bundle.sh` çalıştır.
 - **Kasa kod yapısı (Faz 1):**
