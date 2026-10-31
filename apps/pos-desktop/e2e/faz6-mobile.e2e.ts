@@ -74,7 +74,7 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await importMenu(pos.page);
     await pos.page.getByTestId('sync-status').click();
     await pos.page.getByLabel('Supabase adresi').fill(cloud.url);
-    await pos.page.getByLabel('Anon key').fill('anon-test');
+    await pos.page.getByLabel('Publishable (anon) key').fill('anon-test');
     await pos.page.getByLabel('Cihaz e-postası').fill(USERS.device);
     await pos.page.getByLabel('Cihaz şifresi').fill('x');
     await pos.page.getByRole('button', { name: 'Bağlan', exact: true }).click();
