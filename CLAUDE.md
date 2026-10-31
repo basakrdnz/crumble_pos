@@ -180,6 +180,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Paketleme `electron-builder.yml` (NSIS, x64). better-sqlite3 asar dışında, `npmRebuild: false`. Electron sürümü sabit (`45.0.0`, electron-builder sabit sürüm ister).
   - Sadece main'de `require` edilenler `dependencies`'te (better-sqlite3, bcryptjs, supabase-js). Bundle'a giren React ve `@crumble/shared` `devDependencies`'te.
   - Linux'ta paketlenmiş uygulama smoke testinden geçti. Windows paketinin içeriği doğrulandı (`Crumble POS.exe`, win32-x64 prebuild). NSIS kurulum dosyasının son adımı Linux'ta Wine istediği için kurulum dosyası **Windows'ta** `pnpm pos:dist` ile üretilir.
+  - Kurulum dosyası GitHub Actions'ta üretilir (`.github/workflows/pos-windows.yml`, windows-latest): PR'larda ve `main`'de "Artifacts" altında `Crumble-POS-Kurulum` (30 gün), `kasa-v*` etiketinde GitHub Release. Önce Windows'ta typecheck ve birim testleri çalışır. İmzasız: Windows SmartScreen "Yine de çalıştır" ister.
   - Simge yok (açık konu 6), Electron varsayılanı kullanılıyor. `build/icon.ico` eklenirse electron-builder kullanır.
 - **Tasarım (2026-10-29):**
   - Renkler `src/styles.css` başındaki değişkenler (G2). Yeşil sadece ana eylem (Nakit), seçili satır/ürün ve raydaki aktif sayfa. Kahve/sarı ton kullanma.

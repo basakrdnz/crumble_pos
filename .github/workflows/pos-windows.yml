@@ -1,0 +1,75 @@
+# Builds the POS Windows installer (Crumble-POS-Kurulum-<version>.exe) on a
+# Windows runner: the NSIS step cannot run in the Linux cloud session.
+# - Pull requests and pushes to main: the installer is a downloadable artifact
+#   on the run's page (Actions -> this run -> Artifacts).
+# - A tag "kasa-v*" (e.g. kasa-v1.0.0): also published as a GitHub Release.
+# - "Run workflow" on the Actions tab builds main on demand.
+name: Kasa Windows kurulum dosyası
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['kasa-v*']
+    paths:
+      - 'apps/pos-desktop/**'
+      - 'packages/shared/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/pos-windows.yml'
+  pull_request:
+    paths:
+      - 'apps/pos-desktop/**'
+      - 'packages/shared/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/pos-windows.yml'
+
+permissions:
+  contents: write # only used by the release step on tags
+
+concurrency:
+  group: pos-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Only the POS and what it depends on (not the Expo app).
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter "@crumble/pos-desktop..."
+
+      - name: Typecheck
+        run: pnpm --filter "@crumble/pos-desktop..." typecheck
+
+      # Postgres-backed tests skip themselves on the runner (no Postgres).
+      - name: Unit tests (Windows)
+        run: pnpm --filter "@crumble/pos-desktop..." test
+
+      - name: Build installer
+        run: pnpm pos:dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # not code-signed (yet)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Crumble-POS-Kurulum
+          path: apps/pos-desktop/release/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/kasa-v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" apps/pos-desktop/release/*.exe --title "Kasa $GITHUB_REF_NAME" --generate-notes
