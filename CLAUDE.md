@@ -210,6 +210,18 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - E2E: `launchApp()` krokiyi kurmaz (`CRUMBLE_NO_FLOOR_SEED=1`). `tasarim.e2e.ts` `seedFloor: true` ile gerçek salonu kullanır.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
 
+## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
+
+Kasa programı henüz kurulu değil (2026-11-01). Kullanıcı kafe PC'sine Claude kurup bu adımları ona yaptıracak:
+
+1. Kurulum dosyası: GitHub Actions → "Kasa Windows kurulum dosyası" son başarılı çalışma → Artifacts → `Crumble-POS-Kurulum` (zip içinde `Crumble-POS-Kurulum-<sürüm>.exe`). Kalıcı sürüm için `kasa-v*` etiketi → Releases. Kaynaktan derlemeye gerek yok.
+2. `.exe` imzasız: SmartScreen'de "Ek bilgi → Yine de çalıştır". Kullanıcı başına kurulur, masaüstü kısayolu "Crumble POS". Veriler `%APPDATA%\Crumble POS` (kaldırınca silinmez).
+3. Giriş şifresi **1010**. Kroki (Salon, 8 masa) ilk açılışta kendiliğinden gelir.
+4. Ayarlar → Bulut bağlantısı: adres `https://oduorpefwbpsgzaociro.supabase.co`, publishable key (`sb_publishable_...`, `apps/manager-mobile/.env` ile aynı; kullanıcıda), e-posta `kasa@crumble.local`. **Cihaz şifresini kullanıcı kendisi yazar**, Claude şifre istemez/saklamaz. Sol rayda "Senkron ✓" görülmeli.
+5. Ayarlar → Menü içe aktar: CSV dosya seçiciyle verilir, uygulamanın içinde yok. Repodaki `crumble_menu_seed.csv`'yi GitHub'dan indir (önizleme + onay). Sonra Vardiya aç ve bir deneme satışı yap; Supabase Table Editor'de `tabs`/`payments` satırı görünmeli.
+6. Windows saatinin otomatik ayarlı olduğunu kontrol et (son yazan kazanır kuralı saate dayanır).
+7. Yedekler `%APPDATA%\Crumble POS\backups`, hata günlüğü `...\logs` (Ayarlar → Yedek ve günlük).
+
 ## Komutlar
 
 ```
