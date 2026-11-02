@@ -58,10 +58,6 @@ jobs:
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
 
-      # Links the Expo project on the first run (no-op afterwards).
-      - name: EAS project
-        run: eas init --non-interactive --force
-
       - name: Build (and submit)
         run: eas build --platform ios --profile production --non-interactive --wait ${{ inputs.submit && '--auto-submit' || '' }}
         env:
