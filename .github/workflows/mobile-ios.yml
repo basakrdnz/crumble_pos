@@ -71,7 +71,7 @@ jobs:
           args="--platform ios --profile production --wait ${{ inputs.submit && '--auto-submit' || '' }}"
           if [ "${{ inputs.setup_credentials }}" = "true" ]; then
             # One Enter every 2 s (a flood of input would fill the terminal and hang).
-            (while sleep 2; do echo; done) | CI= timeout 80m script -qefc "eas build $args" /dev/null
+            (while sleep 2; do echo; done) | env -u CI timeout 80m script -qefc "eas build $args" /dev/null
           else
             eas build $args --non-interactive
           fi
