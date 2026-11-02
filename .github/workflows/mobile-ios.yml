@@ -57,10 +57,20 @@ jobs:
 
       # App Store Connect API key: lets EAS create the signing certificate and
       # profile and upload to TestFlight without an Apple ID login.
+      # The same key is written into the submit profile at run time; otherwise
+      # --auto-submit tries to create a new submission key, which needs an
+      # Apple ID login (the first run hung at that prompt).
       - name: App Store Connect key
-        run: printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc.p8"
+        run: |
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc.p8"
+          jq --arg path "$RUNNER_TEMP/asc.p8" --arg id "$ASC_KEY_ID" --arg issuer "$ASC_ISSUER_ID" \
+            '.submit.production.ios += {ascApiKeyPath: $path, ascApiKeyId: $id, ascApiKeyIssuerId: $issuer}' \
+            eas.json > "$RUNNER_TEMP/eas.json"
+          mv "$RUNNER_TEMP/eas.json" eas.json
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
 
       # EAS creates the distribution certificate and provisioning profile only
       # in interactive mode. The first run answers its prompts with the
@@ -71,7 +81,7 @@ jobs:
           args="--platform ios --profile production --wait ${{ inputs.submit && '--auto-submit' || '' }}"
           if [ "${{ inputs.setup_credentials }}" = "true" ]; then
             # One Enter every 2 s (a flood of input would fill the terminal and hang).
-            (while sleep 2; do echo; done) | env -u CI timeout 80m script -qefc "eas build $args" /dev/null
+            (while sleep 2; do echo; done) | env -u CI timeout 45m script -qefc "eas build $args" /dev/null
           else
             eas build $args --non-interactive
           fi
