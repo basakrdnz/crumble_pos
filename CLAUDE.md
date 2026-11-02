@@ -215,6 +215,10 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Kategori çipleri kaymaz, alt satıra geçer (hepsi görünür).
   - Gün sonu başlığı tarih gösterir: "2 Kasım 2026 Pazartesi · açılış 18:30" (`formatLongDate`).
   - Boş hesap (aktif satırı yok, ödeme yok; ör. ürün eklenip çıkarılan hızlı satış) gün sonunda karar istemez: `closeShift` onu kendiliğinden void yapar, gün sonu listesinde görünmez.
+- **Yönetim uygulaması iPhone'a (2026-11-02):** Kullanıcılar iPhone, gerçek uygulama, Apple Developer hesabı var. TestFlight ile dağıtım (App Store'da herkese açık değil).
+  - `apps/manager-mobile/eas.json` (profil `production`, Supabase adresi ve publishable key `env` içinde; ikisi de gizli değil), `app.json` → `ios.bundleIdentifier = com.crumble.yonetim`, `ITSAppUsesNonExemptEncryption: false`, telefon için (`supportsTablet: false`).
+  - Geçici simge `assets/icon.png`: G2 koyu yeşil zemin, Gloock beyaz "C" (logo gelince değişecek).
+  - `.github/workflows/mobile-ios.yml` (elle başlatılır): EAS'te iOS build + `--auto-submit` ile TestFlight. Secret'lar: `EXPO_TOKEN`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`; değişken `APPLE_TEAM_TYPE` (varsayılan INDIVIDUAL). İlk çalıştırmada `eas init` Expo projesini oluşturur; oluşan `extra.eas.projectId` sonra app.json'a eklenmeli. App Store Connect'te uygulama kaydı (bundle id `com.crumble.yonetim`) elle açılır; gerekirse `ascAppId` `eas.json` submit profiline yazılır.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
