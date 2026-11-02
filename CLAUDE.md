@@ -98,7 +98,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 ## Git akışı
 
-- `main` korunur, doğrudan commit atılmaz. Her faz kendi dalında geliştirilir ve PR ile `main`'e birleştirilir. PR'ı kullanıcıya göster, birleştirme onayını bekle.
+- `main` korunur, doğrudan commit atılmaz. Her iş kendi dalında geliştirilir ve PR ile `main`'e birleştirilir. **Kullanıcı kararı (2026-11-02): testler ve CI yeşilse PR'ı onay beklemeden birleştir** ("birleştir hep"). PR'ı yine kullanıcıya göster.
 - Faz 0 dalı: `claude/exciting-lovelace-2jp3ev`.
 
 ## Uygulama notları (Faz 0'da alınan teknik kararlar)
