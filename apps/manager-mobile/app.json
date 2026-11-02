@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Crumble Yönetim",
-    "slug": "crumble-manager",
+    "slug": "crumble-yonetim",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,6 +30,11 @@
       "expo-font"
     ],
     "scheme": "crumble-manager",
-    "backgroundColor": "#F3F4F1"
+    "backgroundColor": "#F3F4F1",
+    "extra": {
+      "eas": {
+        "projectId": "c577a5b3-048e-4268-a3cc-3fa9ef5ce6de"
+      }
+    }
   }
 }
