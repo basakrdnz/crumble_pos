@@ -86,7 +86,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. ~~Supabase projesi~~ Kuruldu (2026-10-30, bkz. uygulama notları). Expo/Apple/Google hesapları hâlâ sorulacak.
-6. Uygulama simgesi (logo bekleniyor; yoksa G2 yeşilinde sade "C"). Renk teması kararlaştı: G2 Orman.
+6. ~~Uygulama simgesi~~ Karar (2026-11-02): kasa ve telefon aynı simge, G2 koyu yeşil zemin + Gloock beyaz "C" (kullanıcı beğendi). Gerçek logo gelirse ikisi birlikte değişir.
 7. ~~Kasa şifresi~~ Karar (2026-10-30): otomatik kilit yok. Şifre baştan **1010**, ilk kurulumda sorulmaz, ayarlardan değiştirilebilir. Unutulursa geliştirici koddan sıfırlar, sıfırlama akışı yok.
 8. ~~Yüzde indirim küsuratlı olabilir mi?~~ Hayır: sadece tam sayı yüzde, hazır %10/%15 + elle.
 9. ~~Mimari karar~~ **Karar (2026-10-28): İki sistem ayrı kalır.** Bu proje (kasa + Supabase + Expo yönetim) planlandığı gibi devam eder. Kullanıcının müşteri uygulaması `basakrdnz/crumble` (Flutter + Firebase, kendi yönetim bölümü var) da kendi yolunda devam eder. Yapıları değiştirilmez. İleride iki taraftaki satışları birlikte görmek için bir köprü kurulacak (plan Faz 8). Öneri: Crumble'daki tamamlanmış siparişler bir Cloud Function ile Supabase'deki `online_orders` tablosuna tek yönlü kopyalanır. Henüz kesin değil.
@@ -181,7 +181,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Sadece main'de `require` edilenler `dependencies`'te (better-sqlite3, bcryptjs, supabase-js). Bundle'a giren React ve `@crumble/shared` `devDependencies`'te.
   - Linux'ta paketlenmiş uygulama smoke testinden geçti. Windows paketinin içeriği doğrulandı (`Crumble POS.exe`, win32-x64 prebuild). NSIS kurulum dosyasının son adımı Linux'ta Wine istediği için kurulum dosyası **Windows'ta** `pnpm pos:dist` ile üretilir.
   - Kurulum dosyası GitHub Actions'ta üretilir (`.github/workflows/pos-windows.yml`, windows-latest): PR'larda ve `main`'de "Artifacts" altında `Crumble-POS-Kurulum` (30 gün), `kasa-v*` etiketinde GitHub Release. Önce Windows'ta typecheck ve birim testleri çalışır. İmzasız: Windows SmartScreen "Yine de çalıştır" ister.
-  - Simge yok (açık konu 6), Electron varsayılanı kullanılıyor. `build/icon.ico` eklenirse electron-builder kullanır.
+  - Simge `apps/pos-desktop/build/icon.ico` (+ `icon.png`), telefondaki `assets/icon.png`'den üretildi; electron-builder exe ve kurulum için kullanır. Kökteki `.gitignore` `build/`'i yok sayar, bu klasör istisna.
 - **Tasarım (2026-10-29):**
   - Renkler `src/styles.css` başındaki değişkenler (G2). Yeşil sadece ana eylem (Nakit), seçili satır/ürün ve raydaki aktif sayfa. Kahve/sarı ton kullanma.
   - Yazı tipleri pakette (`@fontsource-variable/manrope`, `@fontsource/gloock`), internetsiz çalışır. "CRUMBLE" ve "Günaydın." Gloock, gerisi Manrope.
@@ -219,7 +219,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - `apps/manager-mobile/eas.json` (profil `production`, Supabase adresi ve publishable key `env` içinde; ikisi de gizli değil), `app.json` → `ios.bundleIdentifier = com.crumble.yonetim`, `ITSAppUsesNonExemptEncryption: false`, telefon için (`supportsTablet: false`).
   - Geçici simge `assets/icon.png`: G2 koyu yeşil zemin, Gloock beyaz "C" (logo gelince değişecek).
   - `.github/workflows/mobile-ios.yml` (elle başlatılır): EAS'te iOS build + `--auto-submit` ile TestFlight. Secret'lar: `EXPO_TOKEN`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`; değişken `APPLE_TEAM_TYPE` (varsayılan INDIVIDUAL). İlk çalıştırmada `eas init` Expo projesini oluşturur; oluşan `extra.eas.projectId` sonra app.json'a eklenmeli. App Store Connect'te uygulama kaydı (bundle id `com.crumble.yonetim`) elle açılır; gerekirse `ascAppId` `eas.json` submit profiline yazılır.
-- Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
+- Henüz yapılmayanlar: `supabase/seed`, push bildirimleri.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
 
