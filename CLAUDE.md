@@ -214,9 +214,10 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 Kasa programı henüz kurulu değil (2026-11-01). Kullanıcı kafe PC'sine Claude kurup bu adımları ona yaptıracak:
 
-**Önce oku (2026-11-02):** Kullanıcı kasayı geçici olarak başka bir Windows bilgisayara kurup **gerçek Supabase projesine bağladı** (kendi tercihi; uyarıldı). Bulutta artık menü, kroki ve deneme satışları/vardiyaları var ve silinemez (trigger'lar). Bu yüzden kafe PC'sinde:
-- Menüyü **içe aktarma** (5. adım). Bunun yerine bulut bağlantısından sonra **Buluttan geri yükle** yap. İçe aktarmak buluta ikinci bir menü (farklı UUID'ler) gönderir ve telefonda ürünler çift görünür. Geri yükleme sadece boş kasada çalışır; yeni kurulumda kendiliğinden gelen kroki engel değildir.
-- Aynı anda iki kasa açık olmamalı. Geçici bilgisayarda vardiya açık bırakılırsa buluttaki "tek açık vardiya" kuralı kafe PC'sinin vardiyasının gönderimini reddeder. Geçici bilgisayardaki son vardiya gün sonuyla kapatılmış olmalı ve o bilgisayar artık kullanılmamalı.
+**Önce oku (2026-11-02):** Kafe PC'si bakımda. Kullanıcı kasayı **geçici olarak başka bir Windows bilgisayara** kurdu ve **gerçek Supabase projesine** bağlayıp **gerçek satış** için kullanıyor. Bulutta menü, kroki, satışlar ve vardiyalar var. Kafe PC'sine geçerken:
+- Önce geçici bilgisayarda gün sonu alınır (açık hesap ve vardiya kalmaz), sol rayda "Senkron ✓" görülür, sonra o bilgisayarda kasa bir daha kullanılmaz.
+- Kafe PC'sinde menüyü **içe aktarma** (5. adım). Bunun yerine bulut bağlantısından sonra **Buluttan geri yükle** yap; tüm geçmiş, menü ve kroki iner. İçe aktarmak buluta ikinci bir menü (farklı UUID'ler) gönderir, telefonda ürünler çift görünür. Geri yükleme sadece boş kasada çalışır; kendiliğinden gelen kroki engel değildir.
+- Aynı anda iki kasa açık olmamalı: buluttaki "tek açık vardiya" kuralı ikinci kasanın vardiya gönderimini reddeder.
 
 1. Kurulum dosyası: GitHub Actions → "Kasa Windows kurulum dosyası" son başarılı çalışma → Artifacts → `Crumble-POS-Kurulum` (zip içinde `Crumble-POS-Kurulum-<sürüm>.exe`). Kalıcı sürüm için `kasa-v*` etiketi → Releases. Kaynaktan derlemeye gerek yok.
 2. `.exe` imzasız: SmartScreen'de "Ek bilgi → Yine de çalıştır". Kullanıcı başına kurulur, masaüstü kısayolu "Crumble POS". Veriler `%APPDATA%\Crumble POS` (kaldırınca silinmez).
