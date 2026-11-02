@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createCategory, createProduct, updateProduct } from '../src/db/catalog';
 import type { Context } from '../src/db/database';
 import { refundPart } from '../src/db/refunds';
-import { addProduct, closeShift, getTab, openShift, openTab, pay, setTabDiscount, updateItem, voidItem, voidTab } from '../src/db/sales';
+import { addProduct, closeShift, getTab, openShift, openTab, pay, reopenShift, setTabDiscount, updateItem, voidItem, voidTab } from '../src/db/sales';
 import { pendingCount, pushPending } from '../src/sync/engine';
 import { isLocalEmpty, restoreFromCloud } from '../src/sync/restore';
 import { SyncError, type SyncTransport } from '../src/sync/transport';
@@ -194,6 +194,21 @@ describe.skipIf(!bin)('sync to Postgres (Faz 5 entegrasyon testi)', () => {
     expect(result.error?.offline).toBe(false);
     expect(result.error?.message).toMatch(/Kapanmış hesap/);
     expect(result.pending).toBe(1);
+  });
+
+  it('a day\'s shift closed, continued and closed again syncs as one shift', async () => {
+    const ctx = testContext();
+    const transport = pgTransport(device);
+    const shift = openShift(ctx);
+    closeShift(ctx);
+    await drain(ctx, transport);
+    reopenShift(ctx, shift.id);
+    await drain(ctx, transport);
+    expect((await admin.query('select closed_at from public.shifts where id = $1', [shift.id])).rows[0].closed_at).toBeNull();
+    closeShift(ctx);
+    await drain(ctx, transport);
+    expect(await count(admin, 'select count(*) as n from public.shifts')).toBe(1);
+    expect((await admin.query('select closed_at from public.shifts where id = $1', [shift.id])).rows[0].closed_at).not.toBeNull();
   });
 
   it('heartbeat records the last sync time for the manager app', async () => {

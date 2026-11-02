@@ -328,10 +328,22 @@ create trigger tables_no_delete before delete on tables
 begin select raise(abort, 'Kayıt silinemez (tables).'); end;
 `;
 
+// v6 (2026-11-02, günde tek vardiya): the day's closed shift can be opened
+// again ("Bugünün vardiyasına devam et") as long as no later shift exists.
+// Only the closing fields change back to empty; everything else stays frozen.
+const shiftReopen = `
+drop trigger shifts_frozen;
+create trigger shifts_frozen before update on shifts
+when old.closed_at is not null and (${anyChanged(shiftColumns)})
+  and not (new.closed_at is null and not exists (select 1 from shifts s where s.id <> old.id and s.opened_at >= old.opened_at))
+begin select raise(abort, 'Kapanmış vardiya değiştirilemez.'); end;
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
   voidRule,
   shiftWithoutCount,
   catalogSource,
   hearthShape,
+  shiftReopen,
 ];

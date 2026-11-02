@@ -49,6 +49,9 @@ export interface PosApi {
   // Shifts
   getOpenShift(): Shift | null;
   openShift(): Shift;
+  /** One shift per day: today's shift if it was already closed (continue it instead). */
+  getTodaysClosedShift(): Shift | null;
+  reopenShift(shiftId: string): Shift;
   getShiftSummary(shiftId: string): ShiftSummary;
   closeShift(input: CloseShiftInput): CloseShiftResult;
   listShifts(limit?: number): Shift[];
@@ -118,3 +121,5 @@ export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'unlock', 
 export type IpcResult = { ok: true; value: unknown } | { ok: false; error: string };
 
 export const IPC_CHANNEL = 'pos-api';
+/** Main -> renderer: open a screen (e.g. 'shift' from the close warning). */
+export const NAVIGATE_CHANNEL = 'pos-navigate';
