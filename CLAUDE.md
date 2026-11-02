@@ -219,6 +219,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Aynı İstanbul gününde (vardiyanın açılış günü) ikinci vardiya açılmaz. Bugünün vardiyası kapatılmışsa "Vardiyayı aç" yerine "Bugünün vardiyasına devam et" çıkar (`getTodaysClosedShift`, `reopenShift`): kapanış alanları boşalır, satışlar aynı vardiyada toplanır, gün sonu tekrar alınır. "Sıfırla" yok (silme yok kuralı).
   - DB'de de zorunlu: kapanmış vardiya, kendisinden sonra açılmış vardiya yoksa yeniden açılabilir (SQLite v6 `shifts_frozen`, Supabase `20261102000010_shift_reopen.sql`). Başka değişiklik yine yasak.
   - Testlerde ikinci vardiya için `nextDay(ctx)` (test saatini bir gün ileri alır).
+  - Vardiya açıkken pencere kapatılırsa uyarı: "Gün sonu alınmadı" → "Gün sonuna git" (Vardiya ekranına gider, `NAVIGATE_CHANNEL`) / "Yine de kapat". `electron/main.ts`; testlerde `CRUMBLE_CONFIRM_CLOSE=0` (launchApp varsayılanı).
   - Gün sonu başlığının yanında haftalık takvim (`components/WeekCalendar.tsx`, sadece görünüm): vardiya açılan günlerde yeşil tik, bugün çerçeveli; oklarla hafta, ay adının yanındaki oklarla ay değişir.
 - **Yönetim uygulaması iPhone'a (2026-11-02):** Kullanıcılar iPhone, gerçek uygulama, Apple Developer hesabı var. TestFlight ile dağıtım (App Store'da herkese açık değil).
   - `apps/manager-mobile/eas.json` (profil `production`, Supabase adresi ve publishable key `env` içinde; ikisi de gizli değil), `app.json` → `ios.bundleIdentifier = com.crumble.yonetim`, `ITSAppUsesNonExemptEncryption: false`, telefon için (`supportsTablet: false`).

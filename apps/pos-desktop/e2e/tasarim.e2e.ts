@@ -141,6 +141,24 @@ describe('Tasarım: G2 ekran turu', () => {
     // The earlier sales are still in today's shift.
     await page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await expect.poll(() => page.locator('[data-stat="Nakit"]').textContent()).toBe('385,00 ₺');
+
+    // Closing the window with the shift open asks first; "Gün sonuna git" keeps it open on the day end.
+    await page.getByRole('button', { name: 'Satış', exact: true }).click();
+    await run.app.evaluate(({ dialog, BrowserWindow }) => {
+      process.env.CRUMBLE_CONFIRM_CLOSE = '1';
+      const g = globalThis as unknown as { asked: string[] };
+      g.asked = [];
+      dialog.showMessageBox = (async (_win: unknown, options: { message: string }) => {
+        g.asked.push(options.message);
+        return { response: 0, checkboxChecked: false };
+      }) as never;
+      BrowserWindow.getAllWindows()[0]!.close();
+    });
+    await page.getByRole('heading', { name: 'Gün sonu', exact: true }).waitFor();
+    expect(await run.app.evaluate(() => (globalThis as unknown as { asked: string[] }).asked)).toEqual(['Gün sonu alınmadı']);
+    await run.app.evaluate(() => {
+      process.env.CRUMBLE_CONFIRM_CLOSE = '0';
+    });
   });
 
   it('settings: prices without "teyit edilecek"', async () => {

@@ -56,6 +56,9 @@ function Shell() {
     if (auth?.unlocked) void reloadShift();
   }, [auth?.unlocked, reloadShift]);
 
+  // The close warning's "Gün sonuna git" (electron/main.ts).
+  useEffect(() => window.crumble.onNavigate?.((target) => target === 'shift' && setScreen('shift')), []);
+
   // F3: new named tab (plan §5.1), from anywhere.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

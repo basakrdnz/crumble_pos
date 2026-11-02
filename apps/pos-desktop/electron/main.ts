@@ -1,10 +1,11 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell } from 'electron';
 import { formatTL } from '@crumble/shared';
-import { IPC_CHANNEL } from '../src/api/contract';
+import { IPC_CHANNEL, NAVIGATE_CHANNEL } from '../src/api/contract';
 import { createApi, dispatch } from '../src/api/server';
 import { createContext, openDatabase } from '../src/db/database';
 import { seedCrumbleFloor } from '../src/db/floor';
+import { getOpenShift } from '../src/db/sales';
 import { dailyBackup } from '../src/maintenance/backup';
 import { createLogger } from '../src/maintenance/logger';
 import { CloudManager, plainBox, type SecretBox } from '../src/sync/cloud';
@@ -125,6 +126,34 @@ if (!isSmoke && !app.requestSingleInstanceLock()) {
       void runSmoke(win, v);
       return;
     }
+
+    // Closing with the shift still open (2026-11-02): warn that the day end was
+    // not taken. Nothing is lost either way; the shift goes on after a restart.
+    // CRUMBLE_CONFIRM_CLOSE=0 turns the question off (tests).
+    let closeConfirmed = false;
+    win.on('close', (event) => {
+      if (closeConfirmed || process.env.CRUMBLE_CONFIRM_CLOSE === '0' || !getOpenShift(ctx)) return;
+      event.preventDefault();
+      void dialog
+        .showMessageBox(win, {
+          type: 'warning',
+          title: 'Crumble POS',
+          message: 'Gün sonu alınmadı',
+          detail: 'Vardiya hâlâ açık. Kapatırsan hiçbir kayıt kaybolmaz; kasa tekrar açılınca vardiya kaldığı yerden devam eder.',
+          buttons: ['Gün sonuna git', 'Yine de kapat'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        })
+        .then(({ response }) => {
+          if (response === 1) {
+            closeConfirmed = true;
+            win.close();
+          } else {
+            win.webContents.send(NAVIGATE_CHANNEL, 'shift');
+          }
+        });
+    });
 
     void cloud.start().catch((error) => logger.log('error', 'Bulut başlatılamadı', error));
     const backup = () =>

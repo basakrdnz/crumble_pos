@@ -23,7 +23,7 @@ export async function launchApp(dbPath?: string, { seedFloor = false } = {}): Pr
   const app = await electron.launch({
     executablePath: require('electron') as string,
     args: [resolve(__dirname, '..'), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
-    env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path), CRUMBLE_NO_FLOOR_SEED: seedFloor ? '0' : '1' } as Record<string, string>,
+    env: { ...process.env, CRUMBLE_DB_PATH: path, CRUMBLE_DATA_DIR: dirname(path), CRUMBLE_NO_FLOOR_SEED: seedFloor ? '0' : '1', CRUMBLE_CONFIRM_CLOSE: '0' } as Record<string, string>,
   });
   const page = await app.firstWindow();
   await page.waitForSelector('.app');

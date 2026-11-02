@@ -121,3 +121,5 @@ export const PUBLIC_METHODS: readonly PosApiMethod[] = ['authStatus', 'unlock', 
 export type IpcResult = { ok: true; value: unknown } | { ok: false; error: string };
 
 export const IPC_CHANNEL = 'pos-api';
+/** Main -> renderer: open a screen (e.g. 'shift' from the close warning). */
+export const NAVIGATE_CHANNEL = 'pos-navigate';
