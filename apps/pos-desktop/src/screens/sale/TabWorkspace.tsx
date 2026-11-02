@@ -116,10 +116,19 @@ export function TabWorkspace({
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // The line just added (or counted up) opens in the line panel (2026-11-02).
   const pick = (product: Product) =>
     run(async () => {
       const tab = await ensureTab();
-      setDetail(await api.addProduct(tab.tab.id, product.id));
+      const next = await api.addProduct(tab.tab.id, product.id);
+      setDetail(next);
+      const line = next.items
+        .filter((i) => i.product_id === product.id && !i.voided_at)
+        .reduce<TabItem | null>((a, b) => (!a || b.updated_at >= a.updated_at ? b : a), null);
+      if (line) {
+        setSelectedId(line.id);
+        setEntry(null);
+      }
     });
 
   // "−" on a tile: the newest line of that product loses one; a line at 1 is
@@ -178,6 +187,12 @@ export function TabWorkspace({
           setSelectedId(item?.id ?? null);
           setEntry(null);
         }}
+        onRemove={(item) =>
+          void run(async () => {
+            setDetail(await api.voidItem(item.id, null));
+            if (selectedId === item.id) setSelectedId(null);
+          })
+        }
         onDiscount={(p) => {
           setEntry(null);
           void setCartDiscount(p);

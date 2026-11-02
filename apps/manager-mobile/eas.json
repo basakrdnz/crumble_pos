@@ -1,0 +1,18 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://oduorpefwbpsgzaociro.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lfTTy-DWbXaaAW6-Mi882w_0zFz0ybz"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -57,12 +57,13 @@ export interface ConnectInput extends CloudConfig {
   password: string;
 }
 
-function validate(input: CloudConfig): CloudConfig {
-  const url = input.url.trim().replace(/\/+$/, '');
+export function validateCloudConfig(input: CloudConfig): CloudConfig {
+  // Also accept the API address as copied from the dashboard (".../rest/v1/").
+  const url = input.url.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
   if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(url)) {
     throw new Error('Supabase adresi https://<proje>.supabase.co biçiminde olmalı.');
   }
-  if (!input.anonKey.trim()) throw new Error('Anon key gerekli.');
+  if (!input.anonKey.trim()) throw new Error('Publishable (anon) key gerekli.');
   if (!input.email.trim()) throw new Error('Cihaz e-postası gerekli.');
   return { url, anonKey: input.anonKey.trim(), email: input.email.trim() };
 }
@@ -97,7 +98,7 @@ export class CloudManager {
   }
 
   async connect(input: ConnectInput): Promise<CloudInfo> {
-    const config = validate(input);
+    const config = validateCloudConfig(input);
     const client = createCloudClient(config, settingsStorage(this.ctx, this.box));
     await signInDevice(client, config.email, input.password);
     setSetting(this.ctx, CONFIG_KEY, JSON.stringify(config));

@@ -2,6 +2,8 @@ node_modules/
 dist/
 out/
 build/
+# Installer resources (app icon), not build output.
+!apps/pos-desktop/build/
 coverage/
 *.log
 *.tsbuildinfo

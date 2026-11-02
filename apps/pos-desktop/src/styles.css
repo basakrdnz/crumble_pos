@@ -141,7 +141,6 @@ textarea.input { height: auto; padding: 8px 12px; }
 .content h3 { font-size: 16px; font-weight: 800; }
 .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .page-head h2 { margin: 0; }
-.count-chip { height: 28px; padding: 0 10px; border-radius: 999px; background: var(--key-alt); font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; }
 .row { display: flex; gap: 8px; align-items: center; }
@@ -230,7 +229,8 @@ kbd {
 .picker { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .picker-top { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; }
 .picker-top .search-box { flex: 1; }
-.category-tabs { display: flex; gap: 6px; padding: 2px 20px 12px; overflow-x: auto; scrollbar-width: none; }
+/* All categories visible at once: chips wrap to a second row instead of scrolling (2026-11-02). */
+.category-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 20px 12px; }
 .category-tabs .btn { flex: none; height: 38px; border-radius: 999px; font-size: 13px; }
 .product-grid {
   flex: 1; overflow: auto; padding: 0 20px 20px; display: grid; gap: 10px; align-content: start;
@@ -310,6 +310,11 @@ kbd {
 .cart-line .top { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 700; }
 .cart-line .detail { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .cart-line .note { font-size: 12px; color: var(--info-ink); }
+.cart-line .remove-line {
+  flex: none; width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--muted); font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.cart-line .remove-line:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 .cart-totals { margin: 0 18px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
 .cart-totals .line { display: flex; justify-content: space-between; color: var(--muted); }
 .cart-totals .disc-head { display: flex; justify-content: space-between; font-weight: 700; }
@@ -429,6 +434,7 @@ table.summary tr.diff td, td.diff { color: var(--danger); font-weight: 800; }
 .side-panel { width: 360px; flex: none; background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 .side-panel .panel-head { padding: 16px 18px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .side-panel .panel-head strong { font-size: 18px; font-weight: 800; }
+.side-panel .new-tab-btn { margin: 0 14px 10px; height: 44px; }
 .side-panel .panel-body { flex: 1; overflow: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
 .side-panel .panel-foot { padding: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .open-tab-row {
@@ -441,19 +447,6 @@ table.summary tr.diff td, td.diff { color: var(--danger); font-weight: 800; }
 .open-tab-row .amount { font-variant-numeric: tabular-nums; }
 .open-tab-row .muted { font-size: 12px; font-weight: 600; }
 .open-tab-row .paid { font-size: 12px; font-weight: 700; color: var(--primary); }
-
-.tab-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.tab-card {
-  text-align: left; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); cursor: pointer;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.tab-card:hover { border-color: var(--sel-line); }
-.tab-card .kind { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted); }
-.tab-card .title { font-size: 20px; font-weight: 800; }
-.tab-card .items { font-size: 13px; line-height: 19px; color: var(--muted); min-height: 19px; }
-.tab-card .foot { display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 12px; }
-.tab-card .amount { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.tab-card .paid { font-size: 13px; font-weight: 700; color: var(--primary); }
 
 .editor-layout { display: grid; grid-template-columns: 1fr 260px; gap: 16px; align-items: start; }
 .sale-detail { width: 640px; }

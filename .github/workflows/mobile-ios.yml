@@ -1,0 +1,72 @@
+# Builds the manager app (Crumble Yönetim) for iPhone on Expo's servers (EAS)
+# and, when asked, sends it to TestFlight. Started by hand: Actions ->
+# "Yönetim iPhone (TestFlight)" -> Run workflow.
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   EXPO_TOKEN     expo.dev -> Account settings -> Access tokens
+#   ASC_KEY_ID     App Store Connect -> Users and Access -> Integrations ->
+#   ASC_ISSUER_ID    App Store Connect API (Team key, role "App Manager")
+#   ASC_KEY_P8     contents of the downloaded AuthKey_XXXX.p8 file
+#   APPLE_TEAM_ID  developer.apple.com -> Membership -> Team ID
+# Variable APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION for a company account
+# (default INDIVIDUAL).
+# The Supabase address and publishable key are public and live in eas.json.
+name: Yönetim iPhone (TestFlight)
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: "Derledikten sonra TestFlight'a gönder"
+        type: boolean
+        default: true
+
+jobs:
+  ios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/manager-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        working-directory: .
+        run: pnpm install --frozen-lockfile --filter "@crumble/manager-mobile..."
+
+      - name: Typecheck
+        working-directory: .
+        run: pnpm --filter "@crumble/manager-mobile..." typecheck
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # App Store Connect API key: lets EAS create the signing certificate and
+      # profile and upload to TestFlight without an Apple ID login.
+      - name: App Store Connect key
+        run: printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc.p8"
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+
+      # Links the Expo project on the first run (no-op afterwards).
+      - name: EAS project
+        run: eas init --non-interactive --force
+
+      - name: Build (and submit)
+        run: eas build --platform ios --profile production --non-interactive --wait ${{ inputs.submit && '--auto-submit' || '' }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          EXPO_APPLE_TEAM_TYPE: ${{ vars.APPLE_TEAM_TYPE || 'INDIVIDUAL' }} # or COMPANY_OR_ORGANIZATION

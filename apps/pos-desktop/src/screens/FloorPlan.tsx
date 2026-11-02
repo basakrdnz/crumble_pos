@@ -2,17 +2,30 @@ import { formatTL } from '@crumble/shared';
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { FloorCanvas, type TableStatus } from '../components/FloorCanvas';
+import { PromptDialog } from '../components/PromptDialog';
 import { useApiData } from '../components/useApi';
 import { formatTime } from '../format';
 import { TabScreen, type TabTarget } from './TabScreen';
 
-/** Floor map (plan §5.3): click a table to open or continue its tab. */
-export function FloorPlan() {
+/**
+ * Floor map and open tabs on one page (plan §5.3; Hesaplar merged in,
+ * 2026-11-02): click a table to open or continue its tab, open a named tab
+ * (also F3 from anywhere: `newTabRequest` changes), or pick any open tab.
+ */
+export function FloorPlan({ newTabRequest = 0 }: { newTabRequest?: number }) {
   const [plans] = useApiData(() => api.listFloorPlans());
   const [tables] = useApiData(() => api.listTables());
   const [open, reload] = useApiData(() => api.listOpenTabSummaries());
   const [planId, setPlanId] = useState<string>();
   const [target, setTarget] = useState<TabTarget | null>(null);
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    if (newTabRequest > 0) {
+      setTarget(null);
+      setAsking(true);
+    }
+  }, [newTabRequest]);
 
   useEffect(() => {
     if (plans && !plans.some((p) => p.id === planId)) setPlanId(plans[0]?.id);
@@ -48,7 +61,7 @@ export function FloorPlan() {
         ) : (
           <>
             <div className="section-tabs" role="tablist" aria-label="Bölümler">
-              <h2 style={{ margin: '0 10px 0 0' }}>Kroki</h2>
+              <h2 style={{ margin: '0 10px 0 0' }}>Masalar</h2>
               {plans.map((p) => (
                 <button
                   key={p.id}
@@ -95,9 +108,17 @@ export function FloorPlan() {
           <strong>Açık hesaplar</strong>
           <span className="muted">{open.length}</span>
         </div>
+        <button className="btn apply new-tab-btn" onClick={() => setAsking(true)}>
+          + İsimle hesap aç (F3)
+        </button>
         <div className="panel-body">
           {open.map((o) => (
-            <button key={o.tab.id} className="open-tab-row" onClick={() => setTarget({ tabId: o.tab.id })}>
+            <button
+              key={o.tab.id}
+              className="open-tab-row"
+              data-tab={o.tab.customer_name ?? o.tableLabel}
+              onClick={() => setTarget({ tabId: o.tab.id })}
+            >
               <strong>{o.title}</strong>
               <span className="amount">{formatTL(o.remaining)}</span>
               <span className="muted">
@@ -112,6 +133,18 @@ export function FloorPlan() {
           {open.length === 0 && <div className="empty">Açık hesap yok.</div>}
         </div>
       </aside>
+      {asking && (
+        <PromptDialog
+          title="İsimle hesap aç"
+          label="İsim soyisim"
+          confirmLabel="Hesap aç"
+          onClose={() => setAsking(false)}
+          onConfirm={(name) => {
+            setAsking(false);
+            setTarget({ customerName: name });
+          }}
+        />
+      )}
     </div>
   );
 }

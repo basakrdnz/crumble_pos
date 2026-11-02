@@ -104,8 +104,8 @@ export function Cloud() {
         >
           <label htmlFor="cloud-url">Supabase adresi</label>
           <input id="cloud-url" className="input" placeholder="https://xxxx.supabase.co" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-          <label htmlFor="cloud-key">Anon key</label>
-          <input id="cloud-key" className="input" value={form.anonKey} onChange={(e) => setForm({ ...form, anonKey: e.target.value })} />
+          <label htmlFor="cloud-key">Publishable (anon) key</label>
+          <input id="cloud-key" className="input" placeholder="sb_publishable_…" value={form.anonKey} onChange={(e) => setForm({ ...form, anonKey: e.target.value })} />
           <label htmlFor="cloud-email">Cihaz e-postası</label>
           <input id="cloud-email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <label htmlFor="cloud-password">Cihaz şifresi</label>

@@ -7,7 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.crumble.yonetim",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +29,7 @@
       "expo-router",
       "expo-font"
     ],
-    "scheme": "crumble-manager"
+    "scheme": "crumble-manager",
+    "backgroundColor": "#F3F4F1"
   }
 }

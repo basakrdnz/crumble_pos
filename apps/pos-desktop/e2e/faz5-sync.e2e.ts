@@ -44,7 +44,7 @@ describe.skipIf(!bin)('Faz 5: senkron (uygulama + sahte Supabase + gerçek Postg
     const { page } = run;
     await page.getByTestId('sync-status').click();
     await page.getByLabel('Supabase adresi').fill('ftp://yanlis');
-    await page.getByLabel('Anon key').fill('anon-test-key');
+    await page.getByLabel('Publishable (anon) key').fill('anon-test-key');
     await page.getByLabel('Cihaz e-postası').fill('kasa@crumble.test');
     await page.getByLabel('Cihaz şifresi').fill('cihaz-sifresi');
     await page.getByRole('button', { name: 'Bağlan', exact: true }).click();
