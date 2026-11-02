@@ -349,6 +349,27 @@ kbd {
 .content.center { display: flex; align-items: flex-start; justify-content: center; }
 .open-shift { width: 420px; display: flex; flex-direction: column; gap: 12px; margin-top: 48px; text-align: center; }
 .open-shift h2 { margin: 0; }
+/* Gün sonu takvimi (2026-11-02) */
+.day-end-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.week-cal { display: flex; flex-direction: column; gap: 8px; }
+.week-cal-head { display: flex; align-items: center; gap: 6px; }
+.cal-month { font-size: 14px; font-weight: 800; min-width: 120px; text-align: center; }
+.week-cal-row { display: flex; align-items: center; gap: 6px; }
+.cal-arrow {
+  width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.cal-arrow:hover { border-color: var(--primary); }
+.cal-day {
+  width: 50px; height: 62px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.cal-day .wd { font-size: 11px; font-weight: 700; color: var(--muted); }
+.cal-day .dn { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cal-day .tick { height: 14px; font-size: 12px; font-weight: 900; color: var(--primary); }
+.cal-day.worked { background: var(--sel-bg); border-color: var(--apply); }
+.cal-day.today { border: 2px solid var(--primary); border-radius: 16px; }
+.cal-day.future { opacity: 0.45; }
 .day-end { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }

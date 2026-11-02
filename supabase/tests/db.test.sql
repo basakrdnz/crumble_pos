@@ -168,13 +168,23 @@ select pg_temp.expect_ok($$update public.shifts set closed_at = now(), counted_c
 select pg_temp.expect_error($$update public.shifts set notes = 'x'$$, 'update closed shift');
 -- Since 2026-10-29 a shift closes without a cash count (migration 0007).
 insert into public.shifts (id, opened_at, opening_cash)
-  values ('30000000-0000-0000-0000-0000000000a2', now(), 0);
-select pg_temp.expect_error($$update public.shifts set closed_at = now()
+  values ('30000000-0000-0000-0000-0000000000a2', now() + interval '1 hour', 0);
+select pg_temp.expect_error($$update public.shifts set closed_at = now() + interval '2 hours'
   where id = '30000000-0000-0000-0000-0000000000a2'$$, 'close without expected cash');
-select pg_temp.expect_error($$update public.shifts set closed_at = now(), expected_cash = 0, counted_cash = 10
+select pg_temp.expect_error($$update public.shifts set closed_at = now() + interval '2 hours', expected_cash = 0, counted_cash = 10
   where id = '30000000-0000-0000-0000-0000000000a2'$$, 'counted cash without difference');
-select pg_temp.expect_ok($$update public.shifts set closed_at = now(), expected_cash = 0
+select pg_temp.expect_ok($$update public.shifts set closed_at = now() + interval '2 hours', expected_cash = 0
   where id = '30000000-0000-0000-0000-0000000000a2'$$, 'close shift without count');
+-- One shift per day (migration 0010): the latest closed shift may be opened
+-- again (closing fields back to empty); an earlier one may not.
+select pg_temp.expect_error($$update public.shifts set closed_at = null, counted_cash = null, expected_cash = null,
+  cash_difference = null where id = '30000000-0000-0000-0000-000000000001'$$, 'reopen an earlier shift');
+select pg_temp.expect_error($$update public.shifts set closed_at = null, expected_cash = null, notes = 'x', opening_cash = 5
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'reopen and change opening cash');
+select pg_temp.expect_ok($$update public.shifts set closed_at = null, expected_cash = null
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'reopen the latest shift');
+select pg_temp.expect_ok($$update public.shifts set closed_at = now() + interval '2 hours', expected_cash = 0
+  where id = '30000000-0000-0000-0000-0000000000a2'$$, 'close it again');
 
 select pg_temp.expect_count($$select count(*) from public.partners$$, 0, 'device cannot read partners');
 commit;

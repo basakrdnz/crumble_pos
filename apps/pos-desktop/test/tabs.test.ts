@@ -23,7 +23,7 @@ import {
   pay,
   setCustomerName,
 } from '../src/db/sales';
-import { testContext } from './helpers';
+import { nextDay, testContext } from './helpers';
 
 function setup(ctx: Context) {
   const kahve = createCategory(ctx, 'Kahve');
@@ -153,6 +153,7 @@ describe('tabs (hesap)', () => {
     addProduct(ctx, tab.id, latte.id);
     pay(ctx, tab.id, [{ method: 'cash', amount: 1500 }]);
     closeShift(ctx, { carryOverTabIds: [tab.id] });
+    nextDay(ctx);
     const s2 = openShift(ctx, 0);
     pay(ctx, tab.id, [{ method: 'cash', amount: 20000 }]);
     expect(getShiftSummary(ctx, s1.id)).toMatchObject({ cashSales: 1500, salesCount: 0 });

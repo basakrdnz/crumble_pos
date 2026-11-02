@@ -81,6 +81,8 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
 
     getOpenShift: () => sales.getOpenShift(ctx),
     openShift: () => sales.openShift(ctx),
+    getTodaysClosedShift: () => sales.getTodaysClosedShift(ctx),
+    reopenShift: (id) => sales.reopenShift(ctx, id),
     getShiftSummary: (id) => sales.getShiftSummary(ctx, id),
     closeShift: (input) => sales.closeShift(ctx, input),
     listShifts: (limit) => sales.listShifts(ctx, limit),

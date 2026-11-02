@@ -4,6 +4,7 @@
 import {
   assertKurus,
   assertPercent,
+  istanbulDay,
   type Payment,
   type PaymentMethod,
   type Product,
@@ -37,11 +38,23 @@ function requireOpenShift(ctx: Context): Shift {
 }
 
 /** Opens a shift. The cash drawer is not counted (2026-10-29), so the opening cash is 0 by default. */
+/**
+ * Today's shift if it was opened and closed again today (Istanbul day of its
+ * opening, the report day). One shift per day (2026-11-02): instead of a
+ * second one, this one is continued.
+ */
+export function getTodaysClosedShift(ctx: Context): Shift | null {
+  const last = ctx.db.prepare('select * from shifts order by opened_at desc limit 1').get() as Shift | undefined;
+  if (!last || last.closed_at === null) return null;
+  return istanbulDay(last.opened_at) === istanbulDay(ctx.clock.now()) ? last : null;
+}
+
 export function openShift(ctx: Context, openingCash = 0): Shift {
   assertKurus(openingCash);
   if (openingCash < 0) throw new Error('Açılış kasası negatif olamaz.');
   return tx(ctx, () => {
     if (getOpenShift(ctx)) throw new Error('Zaten açık bir vardiya var.');
+    if (getTodaysClosedShift(ctx)) throw new Error('Bugünün vardiyası zaten açılıp kapatılmış. Bugünün vardiyasına devam edin.');
     const s = stamps(ctx);
     return insertRow<Shift>(ctx, 'shifts', {
       ...s,
@@ -52,6 +65,21 @@ export function openShift(ctx: Context, openingCash = 0): Shift {
       expected_cash: null,
       cash_difference: null,
       notes: null,
+    });
+  });
+}
+
+/** Opens today's closed shift again; its sales and the new ones add up in one shift. */
+export function reopenShift(ctx: Context, shiftId: string): Shift {
+  return tx(ctx, () => {
+    if (getOpenShift(ctx)) throw new Error('Zaten açık bir vardiya var.');
+    const today = getTodaysClosedShift(ctx);
+    if (!today || today.id !== shiftId) throw new Error('Sadece bugünün kapanmış vardiyası yeniden açılabilir.');
+    return updateRow<Shift>(ctx, 'shifts', shiftId, {
+      closed_at: null,
+      counted_cash: null,
+      expected_cash: null,
+      cash_difference: null,
     });
   });
 }

@@ -13,7 +13,7 @@ import {
   setTabDiscount,
   voidTab,
 } from '../src/db/sales';
-import { testContext } from './helpers';
+import { nextDay, testContext } from './helpers';
 
 function sale(ctx: Context) {
   const kahve = createCategory(ctx, 'Kahve');
@@ -79,6 +79,7 @@ describe('refunds (iade)', () => {
     pay(ctx, tab.id, [{ method: 'cash', amount: 46500 }]);
     closeShift(ctx);
     expect(() => refundAll(ctx, tab.id)).toThrow(/vardiya/);
+    nextDay(ctx);
     const next = openShift(ctx, 96500);
     refundPart(ctx, tab.id, { amount: 10000, method: 'cash' });
     expect(getShiftSummary(ctx, shift.id).cashRefunds).toBe(0);

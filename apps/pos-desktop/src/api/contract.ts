@@ -49,6 +49,9 @@ export interface PosApi {
   // Shifts
   getOpenShift(): Shift | null;
   openShift(): Shift;
+  /** One shift per day: today's shift if it was already closed (continue it instead). */
+  getTodaysClosedShift(): Shift | null;
+  reopenShift(shiftId: string): Shift;
   getShiftSummary(shiftId: string): ShiftSummary;
   closeShift(input: CloseShiftInput): CloseShiftResult;
   listShifts(limit?: number): Shift[];

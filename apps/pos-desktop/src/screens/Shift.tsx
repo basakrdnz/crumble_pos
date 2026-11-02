@@ -4,25 +4,49 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import { useAction, useApiData } from '../components/useApi';
 import type { OpenTabSummary } from '../db/sales';
+import { WeekCalendar } from '../components/WeekCalendar';
 import { formatDateTime, formatLongDate, formatTime } from '../format';
 
-/** No cash count (2026-10-29): opening a shift is one click. */
+/**
+ * No cash count (2026-10-29): opening a shift is one click. One shift per day
+ * (2026-11-02): if today's shift was already closed, it is continued instead.
+ */
 export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
+  const [today] = useApiData(() => api.getTodaysClosedShift());
   const run = useAction();
   const open = () =>
     run(async () => {
       await api.openShift();
       onOpened();
     }, 'Vardiya açıldı.');
+  const reopen = (id: string) =>
+    run(async () => {
+      await api.reopenShift(id);
+      onOpened();
+    }, 'Bugünün vardiyasına devam ediliyor.');
+  if (today === undefined) return null;
   return (
     <div className="content center">
-      <div className="panel open-shift">
-        <h2>Vardiyayı aç</h2>
-        <p className="muted">Açık vardiya olmadan satış yapılamaz. Açılış saati otomatik kaydedilir.</p>
-        <button className="btn primary big" autoFocus onClick={() => void open()}>
-          Vardiyayı aç
-        </button>
-      </div>
+      {today ? (
+        <div className="panel open-shift" data-testid="continue-shift">
+          <h2>Bugünün vardiyası kapalı</h2>
+          <p className="muted">
+            Açılış {formatTime(today.opened_at)} · kapanış {formatTime(today.closed_at!)}. Günde tek vardiya açılır: devam edersen
+            yeni satışlar bugünün vardiyasına eklenir, gün sonunu tekrar alırsın.
+          </p>
+          <button className="btn primary big" autoFocus onClick={() => void reopen(today.id)}>
+            Bugünün vardiyasına devam et
+          </button>
+        </div>
+      ) : (
+        <div className="panel open-shift">
+          <h2>Vardiyayı aç</h2>
+          <p className="muted">Açık vardiya olmadan satış yapılamaz. Açılış saati otomatik kaydedilir.</p>
+          <button className="btn primary big" autoFocus onClick={() => void open()}>
+            Vardiyayı aç
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -220,12 +244,15 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
   return (
     <div className="day-end">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Gün sonu</h2>
-          {/* The report day is the shift's opening day (plan): show it, also after midnight. */}
-          <div className="muted" style={{ fontWeight: 600, marginTop: 4 }} data-testid="shift-day">
-            {formatLongDate(shift.opened_at)} · açılış {formatTime(shift.opened_at)}
+        <div className="day-end-head">
+          <div>
+            <h2 style={{ margin: 0 }}>Gün sonu</h2>
+            {/* The report day is the shift's opening day (plan): show it, also after midnight. */}
+            <div className="muted" style={{ fontWeight: 600, marginTop: 4 }} data-testid="shift-day">
+              {formatLongDate(shift.opened_at)} · açılış {formatTime(shift.opened_at)}
+            </div>
           </div>
+          <WeekCalendar refreshKey={shift.id} />
         </div>
         <Stats summary={summary} />
         <div className="panel muted" style={{ fontSize: 14, lineHeight: '22px' }}>

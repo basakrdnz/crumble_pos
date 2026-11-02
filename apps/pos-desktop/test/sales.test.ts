@@ -8,17 +8,19 @@ import {
   getOpenQuickTab,
   getOpenShift,
   getShiftSummary,
+  getTodaysClosedShift,
   getTab,
   listOpenTabs,
   openShift,
   openTab,
   pay,
+  reopenShift,
   setTabDiscount,
   updateItem,
   voidItem,
   voidTab,
 } from '../src/db/sales';
-import { outbox, testContext } from './helpers';
+import { nextDay, outbox, testContext } from './helpers';
 
 function menu(ctx: Context) {
   const kahve = createCategory(ctx, 'Kahve');
@@ -280,7 +282,8 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
     expect(closed.shift).toMatchObject({ expected_cash: handExpected, counted_cash: null, cash_difference: null });
     expect(closed.carriedOverTabs).toBe(1);
 
-    // The open tab carries over and is paid in the next shift.
+    // The open tab carries over and is paid in the next day's shift.
+    nextDay(ctx);
     const next = openShift(ctx);
     expect(listOpenTabs(ctx).map((tab) => tab.customer_name)).toEqual(['Mehmet']);
     pay(ctx, open.id, [{ method: 'cash', amount: 6500 }]);
@@ -313,5 +316,44 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
     expect(closeShift(ctx).shift.closed_at).not.toBeNull();
     expect(getTab(ctx, quick.id).tab.status).toBe('void');
     expect(getTab(ctx, named.id).tab.status).toBe('void');
+  });
+});
+
+describe('one shift per day (2026-11-02)', () => {
+  it('continues the day\'s closed shift instead of opening a second one', () => {
+    const ctx = testContext();
+    const m = menu(ctx);
+    const shift = openShift(ctx);
+    const first = openTab(ctx, { kind: 'quick' });
+    addProduct(ctx, first.id, m.latte.id);
+    pay(ctx, first.id, [{ method: 'cash', amount: 21500 }]);
+    closeShift(ctx);
+
+    expect(getTodaysClosedShift(ctx)?.id).toBe(shift.id);
+    expect(() => openShift(ctx)).toThrow(/Bugünün vardiyası/);
+
+    const again = reopenShift(ctx, shift.id);
+    expect(again).toMatchObject({ id: shift.id, closed_at: null, expected_cash: null });
+    const second = openTab(ctx, { kind: 'quick' });
+    addProduct(ctx, second.id, m.cay.id);
+    pay(ctx, second.id, [{ method: 'cash', amount: 6500 }]);
+    // Both sales in the same shift; the day end counts them together.
+    expect(closeShift(ctx).shift.expected_cash).toBe(28000);
+  });
+
+  it('a new day opens a new shift; an earlier day cannot be reopened', () => {
+    const ctx = testContext();
+    const yesterday = openShift(ctx);
+    closeShift(ctx);
+    nextDay(ctx);
+    expect(getTodaysClosedShift(ctx)).toBeNull();
+    expect(() => reopenShift(ctx, yesterday.id)).toThrow(/bugünün/);
+    const today = openShift(ctx);
+    closeShift(ctx);
+    // The database refuses to reopen a shift once a later one exists.
+    expect(() => ctx.db.prepare('update shifts set closed_at = null, expected_cash = null where id = ?').run(yesterday.id)).toThrow(
+      /Kapanmış vardiya/,
+    );
+    expect(reopenShift(ctx, today.id).closed_at).toBeNull();
   });
 });
