@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import type { TabDetail } from '../../db/sales';
 
 /**
- * Cart column: lines (click opens the line panel), subtotal, cart discount
+ * Cart column: lines (click opens the line panel; a click on the empty area
+ * closes it), subtotal, cart discount
  * (Yok / %10 / %15 / Elle) and the total. Payment buttons come in `footer`.
  */
 export function Cart({
@@ -14,6 +15,7 @@ export function Cart({
   detail,
   selectedItemId,
   onSelect,
+  onRemove,
   onDiscount,
   onTypeDiscount,
   typingDiscount,
@@ -25,6 +27,8 @@ export function Cart({
   detail: TabDetail | null;
   selectedItemId: string | null;
   onSelect(item: TabItem | null): void;
+  /** "×" on a line: removes it (kept as a void record, like "Satırı çıkar"). */
+  onRemove?(item: TabItem): void;
   onDiscount(percent: number | null): void;
   onTypeDiscount(): void;
   typingDiscount: boolean;
@@ -58,7 +62,7 @@ export function Cart({
               data-line={item.name_snapshot}
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect(item.id === selectedItemId ? null : item);
+                onSelect(item);
               }}
             >
               <span className="qty-box">{item.quantity}</span>
@@ -76,6 +80,19 @@ export function Cart({
                 </div>
                 {item.note && <div className="note">Not: {item.note}</div>}
               </div>
+              {onRemove && (
+                <button
+                  className="remove-line"
+                  aria-label={`${item.name_snapshot} sil`}
+                  title="Satırı sil"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(item);
+                  }}
+                >
+                  ×
+                </button>
+              )}
             </div>
           );
         })}

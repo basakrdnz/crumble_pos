@@ -51,7 +51,7 @@ describe('Faz 3: hesap ve kroki', () => {
   it('opens a tab by clicking a table, takes a partial payment and keeps it open', async () => {
     const { page } = run;
     await openShiftUi(page);
-    await page.getByRole('button', { name: 'Kroki', exact: true }).click();
+    await page.getByRole('button', { name: 'Masa', exact: true }).click();
     await page.locator('[data-table="1"]').click();
     await pick(page, 'Kahve', 'Cafe Latte');
     await pick(page, 'Kahve', 'Cafe Latte');

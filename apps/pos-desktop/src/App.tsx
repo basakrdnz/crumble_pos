@@ -12,15 +12,13 @@ import { Sale } from './screens/Sale';
 import { Sales } from './screens/Sales';
 import { Settings, type SettingsSection } from './screens/Settings';
 import { ShiftScreen } from './screens/Shift';
-import { Tabs } from './screens/Tabs';
 
-type Screen = 'sale' | 'floor' | 'tabs' | 'sales' | 'shift' | 'settings';
+type Screen = 'sale' | 'floor' | 'sales' | 'shift' | 'settings';
 
 // Left rail (plan "Tasarım yenileme": N2). Icons are 24×24 stroke paths.
 const SCREENS: [Screen, string, string][] = [
   ['sale', 'Satış', 'M6 7h12l-1 13H7L6 7zM9 7a3 3 0 0 1 6 0'],
-  ['floor', 'Kroki', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
-  ['tabs', 'Hesaplar', 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6'],
+  ['floor', 'Masa', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
   ['sales', 'Satışlar', 'M5 6h14M5 12h14M5 18h14'],
   ['shift', 'Vardiya', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2'],
   ['settings', 'Ayarlar', 'M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6'],
@@ -63,7 +61,7 @@ function Shell() {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'F3' || !auth?.unlocked || !shift) return;
       e.preventDefault();
-      setScreen('tabs');
+      setScreen('floor');
       setNewTabRequest((n) => n + 1);
     };
     window.addEventListener('keydown', handler);
@@ -123,12 +121,10 @@ function Shell() {
           <Login onChange={setAuth} />
         ) : shift === undefined ? null : screen === 'sale' ? (
           <Sale shift={shift} onShiftChange={() => void reloadShift()} />
-        ) : (screen === 'floor' || screen === 'tabs') && !shift ? (
+        ) : screen === 'floor' && !shift ? (
           <Sale shift={null} onShiftChange={() => void reloadShift()} />
         ) : screen === 'floor' ? (
-          <FloorPlan />
-        ) : screen === 'tabs' ? (
-          <Tabs newTabRequest={newTabRequest} />
+          <FloorPlan newTabRequest={newTabRequest} />
         ) : screen === 'sales' ? (
           <Sales shift={shift} />
         ) : screen === 'shift' ? (

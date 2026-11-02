@@ -43,6 +43,11 @@ describe('Tasarım: G2 ekran turu', () => {
     await page.getByRole('button', { name: 'Sepet %10' }).click();
     // 430 + 200 + 250 = 880, -%10 = 792
     await expect.poll(() => cartTotal(page)).toBe('792,00 ₺');
+    // "×" on a line removes it at once.
+    await pick(page, 'Kahve', 'Mocha');
+    await page.getByRole('button', { name: 'Mocha sil' }).click();
+    await expect.poll(() => page.locator('[data-line="Mocha"]').count()).toBe(0);
+    await expect.poll(() => cartTotal(page)).toBe('792,00 ₺');
     await page.locator('[data-line="Cafe Latte"]').click();
     await snap(page, 'tasarim-2-satis');
 
@@ -65,7 +70,7 @@ describe('Tasarım: G2 ekran turu', () => {
   it('floor plan, table tab with partial payment and the tab cards', async () => {
     const { page } = run;
     // A new POS starts with the Crumble floor plan: 8 tables, 2 at the fireplace.
-    await page.getByRole('button', { name: 'Kroki', exact: true }).click();
+    await page.getByRole('button', { name: 'Masa', exact: true }).click();
     await expect.poll(() => page.locator('.floor-table').count()).toBe(8);
     expect(await page.locator('[data-table="2"]').textContent()).toContain('Şömine');
     await page.getByRole('button', { name: 'Masa 2', exact: true }).click();
@@ -87,7 +92,7 @@ describe('Tasarım: G2 ekran turu', () => {
     await page.getByRole('button', { name: 'Masa 5', exact: true }).waitFor();
     await snap(page, 'tasarim-4-kroki');
 
-    await page.getByRole('button', { name: 'Hesaplar', exact: true }).click();
+    // Named tabs live on the same page (Hesaplar merged into Kroki).
     await page.getByRole('button', { name: /İsimle hesap aç/ }).click();
     await page.getByLabel('İsim soyisim').fill('Mehmet');
     await page.getByRole('button', { name: 'Hesap aç', exact: true }).click();
@@ -101,6 +106,8 @@ describe('Tasarım: G2 ekran turu', () => {
     const { page } = run;
     await page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await page.getByRole('heading', { name: 'Gün sonu', exact: true }).waitFor();
+    // The report day is visible: "2 Kasım 2026 Pazartesi · açılış 18:30".
+    expect(await page.getByTestId('shift-day').textContent()).toMatch(/^\d{1,2} \S+ \d{4} \S+ · açılış \d\d:\d\d$/);
     const close = page.getByRole('button', { name: 'Gün sonunu al' });
     expect(await close.isDisabled()).toBe(true);
     await page.locator('[data-decision="Masa 5"]').getByRole('button', { name: 'Kart' }).click();

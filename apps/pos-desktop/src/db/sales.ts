@@ -101,6 +101,11 @@ export function closeShift(ctx: Context, input: CloseShiftInput = {}): CloseShif
   return tx(ctx, () => {
     const shift = requireOpenShift(ctx);
     const carry = new Set(input.carryOverTabIds ?? []);
+    // An empty tab (every line removed, nothing paid) needs no decision: it
+    // is cancelled here (2026-11-02).
+    for (const tab of listOpenTabs(ctx)) {
+      if (!carry.has(tab.id) && isEmptyTab(ctx, tab.id)) voidTab(ctx, tab.id);
+    }
     const undecided = listOpenTabs(ctx).filter((t) => !carry.has(t.id));
     if (undecided.length > 0) {
       throw new Error(`Gün sonu için önce açık hesaplara karar verin: ${undecided.map((t) => tabTitle(ctx, t)).join(', ')}.`);
@@ -139,6 +144,12 @@ function listItems(ctx: Context, tabId: string): TabItem[] {
     .prepare('select * from tab_items where tab_id = ? order by created_at, rowid')
     .all(tabId)
     .map((row) => fromDb<TabItem>('tab_items', row));
+}
+
+/** No active line and no money taken. */
+function isEmptyTab(ctx: Context, tabId: string): boolean {
+  const active = ctx.db.prepare('select 1 from tab_items where tab_id = ? and voided_at is null limit 1').get(tabId);
+  return !active && paidAmount(ctx, tabId) === 0;
 }
 
 function paidAmount(ctx: Context, tabId: string): number {

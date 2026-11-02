@@ -208,6 +208,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Masalar Masa 1 boyutunda (210×110), sadece 2 (şömine önü) 220×115. Editörde yeni dikdörtgen de 210×110 gelir.
   - Görünüm A: beyaz kart "Masa N" + "Boş" ya da tutar ve açık kalma süresi (dk). Dolu masa yeşil. Yazı boyları tuval ölçeğine bağlı (`--s`).
   - E2E: `launchApp()` krokiyi kurmaz (`CRUMBLE_NO_FLOOR_SEED=1`). `tasarim.e2e.ts` `seedFloor: true` ile gerçek salonu kullanır.
+- **Geçici kasada kullanıcı geri bildirimi (2026-11-02):**
+  - Raydaki "Kroki" ve "Hesaplar" tek sayfa oldu: **Masa** (`FloorPlan.tsx`, başlık "Masalar"). Sağ panelde açık hesaplar ve "+ İsimle hesap aç (F3)". `Tabs.tsx` silindi; F3 bu sayfayı açar.
+  - Sepet satırında "×": satırı hemen çıkarır (iptal kaydı, "Satırı çıkar" gibi).
+  - Eklenen ürünün satırı kendiliğinden seçilir, işlem paneli (Adet/Fiyat/tuş takımı) açılır. Seçili satıra tekrar tıklamak paneli kapatmaz; sepetin boş alanı veya panelin × kapatır.
+  - Kategori çipleri kaymaz, alt satıra geçer (hepsi görünür).
+  - Gün sonu başlığı tarih gösterir: "2 Kasım 2026 Pazartesi · açılış 18:30" (`formatLongDate`).
+  - Boş hesap (aktif satırı yok, ödeme yok; ör. ürün eklenip çıkarılan hızlı satış) gün sonunda karar istemez: `closeShift` onu kendiliğinden void yapar, gün sonu listesinde görünmez.
 - Henüz yapılmayanlar: `supabase/seed`, uygulama simgesi, push bildirimleri.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)

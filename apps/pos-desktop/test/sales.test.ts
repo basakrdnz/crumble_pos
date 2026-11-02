@@ -301,4 +301,17 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
     voidTab(ctx, quick.id);
     expect(closeShift(ctx).shift.closed_at).not.toBeNull();
   });
+
+  it('cancels an emptied tab by itself at the day end', () => {
+    const ctx = testContext();
+    const m = menu(ctx);
+    openShift(ctx);
+    const quick = openTab(ctx, { kind: 'quick' });
+    const line = addProduct(ctx, quick.id, m.cay.id);
+    voidItem(ctx, line.id, null); // e.g. the "×" on the line
+    const named = openTab(ctx, { kind: 'named', customer_name: 'Ayşe' }); // opened, nothing added
+    expect(closeShift(ctx).shift.closed_at).not.toBeNull();
+    expect(getTab(ctx, quick.id).tab.status).toBe('void');
+    expect(getTab(ctx, named.id).tab.status).toBe('void');
+  });
 });

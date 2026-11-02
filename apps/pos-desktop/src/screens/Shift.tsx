@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import { useAction, useApiData } from '../components/useApi';
 import type { OpenTabSummary } from '../db/sales';
-import { formatDateTime, formatTime } from '../format';
+import { formatDateTime, formatLongDate, formatTime } from '../format';
 
 /** No cash count (2026-10-29): opening a shift is one click. */
 export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
@@ -166,7 +166,9 @@ type Decision = { kind: 'paid'; method: PaymentMethod } | { kind: 'void' } | { k
  */
 function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report): void }) {
   const [summary, reloadSummary] = useApiData(() => api.getShiftSummary(shift.id), [shift.id]);
-  const [open, reloadOpen] = useApiData(() => api.listOpenTabSummaries(true), [shift.id]);
+  // Empty tabs (all lines removed, nothing paid) are cancelled by closeShift itself.
+  const [allOpen, reloadOpen] = useApiData(() => api.listOpenTabSummaries(true), [shift.id]);
+  const open = allOpen?.filter((o) => o.itemCount > 0 || o.total > 0 || o.remaining > 0);
   const [decided, setDecided] = useState<Map<string, { title: string; amount: number; decision: Decision }>>(new Map());
   const [notes, setNotes] = useState('');
   const run = useAction();
@@ -220,8 +222,9 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <h2 style={{ margin: 0 }}>Gün sonu</h2>
-          <div className="muted" style={{ fontWeight: 600, marginTop: 4 }}>
-            Vardiya {formatTime(shift.opened_at)}'de açıldı
+          {/* The report day is the shift's opening day (plan): show it, also after midnight. */}
+          <div className="muted" style={{ fontWeight: 600, marginTop: 4 }} data-testid="shift-day">
+            {formatLongDate(shift.opened_at)} · açılış {formatTime(shift.opened_at)}
           </div>
         </div>
         <Stats summary={summary} />
