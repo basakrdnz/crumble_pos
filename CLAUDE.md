@@ -241,6 +241,8 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 
 Kasa programı henüz kurulu değil (2026-11-01). Kullanıcı kafe PC'sine Claude kurup bu adımları ona yaptıracak:
 
+**Durum (2026-11-03): Kasa artık kafe PC'sinde, geçici bilgisayar kullanılmıyor.** Kafe PC'sinde menü elle içe aktarıldı (ekleme CSV + ana CSV, 74 ürün, 10 kategori) ve 3 Kasım'da ilk gerçek vardiya açıldı. Bulutta kullanıcı isteğiyle eski deneme vardiyaları ve satışları silindi; buluttaki eski menü kopyası (aynı adlı, daha eski ürün/kategoriler) `deleted_at` ile gizlendi. Kafe kasasının yerel veritabanında 2–3 Kasım deneme vardiyaları kalmış olabilir (buluta gitmez). Aşağıdaki geçiş notları tarihçe içindir.
+
 **Önce oku (2026-11-02):** Kafe PC'si bakımda. Kullanıcı kasayı **geçici olarak başka bir Windows bilgisayara** kurdu ve **gerçek Supabase projesine** bağlayıp **gerçek satış** için kullanıyor. Bulutta menü, kroki, satışlar ve vardiyalar var. Kafe PC'sine geçerken:
 - Önce geçici bilgisayarda gün sonu alınır (açık hesap ve vardiya kalmaz), sol rayda "Senkron ✓" görülür, sonra o bilgisayarda kasa bir daha kullanılmaz.
 - Kafe PC'sinde menüyü **içe aktarma** (5. adım). Bunun yerine bulut bağlantısından sonra **Buluttan geri yükle** yap; tüm geçmiş, menü ve kroki iner. İçe aktarmak buluta ikinci bir menü (farklı UUID'ler) gönderir, telefonda ürünler çift görünür. Geri yükleme sadece boş kasada çalışır; kendiliğinden gelen kroki engel değildir.
