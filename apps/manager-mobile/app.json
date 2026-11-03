@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Crumble Yönetim",
+    "name": "Crumble Yonetim",
     "slug": "crumble-yonetim",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.crumble.yonetim",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Crumble Yönetim"
       }
     },
     "android": {
