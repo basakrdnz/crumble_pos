@@ -97,10 +97,12 @@ jobs:
       - name: EAS build log (on failure)
         if: failure()
         run: |
-          eas build:list --platform ios --limit 1 --json --non-interactive > "$RUNNER_TEMP/builds.json" || exit 0
-          jq -r '.[0] | "Build \(.id) status \(.status)"' "$RUNNER_TEMP/builds.json"
-          jq -r '.[0].error // empty' "$RUNNER_TEMP/builds.json"
-          for url in $(jq -r '.[0].logFiles[]?' "$RUNNER_TEMP/builds.json"); do
+          id=$(eas build:list --platform ios --limit 1 --json --non-interactive | jq -r '.[0].id') || exit 0
+          # build:view returns the full build, including its log file URLs.
+          eas build:view "$id" --json > "$RUNNER_TEMP/build.json" || exit 0
+          jq -r '"Build \(.id) status \(.status), \(.logFiles | length) log files"' "$RUNNER_TEMP/build.json"
+          jq -r '.error // empty' "$RUNNER_TEMP/build.json"
+          for url in $(jq -r '.logFiles[]?' "$RUNNER_TEMP/build.json"); do
             curl -sSL "$url" -o "$RUNNER_TEMP/eas.log" || continue
             # Lines are JSON (bunyan); show the failed phase and any errors.
             jq -Rr 'fromjson? | select(.phase != null) | "[\(.phase)] \(.msg)"' "$RUNNER_TEMP/eas.log" \
