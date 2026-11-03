@@ -12,7 +12,11 @@ import {
   weekdayIndex,
   WEEKDAYS_SHORT,
 } from '@crumble/shared';
+import { useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../components/theme';
 import { Card, Columns, Delta, Fact, Label, LastSync, Screen } from '../../components/ui';
 import { loadCatalog, loadOpenTabTotals, loadReportData } from '../../lib/data';
@@ -36,6 +40,14 @@ const formatDayKey = (iso: string) => new Date(Date.parse(iso) + 3 * 3_600_000).
 
 /** Bugün (B1, 2026-10-30): live takings with "so far" comparisons and the hour chart. */
 export default function Today() {
+  const insets = useSafeAreaInsets();
+  // The forest-green hero needs white status bar text; the other tabs are light.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, []),
+  );
   const { data, error, refreshing, reload } = useLive(async () => {
     const today = todayIstanbul();
     const from = [addDays(today, -7), monthStart(today)].sort()[0]!;
@@ -68,7 +80,7 @@ export default function Today() {
   const minutes = oldest ? Math.round((Date.parse(now) - Date.parse(oldest.opened_at)) / 60_000) : 0;
 
   const hero = (
-    <View style={s.hero}>
+    <View style={[s.hero, { paddingTop: insets.top + 16 }]}>
       <View style={s.heroTop}>
         <Text style={s.brand}>CRUMBLE</Text>
         <LastSync onDark />
@@ -155,7 +167,7 @@ export default function Today() {
 }
 
 const s = StyleSheet.create({
-  hero: { backgroundColor: colors.forest, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  hero: { backgroundColor: colors.forest, paddingHorizontal: 20, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 14, letterSpacing: 2.5 },
   heroLabel: { marginTop: 16, fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted },

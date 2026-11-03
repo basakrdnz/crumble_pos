@@ -16,7 +16,7 @@ export default function Shifts() {
   });
 
   return (
-    <Screen title="Vardiyalar" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
+    <Screen underHeader title="Vardiyalar" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
       {data?.length === 0 && <Empty text="Henüz vardiya yok." />}
       {data?.map(({ shift, summary }) => (
         <Section key={shift.id} title={`${formatDateTime(shift.opened_at)}${shift.closed_at ? ` → ${formatTime(shift.closed_at)}` : ' · açık'}`}>

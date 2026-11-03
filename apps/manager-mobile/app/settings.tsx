@@ -15,7 +15,7 @@ export default function Settings() {
     void AsyncStorage.getItem(NOTIFY_KEY).then((v) => setNotify(v === '1'));
   }, []);
   return (
-    <Screen title="Ayarlar">
+    <Screen underHeader title="Ayarlar">
       <Card>
         <Row left="Hesap" right={session?.user.email ?? ''} />
         <View style={[styles.row, { justifyContent: 'space-between' }]}>

@@ -11,10 +11,10 @@ const METHOD = { cash: 'Nakit', card: 'Kart' } as const;
 export default function SaleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, error } = useLive(() => loadSale(id), [id]);
-  if (!data) return <Screen title="Satış" error={error}>{data === null && <Text>Bulunamadı.</Text>}</Screen>;
+  if (!data) return <Screen underHeader title="Satış" error={error}>{data === null && <Text>Bulunamadı.</Text>}</Screen>;
   const totals = tabTotals(data.items, data.tab.discount_percent);
   return (
-    <Screen title={data.tab.status === 'void' ? 'İptal edilen hesap' : formatTL(data.tab.total ?? totals.total)} error={error}>
+    <Screen underHeader title={data.tab.status === 'void' ? 'İptal edilen hesap' : formatTL(data.tab.total ?? totals.total)} error={error}>
       <Text style={styles.rowSub}>
         {formatDateTime(data.tab.opened_at)}
         {data.tab.closed_at ? ` → ${formatDateTime(data.tab.closed_at)}` : ''}
