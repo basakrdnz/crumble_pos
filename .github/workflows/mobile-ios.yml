@@ -24,6 +24,18 @@ on:
         description: "İlk sefer: Apple imza sertifikasını ve profilini oluştur"
         type: boolean
         default: false
+  # A merge that changes the phone app builds and sends it to TestFlight by
+  # itself (Claude's GitHub app may not start workflows by hand).
+  push:
+    branches: [main]
+    paths:
+      - 'apps/manager-mobile/**'
+      - 'packages/shared/**'
+      - '.github/workflows/mobile-ios.yml'
+
+concurrency:
+  group: mobile-ios
+  cancel-in-progress: false
 
 jobs:
   ios:
@@ -72,14 +84,16 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
 
-      # EAS creates the distribution certificate and provisioning profile only
-      # in interactive mode. The first run answers its prompts with the
-      # defaults ("yes, generate") through a pseudo terminal (script); afterwards the
-      # credentials live on Expo's servers and builds run non-interactively.
+      # EAS creates the distribution certificate and provisioning profile, and
+      # adds new capabilities (Push Notifications) to the App ID, only in
+      # interactive mode. That mode answers its prompts with the defaults
+      # ("yes") through a pseudo terminal (script). Automatic builds after a
+      # merge always use it, so a new capability never breaks them; a manual
+      # run uses it when "İlk sefer" is ticked.
       - name: Build (and submit)
         run: |
-          args="--platform ios --profile production --wait ${{ inputs.submit && '--auto-submit' || '' }}"
-          if [ "${{ inputs.setup_credentials }}" = "true" ]; then
+          args="--platform ios --profile production --wait ${{ (github.event_name == 'push' || inputs.submit) && '--auto-submit' || '' }}"
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.setup_credentials }}" = "true" ]; then
             # One Enter every 2 s (a flood of input would fill the terminal and hang).
             (while sleep 2; do echo; done) | env -u CI timeout 45m script -qefc "eas build $args" /dev/null
           else

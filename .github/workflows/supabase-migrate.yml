@@ -1,0 +1,40 @@
+# Applies new Supabase migrations (supabase/migrations) to the live project,
+# so they no longer have to be pasted into the SQL Editor. Runs by itself when
+# a merge to main adds a migration, or by hand: Actions -> "Supabase
+# migration" -> Run workflow.
+#
+# Repository secret SUPABASE_DB_URL: Supabase -> Connect -> "Session pooler"
+# connection string (URI), with [YOUR-PASSWORD] replaced by the database
+# password (Project Settings -> Database -> Reset database password if unknown).
+name: Supabase migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+
+concurrency:
+  group: supabase-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Postgres client
+        run: command -v psql || (sudo apt-get update -q && sudo apt-get install -yq postgresql-client)
+
+      - name: Apply new migrations
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is missing (see the top of this file)."
+            exit 1
+          fi
+          supabase/apply.sh
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
