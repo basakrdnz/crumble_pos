@@ -50,7 +50,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 
 ## Menü içe aktarma (Faz 1)
 
-Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada 84 ürün vardı; 2026-10-30'da 20 tek tek bitki çayı satırı çıkarıldı, şimdi **64 ürün**, 8 kategori). Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
+Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada 84 ürün vardı; 2026-10-30'da 20 tek tek bitki çayı satırı çıkarıldı, 64 ürün, 8 kategori; 2026-11-03'te "Hazır İçecekler" (su, kola, Powerade…) ve "Paketli Ürünler" (bar) eklendi, şimdi **74 ürün**, 10 kategori). Bunlar vitrin gibi QR menüde fiyatsız. Çalışan kasaya yeni ürünler sadece ekleme dosyasıyla girilir (`crumble_menu_ekleme_2026-11-03.csv`); ana CSV'yi tekrar içe aktarmak, kasada silinmiş veya adı değişmiş ürünleri geri getirir. Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
 - `fiyat_tl` × 100 → kuruş.
 - Sıcak/buzlu ve boy seçenekleri ayrı ürün olarak, isim aynen aktarılır.
 - `fiyat_belirlenecek` → pasif, fiyat 0.

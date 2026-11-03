@@ -28,7 +28,7 @@ describe('buildImportPreview with crumble_menu_seed.csv', () => {
 
   it('reads every row without errors', () => {
     expect(preview.errors).toEqual([]);
-    expect(preview.products).toHaveLength(64);
+    expect(preview.products).toHaveLength(74);
     expect(preview.categories.map((c) => c.name)).toEqual([
       'Kahve',
       'Kış İçecekleri',
@@ -38,6 +38,8 @@ describe('buildImportPreview with crumble_menu_seed.csv', () => {
       'Kahvaltılık',
       'Yemek',
       'Varsa Kap! (Vitrin)',
+      'Hazır İçecekler',
+      'Paketli Ürünler',
     ]);
   });
 
