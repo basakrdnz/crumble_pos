@@ -91,3 +91,18 @@ jobs:
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           EXPO_APPLE_TEAM_TYPE: ${{ vars.APPLE_TEAM_TYPE || 'INDIVIDUAL' }} # or COMPANY_OR_ORGANIZATION
+
+      # EAS keeps the real build error in its own logs; print them here so a
+      # failure can be read from GitHub alone.
+      - name: EAS build log (on failure)
+        if: failure()
+        run: |
+          eas build:list --platform ios --limit 1 --json --non-interactive > "$RUNNER_TEMP/builds.json" || exit 0
+          jq -r '.[0] | "Build \(.id) status \(.status)"' "$RUNNER_TEMP/builds.json"
+          jq -r '.[0].error // empty' "$RUNNER_TEMP/builds.json"
+          for url in $(jq -r '.[0].logFiles[]?' "$RUNNER_TEMP/builds.json"); do
+            curl -sSL "$url" -o "$RUNNER_TEMP/eas.log" || continue
+            # Lines are JSON (bunyan); show the failed phase and any errors.
+            jq -Rr 'fromjson? | select(.phase != null) | "[\(.phase)] \(.msg)"' "$RUNNER_TEMP/eas.log" \
+              | grep -v '^\[INSTALL_PODS\]\|^\[RUN_FASTLANE\]' | tail -n 150
+          done
