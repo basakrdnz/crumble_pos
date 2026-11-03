@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Context } from '../db/database';
 import type { SyncService } from './service';
 import { restoreFromCloud, type RestoreResult } from './restore';
+import { type CloudShift, openConflict, reopenConflict } from './shiftGuard';
 import { type CloudConfig, createCloudClient, type KeyValueStorage, signInDevice, supabaseTransport } from './supabase';
 
 const CONFIG_KEY = 'cloud_config';
@@ -122,8 +123,37 @@ export class CloudManager {
     return this.info();
   }
 
-  async restore(): Promise<RestoreResult> {
+  /** The cloud's latest shifts, or null when there is no connection or it does not answer in time (offline-first). */
+  private async cloudShifts(): Promise<CloudShift[] | null> {
+    if (!this.client) return null;
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+    try {
+      return await Promise.race([supabaseTransport(this.client).readShifts(), timeout]);
+    } catch {
+      return null;
+    }
+  }
+
+  private localShiftIds(): Set<string> {
+    return new Set(this.ctx.db.prepare('select id from shifts').pluck().all() as string[]);
+  }
+
+  /** Before opening a shift: refuse if another POS has one open in the cloud. */
+  async checkBeforeOpen(): Promise<void> {
+    const shifts = await this.cloudShifts();
+    const conflict = shifts && openConflict(shifts, this.localShiftIds());
+    if (conflict) throw new Error(conflict);
+  }
+
+  /** Before continuing today's shift: refuse when the cloud would reject it. */
+  async checkBeforeReopen(shift: { id: string; opened_at: string }): Promise<void> {
+    const shifts = await this.cloudShifts();
+    const conflict = shifts && reopenConflict(shifts, shift, this.localShiftIds());
+    if (conflict) throw new Error(conflict);
+  }
+
+  async restore(allowOpenShift = false): Promise<RestoreResult> {
     if (!this.client) throw new Error('Önce bulut bağlantısını kurun.');
-    return restoreFromCloud(this.ctx, supabaseTransport(this.client));
+    return restoreFromCloud(this.ctx, supabaseTransport(this.client), { allowOpenShift });
   }
 }

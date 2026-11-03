@@ -3,7 +3,7 @@
 // kept in the local settings table through `storage`, never the password.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { SyncedTable } from '../db/database';
-import { type CatalogPuller, type CloudReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from './transport';
+import { type CatalogPuller, type CloudReader, type CloudShiftReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from './transport';
 
 export interface CloudConfig {
   url: string;
@@ -42,7 +42,7 @@ export async function signInDevice(client: SupabaseClient, email: string, passwo
   }
 }
 
-export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader & CatalogPuller {
+export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader & CatalogPuller & CloudShiftReader {
   const since = async (table: string, column: string, value: string, filter?: [string, string]) => {
     let query = client.from(table).select('*').gt(column, value);
     if (filter) query = query.eq(filter[0], filter[1]);
@@ -70,6 +70,12 @@ export function supabaseTransport(client: SupabaseClient): SyncTransport & Cloud
         .upsert({ id: DEVICE_STATUS_ID, ...status, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       const syncError = asSyncError(error);
       if (syncError) throw syncError;
+    },
+    async readShifts() {
+      const { data, error } = await client.from('shifts').select('id, opened_at, closed_at').order('opened_at', { ascending: false }).limit(50);
+      const syncError = asSyncError(error);
+      if (syncError) throw syncError;
+      return (data ?? []) as { id: string; opened_at: string; closed_at: string | null }[];
     },
     async readAll(table: SyncedTable) {
       const rows: Record<string, unknown>[] = [];

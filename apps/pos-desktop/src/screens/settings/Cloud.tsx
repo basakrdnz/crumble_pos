@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../../api/client';
 import { useAction, useApiData } from '../../components/useApi';
 import { formatDateTime } from '../../format';
+import { OPEN_SHIFT_IN_CLOUD } from '../../sync/shiftGuard';
 
 const STATE: Record<string, string> = {
   disabled: 'Kapalı',
@@ -72,7 +73,19 @@ export function Cloud() {
                 disabled={busy}
                 onClick={() => {
                   if (!window.confirm('Buluttaki tüm veriler bu kasaya geri yüklensin mi?')) return;
-                  void act(() => api.restoreFromCloud(), 'Geri yükleme tamamlandı.');
+                  void act(async () => {
+                    try {
+                      await api.restoreFromCloud();
+                    } catch (e) {
+                      // Another POS may still be working on the open day (2026-11-03): ask before continuing it here.
+                      const message = e instanceof Error ? e.message : String(e);
+                      if (!message.startsWith(OPEN_SHIFT_IN_CLOUD)) throw e;
+                      if (!window.confirm(`${message}\n\nEski kasa bir daha kullanılmayacak mı? "Tamam" açık vardiyayı bu kasaya alır.`)) {
+                        throw new Error('Geri yükleme yapılmadı. Önce eski kasada gün sonunu alın.');
+                      }
+                      await api.restoreFromCloud(true);
+                    }
+                  }, 'Geri yükleme tamamlandı.');
                 }}
               >
                 Buluttan geri yükle

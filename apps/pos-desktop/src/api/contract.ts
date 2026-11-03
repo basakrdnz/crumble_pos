@@ -48,10 +48,11 @@ export interface PosApi {
 
   // Shifts
   getOpenShift(): Shift | null;
-  openShift(): Shift;
+  /** Async: when connected, first checks that no other POS has a shift open in the cloud. */
+  openShift(): Promise<Shift>;
   /** One shift per day: today's shift if it was already closed (continue it instead). */
   getTodaysClosedShift(): Shift | null;
-  reopenShift(shiftId: string): Shift;
+  reopenShift(shiftId: string): Promise<Shift>;
   getShiftSummary(shiftId: string): ShiftSummary;
   closeShift(input: CloseShiftInput): CloseShiftResult;
   listShifts(limit?: number): Shift[];
@@ -99,7 +100,8 @@ export interface PosApi {
   connectCloud(input: ConnectInput): Promise<CloudInfo>;
   disconnectCloud(): Promise<CloudInfo>;
   isLocalEmpty(): boolean;
-  restoreFromCloud(): Promise<RestoreResult>;
+  /** Refuses while the cloud has an open shift unless allowOpenShift (the old POS will not be used again). */
+  restoreFromCloud(allowOpenShift?: boolean): Promise<RestoreResult>;
 
   // Maintenance (Faz 7)
   listBackups(): BackupFile[];

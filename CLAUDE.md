@@ -231,6 +231,10 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Telefon: Diğer → Bildirimler (`app/notifications.tsx`) `push_log`'u listeler. `lib/push.ts`, girişten sonra varsayılan açık (iOS bir kez izin sorar), Ayarlar'dan kapatılır, çıkışta susturulur. Token `set_push_token()` ile yazılır (sadece ortak), `push_tokens` API'den okunmaz.
   - iOS için APNs anahtarı Expo'ya yüklenmeli (expo.dev → Credentials → iOS → Push key). `app.json` → `expo-notifications` `mode: production`.
   - Test: `supabase_stub.sql` sahte `net.http_post` (istekleri `net.calls`'a yazar), `db.test.sql` senaryosu `crumble.test_now` ile günü sabitler.
+- **İki kasa koruması (2026-11-03):** Kafe PC'sine geçerken yeni kasa, eski kasanın açık gününü geri yükledi; ikisi aynı vardiyada çalıştı, bulut yenisinin yazımını reddetti ("Kapanmış vardiya değiştirilemez") ve senkronu durdu. Bulutta o günün tüm deneme vardiya/satışları kullanıcı isteğiyle silindi (SQL Editor, `truncate` shifts/tabs/tab_items/payments/refunds/push_log; menü ve kroki kaldı). Kurallar `src/sync/shiftGuard.ts`:
+  - Geri yükleme bulutta açık vardiya varsa önce reddeder; ekran "Eski kasa bir daha kullanılmayacak mı?" diye sorar, evet derse açık vardiyaya burada devam edilir (`allowOpenShift`, eski kasa bozulduysa gerekli).
+  - Vardiya açma: bulutta bu kasanın bilmediği açık vardiya varsa açtırmaz. "Bugünün vardiyasına devam et": bulutta başka açık ya da sonradan açılmış vardiya varsa izin vermez. İkisi de sadece bulut 5 sn içinde cevap verirse çalışır, çevrimdışı engel yok.
+  - Senkron yine de bu tür bir redde takılırsa otomatik kurtarma yok, elle çözülür (bulutu sorgula, kasayı temiz kurup geri yükle).
 - Henüz yapılmayanlar: `supabase/seed`.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
