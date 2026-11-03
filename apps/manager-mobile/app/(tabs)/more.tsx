@@ -6,6 +6,7 @@ export default function More() {
     <Screen title="Diğer">
       <Card>
         <Row left="Vardiyalar" sub="Açılış, gün sonu, beklenen nakit" right="›" onPress={() => router.push('/shifts')} />
+        <Row left="Bildirimler" sub="Gönderilen son bildirimler" right="›" onPress={() => router.push('/notifications')} />
         <Row left="Değişiklik geçmişi" sub="Ürün, fiyat, kategori ve kroki değişiklikleri" right="›" onPress={() => router.push('/history')} />
         <Row left="Ayarlar" right="›" onPress={() => router.push('/settings')} />
       </Card>

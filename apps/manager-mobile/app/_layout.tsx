@@ -37,6 +37,7 @@ function Gate() {
       <Stack.Screen name="sale/[id]" options={{ title: 'Satış detayı' }} />
       <Stack.Screen name="shifts" options={{ title: 'Vardiyalar' }} />
       <Stack.Screen name="history" options={{ title: 'Değişiklik geçmişi' }} />
+      <Stack.Screen name="notifications" options={{ title: 'Bildirimler' }} />
       <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
     </Stack>
   );

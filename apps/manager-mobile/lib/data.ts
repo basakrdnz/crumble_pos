@@ -118,6 +118,27 @@ export async function loadChanges(limit = 300): Promise<CatalogChange[]> {
   return data as CatalogChange[];
 }
 
+/** A sent push (push_log). Marker rows (ay rekoru also counts as ortalama) have an empty body. */
+export interface SentPush {
+  id: number;
+  kind: 'day_open' | 'day_end' | 'above_average' | 'month_record';
+  title: string;
+  body: string;
+  recipients: number;
+  sent_at: string;
+}
+
+export async function loadPushLog(limit = 100): Promise<SentPush[]> {
+  const { data, error } = await supabase
+    .from('push_log')
+    .select('id, kind, title, body, recipients, sent_at')
+    .neq('body', '')
+    .order('sent_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data as SentPush[];
+}
+
 export interface SaleDetail {
   tab: Tab;
   items: TabItem[];
