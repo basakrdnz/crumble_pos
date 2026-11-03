@@ -287,4 +287,83 @@ select pg_temp.expect_error($$insert into public.tables (id, floor_plan_id, labe
   values ('00000000-0000-0000-0000-0000000f0003', '00000000-0000-0000-0000-0000000f0001', '9', 'star', 0, 0, 10, 10, '#ffffff', now(), now())$$, 'unknown table shape');
 rollback;
 
+-- ===== Push notifications (gün açıldı, ay rekoru, gün sonu) =====
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001"}', true);
+select pg_temp.expect_ok($$select public.set_push_token('ExponentPushToken[partner-phone]', true)$$, 'partner registers push token');
+select pg_temp.expect_ok($$select public.set_push_token('ExponentPushToken[partner-phone]', true)$$, 'registering twice is fine');
+select pg_temp.expect_error($$select public.set_push_token('not-a-token', true)$$, 'invalid push token');
+select pg_temp.expect_error($$select count(*) from public.push_tokens$$, 'push tokens are not readable');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e001"}', true);
+select pg_temp.expect_error($$select public.set_push_token('ExponentPushToken[stranger]', true)$$, 'stranger cannot register');
+
+-- Device: six earlier days in June 2030, 100 TL each (late rows: nothing sent).
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000d001","app_metadata":{"role":"device"}}', true);
+select set_config('crumble.test_now', '2030-06-20 12:00:00+03', true);
+do $$
+declare
+  i integer;
+  d timestamptz;
+  sid uuid;
+  tid uuid;
+begin
+  for i in 14..19 loop
+    d := ('2030-06-' || i || ' 10:00:00+03')::timestamptz;
+    sid := md5('push-shift' || i)::uuid;
+    tid := md5('push-tab' || i)::uuid;
+    insert into public.shifts (id, opened_at, opening_cash, closed_at, expected_cash)
+      values (sid, d, 0, d + interval '8 hours', 10000);
+    insert into public.tabs (id, opened_shift_id, closed_shift_id, kind, status, total, opened_at, closed_at)
+      values (tid, sid, sid, 'quick', 'paid', 10000, d, d + interval '1 hour');
+    insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+      values (md5('push-pay' || i)::uuid, tid, sid, 'cash', 10000, d + interval '1 hour');
+  end loop;
+end;
+$$;
+
+-- Today: open at 11:00, 50 + 60 + 10 TL, close at 11:55.
+insert into public.shifts (id, opened_at, opening_cash)
+  values ('30000000-0000-0000-0000-0000000000f1', '2030-06-20 11:00:00+03', 0);
+insert into public.tabs (id, opened_shift_id, kind, opened_at)
+  values ('40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'quick', '2030-06-20 11:05:00+03');
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+  values ('60000000-0000-0000-0000-0000000000f1', '40000000-0000-0000-0000-0000000000f1',
+          '30000000-0000-0000-0000-0000000000f1', 'cash', 5000, '2030-06-20 11:10:00+03');
+reset role;
+select pg_temp.expect_count($$select count(*) from net.calls$$, 1, 'day open sent, 50 TL is below the average');
+select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Gün açıldı'
+  and body->0->>'to' = 'ExponentPushToken[partner-phone]' and url like 'https://exp.host/%'$$, 1, 'day open message to the phone');
+set local role authenticated;
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+  values ('60000000-0000-0000-0000-0000000000f2', '40000000-0000-0000-0000-0000000000f1',
+          '30000000-0000-0000-0000-0000000000f1', 'card', 6000, '2030-06-20 11:20:00+03');
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+  values ('60000000-0000-0000-0000-0000000000f3', '40000000-0000-0000-0000-0000000000f1',
+          '30000000-0000-0000-0000-0000000000f1', 'cash', 1000, '2030-06-20 11:30:00+03');
+reset role;
+select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Bu ayın rekoru'
+  and body->0->>'body' like '%110,00 ₺%önceki en iyi 100,00 ₺%'$$, 1, 'month record sent once');
+select pg_temp.expect_count($$select count(*) from net.calls$$, 2, 'no separate above-average push after the record');
+set local role authenticated;
+update public.tabs set status = 'paid', closed_shift_id = '30000000-0000-0000-0000-0000000000f1', total = 12000,
+  closed_at = '2030-06-20 11:50:00+03' where id = '40000000-0000-0000-0000-0000000000f1';
+update public.shifts set closed_at = '2030-06-20 11:55:00+03', expected_cash = 6000
+  where id = '30000000-0000-0000-0000-0000000000f1';
+reset role;
+select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Gün sonu'
+  and body->0->>'body' = 'Ciro 120,00 ₺ · 1 satış · kasada nakit 60,00 ₺.'$$, 1, 'day end summary');
+select pg_temp.expect_count($$select count(*) from public.push_log where day = '2030-06-20'$$, 4, 'push log rows of the day');
+
+-- A broken push never blocks the POS write.
+create or replace function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
+                                         headers jsonb default '{}', timeout_milliseconds integer default 5000)
+returns bigint language plpgsql as $$ begin raise exception 'network down'; end; $$;
+set local role authenticated;
+select set_config('crumble.test_now', '2030-06-21 12:00:00+03', true);
+select pg_temp.expect_ok($$insert into public.shifts (id, opened_at, opening_cash)
+  values ('30000000-0000-0000-0000-0000000000f2', '2030-06-21 11:30:00+03', 0)$$, 'shift opens although the push fails');
+rollback;
+
 \echo 'ALL DATABASE TESTS PASSED'

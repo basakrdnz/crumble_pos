@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { mutePushForSignOut } from './push';
 import { supabase } from './supabase';
 
 interface AuthState {
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    await mutePushForSignOut();
     await supabase.auth.signOut();
     setSession(null);
   };

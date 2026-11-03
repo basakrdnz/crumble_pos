@@ -2,13 +2,19 @@ import { Gloock_400Regular } from '@expo-google-fonts/gloock';
 import { Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Login } from '../components/Login';
 import { colors, fonts } from '../components/theme';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { syncPushAfterSignIn } from '../lib/push';
 
 function Gate() {
   const { session, loading } = useAuth();
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (userId) void syncPushAfterSignIn();
+  }, [userId]);
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>

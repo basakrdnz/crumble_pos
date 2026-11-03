@@ -1,19 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { colors } from '../components/theme';
 import { Card, Row, Screen, styles } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { pushPreference, pushSupported, setPush } from '../lib/push';
 
-const NOTIFY_KEY = 'crumble.notifications';
-
-/** Ayarlar (plan §6.7): sign out, notification preference. */
+/** Ayarlar (plan §6.7): sign out, notifications. */
 export default function Settings() {
   const { session, signOut } = useAuth();
   const [notify, setNotify] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
-    void AsyncStorage.getItem(NOTIFY_KEY).then((v) => setNotify(v === '1'));
+    void pushPreference().then((on) => setNotify(pushSupported && on));
   }, []);
+  const toggle = async (on: boolean) => {
+    setBusy(true);
+    setMessage(null);
+    const result = await setPush(on);
+    setNotify(result.enabled);
+    setMessage(result.error ?? null);
+    setBusy(false);
+  };
   return (
     <Screen underHeader title="Ayarlar">
       <Card>
@@ -21,16 +29,11 @@ export default function Settings() {
         <View style={[styles.row, { justifyContent: 'space-between' }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowLeft}>Bildirimler</Text>
-            <Text style={styles.rowSub}>Tercih kaydedilir; bildirim gönderimi sonraki sürümde.</Text>
+            <Text style={styles.rowSub}>Gün açıldı, gün sonu, ortalamanın üstü ve ayın rekoru. Her biri günde en çok bir kez.</Text>
           </View>
-          <Switch
-            value={notify}
-            onValueChange={(v) => {
-              setNotify(v);
-              void AsyncStorage.setItem(NOTIFY_KEY, v ? '1' : '0');
-            }}
-          />
+          <Switch value={notify} disabled={busy || !pushSupported} onValueChange={(v) => void toggle(v)} accessibilityLabel="Bildirimler" />
         </View>
+        {message && <Text style={[styles.rowSub, { color: colors.danger }]}>{message}</Text>}
       </Card>
       <Pressable
         onPress={() => void signOut()}
