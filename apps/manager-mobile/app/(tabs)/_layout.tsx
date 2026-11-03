@@ -2,7 +2,8 @@ import { Tabs } from 'expo-router/js-tabs';
 import { type ColorValue, Text, View } from 'react-native';
 import { colors, fonts } from '../../components/theme';
 
-// Simple drawn icons (no icon font): the glyph sits in a 24 px box.
+// Simple drawn icons (no icon font): the glyph sits in a 24 px box. U+FE0E asks iOS
+// for the text form of ☕, otherwise it draws the colour emoji and ignores the tint.
 const icon =
   (glyph: string) =>
   ({ color }: { color: ColorValue }) => (
@@ -26,7 +27,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Bugün', tabBarIcon: icon('⌂') }} />
       <Tabs.Screen name="sales" options={{ title: 'Satışlar', tabBarIcon: icon('≡') }} />
-      <Tabs.Screen name="products" options={{ title: 'Ürünler', tabBarIcon: icon('☕') }} />
+      <Tabs.Screen name="products" options={{ title: 'Ürünler', tabBarIcon: icon('☕\uFE0E') }} />
       <Tabs.Screen name="reports" options={{ title: 'Raporlar', tabBarIcon: icon('▥') }} />
       <Tabs.Screen name="more" options={{ title: 'Diğer', tabBarIcon: icon('⋯') }} />
     </Tabs>

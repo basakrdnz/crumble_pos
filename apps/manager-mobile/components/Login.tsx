@@ -1,5 +1,18 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputInstance,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
 import { isConfigured } from '../lib/supabase';
 import { colors, fonts } from './theme';
@@ -19,6 +32,8 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const insets = useSafeAreaInsets();
+  const passwordRef = useRef<TextInputInstance>(null);
 
   const submit = async () => {
     setBusy(true);
@@ -30,15 +45,17 @@ export function Login() {
   };
 
   return (
-    <View style={s.wrap}>
-      <View style={s.hero}>
+    // The form moves up with the keyboard; tapping the green area closes it.
+    <KeyboardAvoidingView style={s.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar style="light" />
+      <Pressable style={[s.hero, { paddingTop: insets.top + 24 }]} onPress={Keyboard.dismiss} accessible={false}>
         <Text style={s.brand}>CRUMBLE</Text>
         <View>
           <Text style={s.greet}>{greeting()}</Text>
           <Text style={s.heroText}>Yönetim paneli. Ortak hesabınla giriş yap.</Text>
         </View>
-      </View>
-      <View style={s.sheet}>
+      </Pressable>
+      <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         {!isConfigured && (
           <Text style={s.error}>Supabase adresi ayarlanmamış (EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY).</Text>
         )}
@@ -47,16 +64,26 @@ export function Login() {
           placeholder="E-posta"
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
+          textContentType="username"
+          autoComplete="email"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          submitBehavior="submit"
           value={email}
           onChangeText={setEmail}
           accessibilityLabel="E-posta"
         />
         <TextInput
           style={s.input}
+          ref={passwordRef}
           placeholder="Şifre"
           placeholderTextColor={colors.muted}
           secureTextEntry
+          textContentType="password"
+          autoComplete="current-password"
+          returnKeyType="go"
           value={password}
           onChangeText={setPassword}
           onSubmitEditing={() => void submit()}
@@ -77,17 +104,17 @@ export function Login() {
         </Pressable>
         <Text style={s.foot}>Crumble Yönetim · sadece ortaklar</Text>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.forest },
-  hero: { flex: 1, padding: 28, paddingTop: 64, justifyContent: 'space-between', paddingBottom: 40 },
+  hero: { flex: 1, padding: 28, justifyContent: 'space-between', paddingBottom: 32 },
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 16, letterSpacing: 3 },
   greet: { fontFamily: fonts.brand, color: '#fff', fontSize: 44, lineHeight: 50 },
   heroText: { fontFamily: fonts.semibold, color: colors.forestMuted, fontSize: 15, lineHeight: 23, marginTop: 10 },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36, gap: 12 },
+  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 },
   input: {
     height: 52, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 16, fontSize: 16,
     backgroundColor: '#fff', fontFamily: fonts.semibold, color: colors.text,

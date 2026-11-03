@@ -1,7 +1,8 @@
 import { type Category, formatTL, parseTL, type Product } from '@crumble/shared';
 import { randomUUID } from 'expo-crypto';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addMenuProduct, type Catalog, type DeviceStatus, deleteMenuProduct, loadCatalog, loadChanges, loadDeviceStatus, setProductPrice } from '../lib/data';
 import { formatDateTime } from '../lib/format';
 import { useLive } from '../lib/useLive';
@@ -95,13 +96,17 @@ function pendingOnPos(p: Product, source: string | undefined, device: DeviceStat
 }
 
 function Sheet({ title, children, onClose }: { title: string; children: React.ReactNode; onClose(): void }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose} />
-      <View style={s.sheet} accessibilityLabel={title}>
-        <View style={s.handle} />
-        {children}
-      </View>
+      {/* The sheet rides up with the keyboard so the price field stays visible. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={s.backdrop} onPress={onClose} />
+        <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]} accessibilityLabel={title}>
+          <View style={s.handle} />
+          {children}
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -246,7 +251,7 @@ const s = StyleSheet.create({
   fab: { alignSelf: 'flex-end', height: 52, paddingHorizontal: 20, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   fabText: { color: '#fff', fontFamily: fonts.heavy, fontSize: 15 },
   backdrop: { flex: 1, backgroundColor: 'rgba(28,36,32,0.35)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 18, paddingBottom: 32, gap: 10 },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 18, gap: 10 },
   handle: { width: 40, height: 5, borderRadius: 9, backgroundColor: '#D8DCD5', alignSelf: 'center', marginBottom: 4 },
   sheetTitle: { fontSize: 22, fontFamily: fonts.heavy, color: colors.text },
   priceBox: { height: 60, borderRadius: 14, borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentSoft, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 8 },

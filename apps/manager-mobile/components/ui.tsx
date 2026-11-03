@@ -1,6 +1,7 @@
 import { formatTL } from '@crumble/shared';
 import type { ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadDeviceStatus } from '../lib/data';
 import { formatDateTime, formatTime } from '../lib/format';
 import { useLive } from '../lib/useLive';
@@ -14,6 +15,7 @@ export function Screen({
   onRefresh,
   error,
   hero,
+  underHeader = false,
 }: {
   title?: string;
   children: ReactNode;
@@ -22,11 +24,15 @@ export function Screen({
   error?: string | null;
   /** Full-width block above the padded content (Bugün's dark card). */
   hero?: ReactNode;
+  /** Stack screens with a navigation header: the header already clears the status bar. */
+  underHeader?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
+  const top = hero || underHeader ? 0 : insets.top;
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={hero ? { paddingBottom: 40 } : styles.content}
+      contentContainerStyle={hero ? { paddingBottom: 40 } : [styles.content, { paddingTop: 16 + top }]}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
     >
       {hero}

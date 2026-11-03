@@ -29,7 +29,7 @@ export default function History() {
     for (const f of data[1].floorPlans) names.set(f.id, f.name);
   }
   return (
-    <Screen title="Değişiklik geçmişi" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
+    <Screen underHeader title="Değişiklik geçmişi" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
       <Card>
         {data?.[0].map((c) => (
           <Row
