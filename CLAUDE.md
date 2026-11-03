@@ -51,6 +51,7 @@ Bu dosya `CRUMBLE_POS_PLAN.md`'nin özetidir ve oturumlar arası hafızadır. **
 ## Menü içe aktarma (Faz 1)
 
 Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2026_v2`'den üretildi; plan 83 der ama dosyada 84 ürün vardı; 2026-10-30'da 20 tek tek bitki çayı satırı çıkarıldı, 64 ürün, 8 kategori; 2026-11-03'te "Hazır İçecekler" (su, kola, Powerade…) ve "Paketli Ürünler" (bar) eklendi, şimdi **74 ürün**, 10 kategori). Bunlar vitrin gibi QR menüde fiyatsız. Çalışan kasaya yeni ürünler sadece ekleme dosyasıyla girilir (`crumble_menu_ekleme_2026-11-03.csv`); ana CSV'yi tekrar içe aktarmak, kasada silinmiş veya adı değişmiş ürünleri geri getirir. Sütunlar: `kategori, urun, fiyat_tl, durum, not`.
+- **2026-11-03'ten beri menünün kaynağı kasa ve bulut, CSV değil.** Kullanıcı kafe kasasında menüyü yeniden düzenledi: 11 kategori (Kahve, Aromalı Kahve, Çay ve Diğer Sıcaklar, Soğuk İçecekler (hazır içecekler dahil), Paketli Ürünler, Kış İçecekleri, Detox ve Matcha (Cool Lime, Berry Hibiskus dahil), Granola ve Çorba, Kase ve Makarna, Teşhir (eski "Varsa Kap! (Vitrin)"), Tost ve Baget), 84 ürün; yeni ürünler (Soda, Meyveli Soda, Cappy, Biscolata, Wafer Master, glutensiz krakerler, Waffle, Çiçek Böreği). `crumble_menu_seed.csv` eski kaldı, çalışan kasaya bir daha içe aktarılmaz.
 - `fiyat_tl` × 100 → kuruş.
 - Sıcak/buzlu ve boy seçenekleri ayrı ürün olarak, isim aynen aktarılır.
 - `fiyat_belirlenecek` → pasif, fiyat 0.
@@ -82,7 +83,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
 ## Açık konular (kullanıcıya sorulacak)
 
 1. ~~Kroki~~ Yapıldı (2026-10-30): kullanıcının çizimine göre "Salon", 8 masa, 2 numara şömine önü. Kasa krokide gösterilmez. Görünüm A (sade kartlar).
-2. Bekleyen fiyatlar: Çıtır Kurabiye ve Vişneli Parmak Kurabiye (belirlenecek); Elmalı Kurabiye ve üç börek (teyit edilecek).
+2. Bekleyen fiyatlar: ~~Çıtır Kurabiye ve Vişneli Parmak Kurabiye~~ (2026-11-03 kasada girildi: 120 ₺ / 80 ₺); Elmalı Kurabiye ve üç börek "teyit edilecek" rozetinde olabilir (kasada "Fiyat doğru").
 3. ~~Devir mi, zorunlu kapatma mı?~~ Plan §5.4'e göre kapanışta sorulur: açık hesaplar listelenir, "Hesaplara dön" veya "Sonraki vardiyaya devret". Devredilen hesabın ödemesi ödendiği vardiyaya yazılır.
 4. ~~Ortak sayısı~~ Herkes aynı hesaba aynı şifreyle giriyor. E-posta kurulumda girilecek.
 5. ~~Supabase projesi~~ Kuruldu (2026-10-30, bkz. uygulama notları). Expo/Apple/Google hesapları hâlâ sorulacak.
