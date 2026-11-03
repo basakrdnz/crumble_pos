@@ -167,7 +167,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Veri büyürse sunucu tarafı toplama (SQL view/RPC) düşünülebilir. Şimdilik sayfalı (1000) okuma yapılıyor.
   - Canlılık: Supabase Realtime (`20261028000006_realtime.sql` yayını) + 15 sn yoklama yedeği (`EXPO_PUBLIC_POLL_MS`). Yerel testte Realtime yok, E2E yoklamayla (3 sn) ölçüyor.
   - "Son senkron" bilgisi `device_status`'tan okunur, 10 dakikadan eskiyse uyarı renginde gösterilir.
-  - Bildirim tercihi sadece kaydedilir, push bildirimi yok (plan kapsamında gönderim tanımlı değil).
+  - Bildirimler (2026-11-03): bkz. "Telefona bildirim".
   - Not: RN'de `textTransform: 'uppercase'` Türkçe bilmez (i→I), kullanma.
   - E2E altyapısı: `e2e/fakeSupabase.ts`, Auth + PostgREST POST/GET alt kümesini gerçek Postgres'e cihaz/ortak rolüyle (RLS açık) çevirir. Gerçek PostgREST ikili dosyası indirilemedi (izin verilmedi), yerine bu kullanılıyor.
 - **Cilalama (Faz 7):**
@@ -225,7 +225,13 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - `apps/manager-mobile/eas.json` (profil `production`, Supabase adresi ve publishable key `env` içinde; ikisi de gizli değil), `app.json` → `ios.bundleIdentifier = com.crumble.yonetim`, `ITSAppUsesNonExemptEncryption: false`, telefon için (`supportsTablet: false`).
   - Geçici simge `assets/icon.png`: G2 koyu yeşil zemin, Gloock beyaz "C" (logo gelince değişecek).
   - `.github/workflows/mobile-ios.yml` (elle başlatılır): EAS'te iOS build + `--auto-submit` ile TestFlight. Secret'lar (2026-11-02 girildi): `EXPO_TOKEN`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`; ilk çalıştırma "İlk sefer: Apple imza sertifikası" seçeneğiyle (EAS sertifikayı sadece etkileşimli modda üretir, sorular `script` ile ve 2 sn'de bir Enter gönderilerek varsayılanla geçilir); değişken `APPLE_TEAM_TYPE` (varsayılan INDIVIDUAL). Expo projesi kullanıcının hesabında açıldı: slug `crumble-yonetim`, `extra.eas.projectId = c577a5b3-048e-4268-a3cc-3fa9ef5ce6de` (app.json). `expo.name` ASCII olmalı ("Crumble Yonetim"): EAS hedef adını "ö"yü atarak (CrumbleYnetim), prebuild ise çevirerek (CrumbleYonetim) üretiyordu, "Could not find target" hatası. Telefonda görünen ad `ios.infoPlist.CFBundleDisplayName` = "Crumble Yönetim". App Store Connect'te uygulama kaydı "Crumble Yönetim" açıldı (2026-11-02), Apple ID `6829931111` → `eas.json` `submit.production.ios.ascAppId`.
-- Henüz yapılmayanlar: `supabase/seed`, push bildirimleri.
+- **Telefona bildirim (2026-11-03, kullanıcı isteği "abartmadan"):**
+  - Gönderim veritabanından: `20261103000011_push_notifications.sql` trigger'ları `pg_net` ile Expo push servisine (`exp.host`) yazar. Sunucu kodu/Edge Function yok. Hata kasanın yazımını asla engellemez (uyarı olarak yutulur).
+  - Türler: gün açıldı (vardiya eklendi), gün sonu (vardiya kapandı: ciro, satış sayısı, kasadaki nakit), ortalamanın üstü (bugünkü ciro son 30 günün açık günlerinin ortalamasını geçti, en az 5 gün geçmiş), ayın rekoru (ayın önceki en iyi gününü geçti, en az 3 gün geçmiş; rekor gelirse ortalama ayrıca gönderilmez). Gün sonu dışındakiler günde bir kez (`push_log`), gün sonu yeniden açılıp kapanınca tekrar gider. Geç gelen (kasa çevrimdışıydı) eski açılış/kapanış ve bugün olmayan ödemeler için bildirim yok. Ciro raporlarla aynı: vardiyanın açılış günü, ödemeler − iadeler.
+  - Telefon: `lib/push.ts`, girişten sonra varsayılan açık (iOS bir kez izin sorar), Ayarlar'dan kapatılır, çıkışta susturulur. Token `set_push_token()` ile yazılır (sadece ortak), `push_tokens` API'den okunmaz.
+  - iOS için APNs anahtarı Expo'ya yüklenmeli (expo.dev → Credentials → iOS → Push key). `app.json` → `expo-notifications` `mode: production`.
+  - Test: `supabase_stub.sql` sahte `net.http_post` (istekleri `net.calls`'a yazar), `db.test.sql` senaryosu `crumble.test_now` ile günü sabitler.
+- Henüz yapılmayanlar: `supabase/seed`.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
 

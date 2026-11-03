@@ -28,7 +28,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "mode": "production"
+        }
+      ]
     ],
     "scheme": "crumble-manager",
     "backgroundColor": "#F3F4F1",
