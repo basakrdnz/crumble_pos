@@ -80,9 +80,16 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     applyMenuImport: (text) => menuImport.applyMenuImport(ctx, text),
 
     getOpenShift: () => sales.getOpenShift(ctx),
-    openShift: () => sales.openShift(ctx),
+    openShift: async () => {
+      await deps?.cloud.checkBeforeOpen();
+      return sales.openShift(ctx);
+    },
     getTodaysClosedShift: () => sales.getTodaysClosedShift(ctx),
-    reopenShift: (id) => sales.reopenShift(ctx, id),
+    reopenShift: async (id) => {
+      const shift = sales.getTodaysClosedShift(ctx);
+      if (shift && shift.id === id) await deps?.cloud.checkBeforeReopen(shift);
+      return sales.reopenShift(ctx, id);
+    },
     getShiftSummary: (id) => sales.getShiftSummary(ctx, id),
     closeShift: (input) => sales.closeShift(ctx, input),
     listShifts: (limit) => sales.listShifts(ctx, limit),
@@ -144,7 +151,7 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     connectCloud: (input) => need().cloud.connect(input),
     disconnectCloud: () => need().cloud.disconnect(),
     isLocalEmpty: () => isLocalEmpty(ctx),
-    restoreFromCloud: () => need().cloud.restore(),
+    restoreFromCloud: (allowOpenShift) => need().cloud.restore(allowOpenShift),
 
     listBackups: () => listBackups(care().backupDir),
     backupNow: () => backupNow(ctx.db, care().backupDir),

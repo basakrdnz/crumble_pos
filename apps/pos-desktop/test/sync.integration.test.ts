@@ -230,7 +230,9 @@ describe.skipIf(!bin)('sync to Postgres (Faz 5 entegrasyon testi)', () => {
 
     const fresh = testContext();
     expect(isLocalEmpty(fresh)).toBe(true);
-    const result = await restoreFromCloud(fresh, transport);
+    // The source still has its shift open: a restore refuses that unless told the old POS is gone.
+    await expect(restoreFromCloud(fresh, transport)).rejects.toThrow(/Bulutta açık bir vardiya var/);
+    const result = await restoreFromCloud(fresh, transport, { allowOpenShift: true });
     expect(result.counts.tabs).toBe(5);
     for (const table of ['categories', 'products', 'shifts', 'tabs', 'tab_items', 'payments', 'refunds', 'catalog_changes']) {
       const dump = (c: Context) => c.db.prepare(`select * from ${table} order by id`).all();

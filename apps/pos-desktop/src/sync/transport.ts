@@ -34,6 +34,11 @@ export interface SyncTransport {
   heartbeat(status: DeviceHeartbeat): Promise<void>;
 }
 
+/** The cloud's shifts (id, opened_at, closed_at), for the two-POS checks (shiftGuard). */
+export interface CloudShiftReader {
+  readShifts(): Promise<{ id: string; opened_at: string; closed_at: string | null }[]>;
+}
+
 /** Reads the cloud copy back (new install / restore). */
 export interface CloudReader {
   readAll(table: SyncedTable): Promise<Record<string, unknown>[]>;

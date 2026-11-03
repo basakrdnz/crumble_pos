@@ -5,6 +5,7 @@
 // only then do they get their final (paid/void) state.
 import type { Context, SyncedTable } from '../db/database';
 import { CRUMBLE_FLOOR_IDS } from '../floor/crumble';
+import { type CloudShift, restoreConflict } from './shiftGuard';
 import type { CloudReader } from './transport';
 
 const BOOLEAN_COLUMNS: Record<string, readonly string[]> = {
@@ -51,7 +52,7 @@ export interface RestoreResult {
   counts: Partial<Record<SyncedTable, number>>;
 }
 
-export async function restoreFromCloud(ctx: Context, reader: CloudReader): Promise<RestoreResult> {
+export async function restoreFromCloud(ctx: Context, reader: CloudReader, options: { allowOpenShift?: boolean } = {}): Promise<RestoreResult> {
   if (!isLocalEmpty(ctx)) throw new Error('Geri yükleme sadece boş (yeni kurulum) bir kasada yapılabilir.');
   const order: SyncedTable[] = [
     'categories',
@@ -67,6 +68,8 @@ export async function restoreFromCloud(ctx: Context, reader: CloudReader): Promi
   ];
   const data = new Map<SyncedTable, Record<string, unknown>[]>();
   for (const table of order) data.set(table, await reader.readAll(table));
+  const conflict = restoreConflict(data.get('shifts')! as unknown as CloudShift[]);
+  if (conflict && !options.allowOpenShift) throw new Error(conflict);
 
   const counts: Partial<Record<SyncedTable, number>> = {};
   ctx.db.transaction(() => {
