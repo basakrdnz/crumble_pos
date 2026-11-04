@@ -113,6 +113,8 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     expect(seconds).toBeLessThan(10);
     expect(await phone.getByTestId('today-cash').textContent()).toBe('215,00 ₺');
     expect(await phone.getByTestId('today-count').textContent()).toBe('1');
+    // Kafe yoğunluğu: one small order in the last 30 minutes.
+    expect(await phone.getByTestId('busy-label').textContent()).toBe('Sakin');
     expect(await phone.getByTestId('last-sync').textContent()).toMatch(/Son senkron: \d\d:\d\d/);
     await snap(phone, 'faz6-today');
   });

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router/js-tabs';
-import { type ColorValue, Text, View } from 'react-native';
+import { type ColorValue, Platform, Text, View } from 'react-native';
 import { colors, fonts } from '../../components/theme';
 
 // Simple drawn icons (no icon font): the glyph sits in a 24 px box. U+FE0E asks iOS
@@ -12,6 +12,10 @@ const icon =
     </View>
   );
 
+// The web build (tests, store screenshots) has no home-indicator inset, so the
+// default bar clips its labels; give it the room an iPhone has.
+const webBar = Platform.OS === 'web' ? { height: 86, paddingTop: 4, paddingBottom: 26 } : null;
+
 /** M1: white tab bar, the active tab in green (2026-10-30). */
 export default function TabsLayout() {
   return (
@@ -20,7 +24,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.faint,
-        tabBarStyle: { backgroundColor: colors.panel, borderTopColor: colors.border },
+        tabBarStyle: { backgroundColor: colors.panel, borderTopColor: colors.border, ...webBar },
         tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 11 },
         sceneStyle: { backgroundColor: colors.bg },
       }}
