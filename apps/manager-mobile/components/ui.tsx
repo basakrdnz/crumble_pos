@@ -2,6 +2,7 @@ import { type Busyness, formatTL } from '@crumble/shared';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { loadDeviceStatus } from '../lib/data';
 import { formatDateTime, formatTime } from '../lib/format';
 import { useLive } from '../lib/useLive';
@@ -103,11 +104,11 @@ export function Label({ children }: { children: ReactNode }) {
 }
 
 /** ▲ %15 / ▼ %7 (green / red); nothing when there is no basis. */
-export function Delta({ value, suffix = '', onDark = false }: { value: number | null; suffix?: string; onDark?: boolean }) {
-  if (value === null) return <Text style={[styles.delta, { color: onDark ? colors.forestMuted : colors.faint }]}>—</Text>;
+export function Delta({ value, suffix = '', onDark = false, size }: { value: number | null; suffix?: string; onDark?: boolean; size?: number }) {
+  if (value === null) return <Text style={[styles.delta, size ? { fontSize: size } : null, { color: onDark ? colors.forestMuted : colors.faint }]}>—</Text>;
   const up = value >= 0;
   const color = onDark ? (up ? colors.upOnDark : colors.downOnDark) : up ? colors.ok : colors.danger;
-  return <Text style={[styles.delta, { color }]}>{`${up ? '▲' : '▼'} %${Math.abs(value)}${suffix}`}</Text>;
+  return <Text style={[styles.delta, size ? { fontSize: size } : null, { color }]}>{`${up ? '▲' : '▼'} %${Math.abs(value)}${suffix}`}</Text>;
 }
 
 export function Stat({
@@ -380,13 +381,12 @@ export function Fact({ tone, children }: { tone: 'up' | 'down' | 'info'; childre
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  shiftLight: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 12, backgroundColor: colors.forestChip, borderRadius: 999, paddingVertical: 5, paddingLeft: 6, paddingRight: 12 },
-  shiftTrack: { width: 28, height: 16, borderRadius: 999, padding: 2 },
-  shiftKnob: { width: 12, height: 12, borderRadius: 999 },
-  shiftText: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 12 },
-  busyBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 14, paddingLeft: 4 },
-  busyBar: { width: 4, borderRadius: 2 },
-  busySub: { color: colors.forestInk, opacity: 0.7, fontFamily: fonts.bold, fontSize: 11 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, backgroundColor: colors.forestChip, borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14 },
+  statusLevel: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 21 },
+  statusSub: { color: colors.forestMuted, fontFamily: fonts.bold, fontSize: 13 },
+  statusShift: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
+  statusDot: { width: 9, height: 9, borderRadius: 999 },
+  statusShiftText: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 13 },
   heroBounce: { position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: colors.forest },
   content: { padding: 16, paddingBottom: 40 },
   header: { marginBottom: 14, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
@@ -432,16 +432,47 @@ export const styles = StyleSheet.create({
   factText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text, fontFamily: fonts.semibold },
 });
 
+/** Kafe yoğunluğu kadranı (2026-11-04, tasarım D): four arcs, filled up to the level, and a needle. */
+export function BusyGauge({ level, width = 104 }: { level: number | null; width?: number }) {
+  const cx = 56, cy = 58, r = 44, gap = 0.07;
+  const point = (a: number) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;
+  const needle = Math.PI + (((level ?? 0) + 0.5) * Math.PI) / 4;
+  const tint = level === null ? colors.gaugeIdle : colors.busy[level]!;
+  return (
+    <Svg width={width} height={(width * 66) / 112} viewBox="0 0 112 66">
+      {[0, 1, 2, 3].map((i) => {
+        const a0 = Math.PI + (i * Math.PI) / 4 + gap;
+        const a1 = Math.PI + ((i + 1) * Math.PI) / 4 - gap;
+        return (
+          <Path
+            key={i}
+            d={`M${point(a0)} A${r} ${r} 0 0 1 ${point(a1)}`}
+            stroke={level !== null && i <= level ? tint : colors.gaugeIdle}
+            strokeWidth={11}
+            strokeLinecap="round"
+            fill="none"
+          />
+        );
+      })}
+      {level !== null && (
+        <>
+          <Line x1={cx} y1={cy} x2={cx + 26 * Math.cos(needle)} y2={cy + 26 * Math.sin(needle)} stroke="#fff" strokeWidth={3} strokeLinecap="round" />
+          <Circle cx={cx} cy={cy} r={4.5} fill="#fff" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
 /**
- * Vardiya göstergesi (2026-11-04): a small switch-like pill on the Bugün hero,
- * green and gently pulsing while a shift is open, red when it is closed. Only
- * shows the state; nothing happens on tap.
+ * Bugün'ün durum kartı (2026-11-04, tasarım D): the busyness gauge, its level
+ * and the last half hour's order count, and under them the shift (green dot
+ * gently pulsing while open, red when closed). Only shows state.
  */
-export function ShiftLight({ open, since }: { open: boolean; since?: string }) {
+export function StatusCard({ busy, openedAt }: { busy: Busyness | null; openedAt: string | null }) {
   const pulse = useRef(new Animated.Value(1)).current;
-  const knob = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const open = openedAt !== null;
   useEffect(() => {
-    Animated.timing(knob, { toValue: open ? 1 : 0, duration: 250, useNativeDriver: true }).start();
     if (!open) {
       pulse.setValue(1);
       return;
@@ -454,35 +485,21 @@ export function ShiftLight({ open, since }: { open: boolean; since?: string }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [open, knob, pulse]);
-  const tint = open ? colors.shiftOpen : colors.shiftClosed;
+  }, [open, pulse]);
+  const shown = open ? busy : null;
   return (
-    <View style={styles.shiftLight} accessibilityLabel={open ? 'Vardiya açık' : 'Vardiya kapalı'} testID="shift-light">
-      <View style={[styles.shiftTrack, { backgroundColor: open ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)' }]}>
-        <Animated.View
-          style={[
-            styles.shiftKnob,
-            { backgroundColor: tint, opacity: pulse, transform: [{ translateX: knob.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }) }] },
-          ]}
-        />
+    <View style={styles.status} testID="busy-meter" accessibilityLabel={shown ? `Yoğunluk: ${shown.label}` : 'Vardiya kapalı'}>
+      <BusyGauge level={shown?.level ?? null} />
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.statusLevel, !shown && { color: colors.forestMuted }]} testID="busy-label">
+          {shown?.label ?? '—'}
+        </Text>
+        <Text style={styles.statusSub}>{shown ? `son 30 dk · ${shown.orders} sipariş` : 'vardiya açılınca görünür'}</Text>
+        <View style={styles.statusShift} testID="shift-light" accessibilityLabel={open ? 'Vardiya açık' : 'Vardiya kapalı'}>
+          <Animated.View style={[styles.statusDot, { backgroundColor: open ? colors.shiftOpen : colors.shiftClosed, opacity: pulse }]} />
+          <Text style={styles.statusShiftText}>{open ? `Vardiya açık · ${formatTime(openedAt)}` : 'Vardiya kapalı'}</Text>
+        </View>
       </View>
-      <Text style={styles.shiftText}>{open ? `Vardiya açık${since ? ` · ${since}` : ''}` : 'Vardiya kapalı'}</Text>
-    </View>
-  );
-}
-
-/** Kafe yoğunluğu (2026-11-04): four signal bars and the level, from the last 30 minutes' orders. */
-export function BusyMeter({ busy }: { busy: Busyness }) {
-  const tint = busy.level === 3 ? colors.shiftClosed : colors.shiftOpen;
-  return (
-    <View style={styles.shiftLight} accessibilityLabel={`Yoğunluk: ${busy.label}`} testID="busy-meter">
-      <View style={styles.busyBars}>
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={[styles.busyBar, { height: 5 + i * 3, backgroundColor: i <= busy.level ? tint : 'rgba(255,255,255,0.22)' }]} />
-        ))}
-      </View>
-      <Text style={styles.shiftText} testID="busy-label">{busy.label}</Text>
-      <Text style={styles.busySub}>son 30 dk</Text>
     </View>
   );
 }
