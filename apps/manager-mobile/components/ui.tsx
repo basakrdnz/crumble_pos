@@ -1,4 +1,4 @@
-import { formatTL } from '@crumble/shared';
+import { type Busyness, formatTL } from '@crumble/shared';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -384,6 +384,9 @@ export const styles = StyleSheet.create({
   shiftTrack: { width: 28, height: 16, borderRadius: 999, padding: 2 },
   shiftKnob: { width: 12, height: 12, borderRadius: 999 },
   shiftText: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 12 },
+  busyBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 14, paddingLeft: 4 },
+  busyBar: { width: 4, borderRadius: 2 },
+  busySub: { color: colors.forestInk, opacity: 0.7, fontFamily: fonts.bold, fontSize: 11 },
   heroBounce: { position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: colors.forest },
   content: { padding: 16, paddingBottom: 40 },
   header: { marginBottom: 14, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
@@ -464,6 +467,22 @@ export function ShiftLight({ open, since }: { open: boolean; since?: string }) {
         />
       </View>
       <Text style={styles.shiftText}>{open ? `Vardiya açık${since ? ` · ${since}` : ''}` : 'Vardiya kapalı'}</Text>
+    </View>
+  );
+}
+
+/** Kafe yoğunluğu (2026-11-04): four signal bars and the level, from the last 30 minutes' orders. */
+export function BusyMeter({ busy }: { busy: Busyness }) {
+  const tint = busy.level === 3 ? colors.shiftClosed : colors.shiftOpen;
+  return (
+    <View style={styles.shiftLight} accessibilityLabel={`Yoğunluk: ${busy.label}`} testID="busy-meter">
+      <View style={styles.busyBars}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={[styles.busyBar, { height: 5 + i * 3, backgroundColor: i <= busy.level ? tint : 'rgba(255,255,255,0.22)' }]} />
+        ))}
+      </View>
+      <Text style={styles.shiftText} testID="busy-label">{busy.label}</Text>
+      <Text style={styles.busySub}>son 30 dk</Text>
     </View>
   );
 }

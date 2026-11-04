@@ -1,5 +1,7 @@
 import {
   addDays,
+  busyness,
+  BUSY_WINDOW_MINUTES,
   compareSoFar,
   formatTL,
   heatmap,
@@ -18,8 +20,8 @@ import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../components/theme';
-import { Card, Columns, Delta, Fact, Label, LastSync, Screen, ShiftLight } from '../../components/ui';
-import { loadCatalog, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
+import { BusyMeter, Card, Columns, Delta, Fact, Label, LastSync, Screen, ShiftLight } from '../../components/ui';
+import { loadCatalog, loadItemsSince, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
 import { formatDay, formatTime, tabLabel } from '../../lib/format';
 import { useLive } from '../../lib/useLive';
 
@@ -51,8 +53,16 @@ export default function Today() {
   const { data, error, refreshing, reload } = useLive(async () => {
     const today = todayIstanbul();
     const from = [addDays(today, -7), monthStart(today)].sort()[0]!;
-    const [report, open, catalog, openShift] = await Promise.all([loadReportData(from, today), loadOpenTabTotals(), loadCatalog(), loadOpenShift()]);
-    return { today, report, open, catalog, openShift, now: new Date().toISOString() };
+    const now = new Date().toISOString();
+    const since = new Date(Date.parse(now) - BUSY_WINDOW_MINUTES * 60_000).toISOString();
+    const [report, open, catalog, openShift, recent] = await Promise.all([
+      loadReportData(from, today),
+      loadOpenTabTotals(),
+      loadCatalog(),
+      loadOpenShift(),
+      loadItemsSince(since),
+    ]);
+    return { today, report, open, catalog, openShift, recent, now };
   });
 
   if (!data) return <Screen title="Bugün" refreshing={refreshing} onRefresh={() => void reload()} error={error}>{null}</Screen>;
@@ -77,6 +87,7 @@ export default function Today() {
   const seated = open.filter((o) => o.tab.kind !== 'quick');
   const oldest = [...seated].sort((a, b) => a.tab.opened_at.localeCompare(b.tab.opened_at))[0]?.tab;
   const openTotal = sumKurus(seated.map((o) => o.total));
+  const busy = busyness(data.recent, catalog, [...report.tabs, ...open.map((o) => o.tab)], now);
   const minutes = oldest ? Math.round((Date.parse(now) - Date.parse(oldest.opened_at)) / 60_000) : 0;
 
   const hero = (
@@ -85,7 +96,10 @@ export default function Today() {
         <Text style={s.brand}>CRUMBLE</Text>
         <LastSync onDark />
       </View>
-      <ShiftLight open={!!data.openShift} since={data.openShift ? `açılış ${formatTime(data.openShift.opened_at)}` : undefined} />
+      <View style={s.chips}>
+        <ShiftLight open={!!data.openShift} since={data.openShift ? `açılış ${formatTime(data.openShift.opened_at)}` : undefined} />
+        {data.openShift && <BusyMeter busy={busy} />}
+      </View>
       <Text style={s.heroLabel}>
         Bugün · {formatDay(today)} · {formatTime(now)}
       </Text>
@@ -172,6 +186,7 @@ export default function Today() {
 const s = StyleSheet.create({
   hero: { backgroundColor: colors.forest, paddingHorizontal: 20, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8 },
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 14, letterSpacing: 2.5 },
   heroLabel: { marginTop: 16, fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted },
   heroBig: { fontSize: 42, fontFamily: fonts.heavy, color: '#fff', marginTop: 2 },

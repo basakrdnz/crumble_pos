@@ -74,6 +74,11 @@ export async function loadOpenTabTotals(): Promise<{ tab: Tab; total: number }[]
   return tabs.map((tab) => ({ tab, total: tabTotals(items.filter((i) => i.tab_id === tab.id), tab.discount_percent).total }));
 }
 
+/** Lines added since a moment (Bugün's yoğunluk: the last 30 minutes). */
+export async function loadItemsSince(since: string): Promise<TabItem[]> {
+  return all<TabItem>(() => supabase.from('tab_items').select('*').gte('created_at', since).order('created_at').order('id'));
+}
+
 export interface DeviceStatus {
   last_sync_at: string;
   pending: number;

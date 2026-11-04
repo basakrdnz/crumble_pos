@@ -40,3 +40,4 @@ yarn-error.*
 /ios
 /android
 dist-e2e/
+dist-store/
