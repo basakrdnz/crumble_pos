@@ -3,14 +3,14 @@
 # partner's phone is Android). The link is in this run's summary and on
 # expo.dev (Builds); opening it on the phone downloads the APK.
 #
-# Uses EXPO_TOKEN (see mobile-ios.yml). EAS keeps the Android signing key; the
-# first run creates it (that question is answered "yes" through a terminal).
+# Uses EXPO_TOKEN (see mobile-ios.yml). EAS keeps the Android signing key
+# (created on the first build, 2026-11-04), so builds run non-interactively.
 name: Yönetim Android (APK)
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'claude/**'] # TODO(test): branch only for the first try
+    branches: [main]
     paths:
       - 'apps/manager-mobile/**'
       - '!apps/manager-mobile/store/**'
@@ -51,13 +51,11 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # Interactive through a pseudo terminal so EAS may create the signing key
-      # on the first run (one Enter every 2 s accepts the defaults).
       - name: Build APK
-        run: (while sleep 2; do echo; done) | env -u CI timeout 60m script -qefc "eas build --platform android --profile android-apk --wait" /dev/null
+        run: eas build --platform android --profile android-apk --wait --non-interactive
 
       - name: Download link
         if: always()
         run: |
           eas build:list --platform android --limit 1 --json --non-interactive > "$RUNNER_TEMP/build.json" || exit 0
-          jq -r '.[0] | "Build \(.id) \(.status)\nAPK: \(.artifacts.buildUrl // "-")\nSayfa: https://expo.dev/accounts/\(.project.ownerAccount.name)/projects/\(.project.slug)/builds/\(.id)"' "$RUNNER_TEMP/build.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r '.[0] | "Build \(.id) \(.status)\nAPK: \(.artifacts.buildUrl // "-")\nKurulum sayfası (telefonda aç): https://expo.dev/accounts/basakrdnzs-team/projects/crumble-yonetim/builds/\(.id)"' "$RUNNER_TEMP/build.json" | tee -a "$GITHUB_STEP_SUMMARY"
