@@ -29,42 +29,47 @@ export function Screen({
   underHeader?: boolean;
 }) {
   const insets = useSafeAreaInsets();
-  const top = hero || underHeader ? 0 : insets.top;
+  // The scroll view starts below the status bar, so iOS's pull-to-refresh
+  // spinner shows right under it instead of behind the clock (2026-11-04).
+  const top = underHeader ? 0 : insets.top;
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={hero ? { paddingBottom: 40 } : [styles.content, { paddingTop: 16 + top }]}
-      refreshControl={
-        onRefresh ? (
-          // Pull-to-refresh in the app's colours: white on the green Bugün hero, green elsewhere.
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={hero ? colors.forestInk : colors.accent}
-            colors={[colors.accent]}
-            progressBackgroundColor={colors.panel}
-          />
-        ) : undefined
-      }
-    >
-      {/* Pulling down on Bugün shows green above the hero, not a white gap. */}
-      {hero && <View pointerEvents="none" style={styles.heroBounce} />}
-      {hero}
-      <View style={hero ? styles.content : undefined}>
-        {title && (
-          <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <LastSync />
-          </View>
-        )}
-        {error && (
-          <Text style={styles.error} testID="error">
-            {error}
-          </Text>
-        )}
-        <View style={{ gap: 12 }}>{children}</View>
-      </View>
-    </ScrollView>
+    <View style={[styles.screen, hero ? { backgroundColor: colors.forest } : null]}>
+      {/* Behind the transparent scroll view: green above (pull on Bugün), page colour below. */}
+      {hero ? <View pointerEvents="none" style={styles.screenBottom} /> : null}
+      <View style={{ height: top, backgroundColor: hero ? colors.forest : colors.bg }} />
+      <ScrollView
+        style={{ backgroundColor: 'transparent' }}
+        contentContainerStyle={hero ? styles.heroContent : [styles.content, { paddingTop: 16 }]}
+        refreshControl={
+          onRefresh ? (
+            // White spinner on the green Bugün background, green elsewhere.
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={hero ? colors.forestInk : colors.accent}
+              colors={[colors.accent]}
+              progressBackgroundColor={colors.panel}
+            />
+          ) : undefined
+        }
+      >
+        {hero}
+        <View style={hero ? styles.content : undefined}>
+          {title && (
+            <View style={styles.header}>
+              <Text style={styles.title}>{title}</Text>
+              <LastSync />
+            </View>
+          )}
+          {error && (
+            <Text style={styles.error} testID="error">
+              {error}
+            </Text>
+          )}
+          <View style={{ gap: 12 }}>{children}</View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -387,7 +392,9 @@ export const styles = StyleSheet.create({
   statusShift: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
   statusDot: { width: 9, height: 9, borderRadius: 999 },
   statusShiftText: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 13 },
-  heroBounce: { position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: colors.forest },
+  screenBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%', backgroundColor: colors.bg },
+  // The page colour under the hero, so its rounded corners show it and not the green behind.
+  heroContent: { flexGrow: 1, backgroundColor: colors.bg, paddingBottom: 40 },
   content: { padding: 16, paddingBottom: 40 },
   header: { marginBottom: 14, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
   title: { fontSize: 28, fontFamily: fonts.heavy, color: colors.text },

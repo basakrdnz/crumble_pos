@@ -18,7 +18,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../components/theme';
 import { Card, Columns, Delta, Fact, Label, LastSync, Screen, StatusCard } from '../../components/ui';
 import { loadCatalog, loadItemsSince, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
@@ -42,7 +41,6 @@ const formatDayKey = (iso: string) => new Date(Date.parse(iso) + 3 * 3_600_000).
 
 /** Bugün (B1, 2026-10-30): live takings with "so far" comparisons and the hour chart. */
 export default function Today() {
-  const insets = useSafeAreaInsets();
   // The forest-green hero needs white status bar text; the other tabs are light.
   useFocusEffect(
     useCallback(() => {
@@ -91,7 +89,7 @@ export default function Today() {
   const minutes = oldest ? Math.round((Date.parse(now) - Date.parse(oldest.opened_at)) / 60_000) : 0;
 
   const hero = (
-    <View style={[s.hero, { paddingTop: insets.top + 16 }]}>
+    <View style={[s.hero, { paddingTop: 16 }]}>
       <View style={s.heroTop}>
         <Text style={s.brand}>CRUMBLE</Text>
         <LastSync onDark />
