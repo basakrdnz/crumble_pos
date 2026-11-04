@@ -1,9 +1,10 @@
 // Kafe yoğunluğu (2026-11-04, kullanıcı isteği): "Sakin / Hafif yoğun / Yoğun /
 // Çok yoğun", from the orders that came in during the last 30 minutes. Each
 // line adds quantity × weight points: a tea 1, a coffee or a cake 2, a meal 3
-// (it keeps the kitchen busy longest). Lines added and then removed (voided)
-// and cancelled tabs do not count. A quantity raised later on the same line
-// counts at the line's first time (approximation).
+// (it keeps the kitchen busy longest); soup (2) and waffle (1) are ready to
+// serve. Lines added and then removed (voided) and cancelled tabs do not
+// count. A quantity raised later on the same line counts at the line's first
+// time (approximation).
 import type { Category, Product, Tab, TabItem } from '../types';
 
 export type BusyLevel = 0 | 1 | 2 | 3;
@@ -14,11 +15,14 @@ export const BUSY_THRESHOLDS = [12, 30, 50] as const;
 
 const lower = (s: string) => s.toLocaleLowerCase('tr');
 
-/** Meals: 3. Coffee-bar drinks and cakes: 2. Tea, bottled drinks, packaged snacks: 1. */
+/** Meals: 3. Coffee-bar drinks, cakes, soup: 2. Tea, waffle, bottled drinks, packaged snacks: 1. */
 export function busyWeight(productName: string, categoryName: string | undefined): number {
   const name = lower(productName);
   const category = lower(categoryName ?? '');
-  if (/tost|baget|makarna|çorba|kase|waffle|granola/.test(name) || /tost|baget|makarna|çorba/.test(category)) return 3;
+  // Ready to serve (2026-11-04, kullanıcı): waffle 1, soup 2.
+  if (/waffle/.test(name)) return 1;
+  if (/çorba/.test(name)) return 2;
+  if (/tost|baget|makarna|kase|granola/.test(name) || /tost|baget|makarna/.test(category)) return 3;
   if (/latte|mocha|matcha|frappe|americano|espresso|cappuccino|flat white|macchiato|filtre|kahve|çikolata|salep/.test(name)) return 2;
   if (/çay/.test(name)) return 1;
   if (/kahve|matcha|detox|kış|teşhir|vitrin/.test(category)) return 2;
