@@ -4,6 +4,10 @@ Karar (2026-11-04): uygulama App Store'a **Unlisted** (listelenmemiş) olarak ç
 
 Build'i GitHub Actions zaten App Store Connect'e yüklüyor (`mobile-ios.yml`, main'e her birleşmede). Aşağıdakiler App Store Connect'te (appstoreconnect.apple.com → Uygulamalar → Crumble Yönetim) **bir kez** elle doldurulur.
 
+## Otomatik yüklenenler (2026-11-04)
+
+`.github/workflows/app-store-metadata.yml` (fastlane deliver, GitHub'daki ASC API anahtarıyla) şunları App Store Connect'e kendisi yazar: ad, alt başlık, açıklama, tanıtım metni, anahtar kelimeler, destek ve gizlilik adresi, telif, kategoriler (`store/metadata/`) ve ekran görüntüleri (`store/screenshots/` 6,9", `store/screenshots-6.5/` 6,5"). Bu dosyalar değişip main'e (veya bir Claude dalına) gelince çalışır, elle de başlatılır. Build yüklemez, incelemeye göndermez. Elle kalanlar: App Privacy, fiyat ve ülkeler, dağıtım yöntemi, inceleme bilgileri (hesap ve şifre), build seçimi ve "İncelemeye gönder".
+
 ## 1. Uygulama Bilgileri (App Information)
 
 | Alan | Değer |
