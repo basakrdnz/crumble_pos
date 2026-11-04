@@ -77,8 +77,12 @@ jobs:
             --run_precheck_before_submit false \
             --force true
 
+      # Until App Review Information is saved once in App Store Connect, deliver
+      # writes every text and then stops at the missing review record
+      # (fastlane issue 20538). Only that case is a warning; any other error fails.
       - name: Upload texts
         run: |
+          set +e
           fastlane deliver \
             --api_key_path "$RUNNER_TEMP/asc.json" \
             --app_identifier com.crumble.yonetim \
@@ -90,4 +94,10 @@ jobs:
             --submit_for_review false \
             --automatic_release false \
             --run_precheck_before_submit false \
-            --force true
+            --force true 2>&1 | tee "$RUNNER_TEMP/deliver.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ] && grep -q "fetch_app_store_review_detail" "$RUNNER_TEMP/deliver.log"; then
+            echo "::warning::Texts uploaded; App Review Information is not saved yet in App Store Connect (fastlane issue 20538)."
+            exit 0
+          fi
+          exit "$status"
