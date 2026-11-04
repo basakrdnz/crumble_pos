@@ -3,7 +3,8 @@
 //   CRUMBLE_STORE_SHOTS=$PWD/../manager-mobile/store/screenshots npx vitest run -c vitest.e2e.config.mts e2e/store-screenshots.e2e.ts
 // Five weeks of made-up sales (demo data, no real numbers) go into a throwaway
 // Postgres behind the fake Supabase; the phone's web build is shot at
-// 440×956 @3x = 1320×2868, the App Store's 6.9" iPhone size.
+// 440×956 @3x = 1320×2868, the App Store's 6.9" iPhone size (CRUMBLE_STORE_65=1:
+// 428×926 @3x = 1284×2778, the 6.5" size).
 import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, existsSync, mkdirSync, statSync } from 'node:fs';
@@ -190,7 +191,7 @@ describe.skipIf(!OUT || !bin || !existsSync(CHROMIUM))('App Store ekran görünt
     });
     web = await serveStatic(join(MOBILE, 'dist-store'), webPort);
     browser = await chromium.launch({ executablePath: CHROMIUM });
-    phone = await browser.newPage({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, locale: 'tr-TR', timezoneId: 'Europe/Istanbul' });
+    phone = await browser.newPage({ viewport: process.env.CRUMBLE_STORE_65 ? { width: 428, height: 926 } : { width: 440, height: 956 }, deviceScaleFactor: 3, locale: 'tr-TR', timezoneId: 'Europe/Istanbul' });
     await phone.clock.setFixedTime(now);
     phone.on('pageerror', (e) => console.log('[telefon hata]', e.message));
   }, 240_000);
