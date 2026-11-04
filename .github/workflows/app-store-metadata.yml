@@ -59,15 +59,32 @@ jobs:
           for f in screenshots-6.5/*.png; do cp "$f" "$RUNNER_TEMP/shots/tr/65_$(basename "$f")"; done
           ls -l "$RUNNER_TEMP/shots/tr"
 
-      - name: Upload to App Store Connect
+      # Screenshots first and on their own: the text step below fails on a
+      # first version until App Review Information has been saved once in App
+      # Store Connect (fastlane issue 20538, "No data").
+      - name: Upload screenshots
+        run: |
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/asc.json" \
+            --app_identifier com.crumble.yonetim \
+            --platform ios \
+            --screenshots_path "$RUNNER_TEMP/shots" \
+            --overwrite_screenshots true \
+            --skip_metadata true \
+            --skip_binary_upload true \
+            --skip_app_version_update true \
+            --submit_for_review false \
+            --run_precheck_before_submit false \
+            --force true
+
+      - name: Upload texts
         run: |
           fastlane deliver \
             --api_key_path "$RUNNER_TEMP/asc.json" \
             --app_identifier com.crumble.yonetim \
             --platform ios \
             --metadata_path metadata \
-            --screenshots_path "$RUNNER_TEMP/shots" \
-            --overwrite_screenshots true \
+            --skip_screenshots true \
             --skip_binary_upload true \
             --skip_app_version_update true \
             --submit_for_review false \
