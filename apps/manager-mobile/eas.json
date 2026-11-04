@@ -10,6 +10,13 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://oduorpefwbpsgzaociro.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_lfTTy-DWbXaaAW6-Mi882w_0zFz0ybz"
       }
+    },
+    "android-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

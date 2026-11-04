@@ -25,6 +25,10 @@ export async function pushPreference(): Promise<boolean> {
 }
 
 async function pushToken(ask: boolean): Promise<string | null> {
+  // Android 13+ shows the permission prompt only once a channel exists.
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', { name: 'Crumble', importance: Notifications.AndroidImportance.HIGH });
+  }
   const permission = await Notifications.getPermissionsAsync();
   let granted = permission.granted;
   if (!granted && ask && permission.canAskAgain) granted = (await Notifications.requestPermissionsAsync()).granted;
@@ -43,7 +47,7 @@ export async function setPush(enabled: boolean): Promise<{ enabled: boolean; err
         await AsyncStorage.setItem(NOTIFY_KEY, '0');
         return { enabled: false };
       }
-      return { enabled: false, error: 'Bildirim izni yok. iPhone Ayarlar → Crumble Yönetim → Bildirimler’den açabilirsin.' };
+      return { enabled: false, error: `Bildirim izni yok. Telefonun ${Platform.OS === 'ios' ? 'Ayarlar → Crumble Yönetim → Bildirimler' : 'Ayarlar → Uygulamalar → Crumble Yönetim → Bildirimler'} bölümünden açabilirsin.` };
     }
     const { error } = await supabase.rpc('set_push_token', { p_token: token, p_enabled: enabled });
     if (error) throw new Error(error.message);
