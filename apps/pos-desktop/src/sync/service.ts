@@ -4,6 +4,7 @@
 import type { Context } from '../db/database';
 import { pendingCount, pruneSent, pushPending } from './engine';
 import { pullCatalog } from './pull';
+import { applyPendingRequests, type RequestOutcome, type TabRequestChannel } from './requests';
 import type { CatalogPuller, SyncTransport } from './transport';
 
 export type SyncState = 'disabled' | 'idle' | 'syncing' | 'offline' | 'error';
@@ -15,6 +16,8 @@ export interface SyncStatus {
   lastError: string | null;
   /** Goes up when products changed by the phone were pulled in (screens reload the menu). */
   catalogVersion: number;
+  /** Goes up when the phone's tab requests changed open tabs (screens reload them). */
+  tabsVersion: number;
 }
 
 const MIN_DELAY = 10_000;
@@ -25,7 +28,7 @@ const HEARTBEAT_EVERY = 60_000;
 const IDLE_DELAY = 20_000;
 
 export class SyncService {
-  private transport: (SyncTransport & Partial<CatalogPuller>) | null = null;
+  private transport: (SyncTransport & Partial<CatalogPuller> & Partial<TabRequestChannel>) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private failures = 0;
@@ -36,7 +39,7 @@ export class SyncService {
     private readonly ctx: Context,
     private readonly onStatus: (status: SyncStatus) => void = () => {},
   ) {
-    this.status = { state: 'disabled', pending: pendingCount(ctx), lastSyncAt: null, lastError: null, catalogVersion: 0 };
+    this.status = { state: 'disabled', pending: pendingCount(ctx), lastSyncAt: null, lastError: null, catalogVersion: 0, tabsVersion: 0 };
   }
 
   getStatus(): SyncStatus {
@@ -44,7 +47,7 @@ export class SyncService {
   }
 
   /** Starts (or stops, with null) syncing to the given transport. */
-  setTransport(transport: (SyncTransport & Partial<CatalogPuller>) | null): void {
+  setTransport(transport: (SyncTransport & Partial<CatalogPuller> & Partial<TabRequestChannel>) | null): void {
     this.transport = transport;
     this.failures = 0;
     this.update({ state: transport ? 'idle' : 'disabled', lastError: null });
@@ -86,7 +89,27 @@ export class SyncService {
     this.running = true;
     this.update({ state: 'syncing' });
     try {
+      // The phone's tab requests are applied before the push, so their
+      // payments go up in this round, and reported after it.
+      let outcomes: RequestOutcome[] = [];
+      if (transport.pendingTabRequests && transport.reportTabRequest) {
+        try {
+          outcomes = await applyPendingRequests(this.ctx, transport as TabRequestChannel);
+        } catch {
+          // Offline or refused: the requests stay pending for the next round.
+        }
+      }
       const result = await pushPending(this.ctx, transport);
+      if (!result.error) {
+        for (const o of outcomes) {
+          try {
+            await transport.reportTabRequest!(o.id, o.ok, o.ok ? undefined : o.error);
+          } catch {
+            // Reported again next round: applying a request twice is harmless.
+          }
+        }
+      }
+      if (outcomes.some((o) => o.ok)) this.update({ tabsVersion: this.status.tabsVersion + 1 });
       if (result.error) {
         this.failures++;
         this.update({ state: result.error.offline ? 'offline' : 'error', lastError: result.error.message });

@@ -1,6 +1,6 @@
 import { formatTL } from '@crumble/shared';
-import type { ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useEffect, useRef } from 'react';
+import { Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadDeviceStatus } from '../lib/data';
 import { formatDateTime, formatTime } from '../lib/format';
@@ -33,8 +33,21 @@ export function Screen({
     <ScrollView
       style={styles.screen}
       contentContainerStyle={hero ? { paddingBottom: 40 } : [styles.content, { paddingTop: 16 + top }]}
-      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+      refreshControl={
+        onRefresh ? (
+          // Pull-to-refresh in the app's colours: white on the green Bugün hero, green elsewhere.
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={hero ? colors.forestInk : colors.accent}
+            colors={[colors.accent]}
+            progressBackgroundColor={colors.panel}
+          />
+        ) : undefined
+      }
     >
+      {/* Pulling down on Bugün shows green above the hero, not a white gap. */}
+      {hero && <View pointerEvents="none" style={styles.heroBounce} />}
       {hero}
       <View style={hero ? styles.content : undefined}>
         {title && (
@@ -103,17 +116,20 @@ export function Stat({
   sub,
   testID,
   big,
+  compact,
 }: {
   label: string;
   value: string;
   sub?: ReactNode;
   testID?: string;
   big?: boolean;
+  /** Three in a row on a phone (açık hesap detayı). */
+  compact?: boolean;
 }) {
   return (
-    <Card style={styles.stat}>
+    <Card style={compact ? [styles.stat, styles.statCompact] : styles.stat}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.statValue, big && styles.statBig]} testID={testID}>
+      <Text style={[styles.statValue, big && styles.statBig, compact && styles.statValueCompact]} testID={testID} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
       {sub ? typeof sub === 'string' ? <Text style={styles.rowSub}>{sub}</Text> : sub : null}
@@ -364,6 +380,11 @@ export function Fact({ tone, children }: { tone: 'up' | 'down' | 'info'; childre
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  shiftLight: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 12, backgroundColor: colors.forestChip, borderRadius: 999, paddingVertical: 5, paddingLeft: 6, paddingRight: 12 },
+  shiftTrack: { width: 28, height: 16, borderRadius: 999, padding: 2 },
+  shiftKnob: { width: 12, height: 12, borderRadius: 999 },
+  shiftText: { color: colors.forestInk, fontFamily: fonts.heavy, fontSize: 12 },
+  heroBounce: { position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: colors.forest },
   content: { padding: 16, paddingBottom: 40 },
   header: { marginBottom: 14, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
   title: { fontSize: 28, fontFamily: fonts.heavy, color: colors.text },
@@ -377,6 +398,8 @@ export const styles = StyleSheet.create({
   stat: { flex: 1, minWidth: 140, padding: 14 },
   statValue: { fontSize: 20, fontFamily: fonts.heavy, color: colors.text, marginTop: 4 },
   statBig: { fontSize: 34 },
+  statCompact: { minWidth: 0, padding: 12 },
+  statValueCompact: { fontSize: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.line, gap: 8 },
   rowLeft: { fontSize: 14, color: colors.text, fontFamily: fonts.bold },
@@ -405,3 +428,42 @@ export const styles = StyleSheet.create({
   factMark: { width: 26, height: 26, borderRadius: 9, textAlign: 'center', lineHeight: 26, fontSize: 12, overflow: 'hidden' },
   factText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text, fontFamily: fonts.semibold },
 });
+
+/**
+ * Vardiya göstergesi (2026-11-04): a small switch-like pill on the Bugün hero,
+ * green and gently pulsing while a shift is open, red when it is closed. Only
+ * shows the state; nothing happens on tap.
+ */
+export function ShiftLight({ open, since }: { open: boolean; since?: string }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const knob = useRef(new Animated.Value(open ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(knob, { toValue: open ? 1 : 0, duration: 250, useNativeDriver: true }).start();
+    if (!open) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.35, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [open, knob, pulse]);
+  const tint = open ? colors.shiftOpen : colors.shiftClosed;
+  return (
+    <View style={styles.shiftLight} accessibilityLabel={open ? 'Vardiya açık' : 'Vardiya kapalı'} testID="shift-light">
+      <View style={[styles.shiftTrack, { backgroundColor: open ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)' }]}>
+        <Animated.View
+          style={[
+            styles.shiftKnob,
+            { backgroundColor: tint, opacity: pulse, transform: [{ translateX: knob.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }) }] },
+          ]}
+        />
+      </View>
+      <Text style={styles.shiftText}>{open ? `Vardiya açık${since ? ` · ${since}` : ''}` : 'Vardiya kapalı'}</Text>
+    </View>
+  );
+}

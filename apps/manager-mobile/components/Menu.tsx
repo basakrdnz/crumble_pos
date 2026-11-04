@@ -95,7 +95,7 @@ function pendingOnPos(p: Product, source: string | undefined, device: DeviceStat
   return !device || Date.parse(p.updated_at) > Date.parse(device.last_sync_at);
 }
 
-function Sheet({ title, children, onClose }: { title: string; children: React.ReactNode; onClose(): void }) {
+export function Sheet({ title, children, onClose }: { title: string; children: React.ReactNode; onClose(): void }) {
   const insets = useSafeAreaInsets();
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
@@ -246,7 +246,7 @@ function AddSheet({
   );
 }
 
-const s = StyleSheet.create({
+export const sheetStyles = StyleSheet.create({
   search: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: '#fff', paddingHorizontal: 14, fontFamily: fonts.semibold, color: colors.text },
   fab: { alignSelf: 'flex-end', height: 52, paddingHorizontal: 20, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   fabText: { color: '#fff', fontFamily: fonts.heavy, fontSize: 15 },
@@ -263,3 +263,4 @@ const s = StyleSheet.create({
   secondary: { height: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: colors.danger, fontFamily: fonts.bold, fontSize: 14 },
 });
+const s = sheetStyles;

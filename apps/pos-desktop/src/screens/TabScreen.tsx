@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { PromptDialog } from '../components/PromptDialog';
 import { useToast } from '../components/Toast';
-import { useAction, useApiData, useCatalogVersion } from '../components/useApi';
+import { useAction, useApiData, useCatalogVersion, useTabsVersion } from '../components/useApi';
 import { formatTime } from '../format';
 import type { TabDetail } from '../db/sales';
 import { TabWorkspace } from './sale/TabWorkspace';
@@ -39,6 +39,21 @@ export function TabScreen({ target, onBack }: { target: TabTarget; onBack(): voi
       });
     }
   }, []);
+
+  // A payment, rename or cancel from the phone: show the tab as it is now.
+  const tabsVersion = useTabsVersion();
+  const tabId = detail?.tab.id;
+  useEffect(() => {
+    if (tabsVersion === 0 || !tabId) return;
+    void api
+      .getTab(tabId)
+      .then((fresh) => {
+        if (fresh.tab.status === 'open') return setDetail(fresh);
+        toast.info(fresh.tab.status === 'paid' ? 'Hesap telefondan kapatıldı (ödendi).' : 'Hesap telefondan iptal edildi.');
+        onBack();
+      })
+      .catch(() => {});
+  }, [tabsVersion, tabId]);
 
   const tableId = detail?.tab.table_id ?? ('tableId' in target ? target.tableId : null);
   const table = tables?.find((t) => t.id === tableId);

@@ -3,6 +3,8 @@
 // and the active tab; no brown or yellow.
 export const colors = {
   forest: '#1E3A2B',
+  shiftOpen: '#4ADE80',
+  shiftClosed: '#F87171',
   forestChip: '#284836',
   forestInk: '#FFFFFF',
   forestMuted: '#B9CFC0',

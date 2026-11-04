@@ -177,3 +177,88 @@ export const addMenuProduct = (id: string, categoryId: string, name: string, pri
   rpc('menu_add_product', { p_id: id, p_category: categoryId, p_name: name, p_price: price });
 
 export const deleteMenuProduct = (productId: string) => rpc('menu_delete_product', { p_product: productId });
+
+// ---------------------------------------------------------------------------
+// Açık hesaplar telefondan (2026-11-04): the phone reads open tabs in detail and
+// leaves requests (payment, rename, cancel) through tab_request(); the POS
+// applies them into its open shift and marks them done or rejected
+// (supabase/migrations/20261104000012_tab_requests.sql).
+// ---------------------------------------------------------------------------
+
+export interface TabRequest {
+  id: string;
+  tab_id: string;
+  kind: 'pay' | 'rename' | 'void';
+  amount: number | null;
+  method: 'cash' | 'card' | null;
+  customer_name: string | null;
+  status: 'pending' | 'done' | 'rejected';
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpenTabRow {
+  tab: Tab;
+  total: number;
+  paid: number;
+  remaining: number;
+  itemCount: number;
+  /** Latest line added (or the opening), for "son ekleme". */
+  lastActivity: string;
+  pending: number;
+}
+
+const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+/** Open tabs with running totals, what was paid so far and pending phone requests. */
+export async function loadOpenTabRows(): Promise<OpenTabRow[]> {
+  const tabs = await loadOpenTabs();
+  const ids = tabs.map((t) => t.id);
+  const [items, payments, requests] = await Promise.all([
+    byIds<TabItem>('tab_items', 'tab_id', ids),
+    byIds<Payment>('payments', 'tab_id', ids),
+    byIds<TabRequest>('tab_requests', 'tab_id', ids),
+  ]);
+  return tabs.map((tab) => {
+    const mine = items.filter((i) => i.tab_id === tab.id);
+    const totals = tabTotals(mine, tab.discount_percent);
+    const paid = sum(payments.filter((p) => p.tab_id === tab.id).map((p) => p.amount));
+    const lastActivity = mine.reduce((max, i) => (i.created_at > max ? i.created_at : max), tab.opened_at);
+    return {
+      tab,
+      total: totals.total,
+      paid,
+      remaining: totals.total - paid,
+      itemCount: totals.itemCount,
+      lastActivity,
+      pending: requests.filter((r) => r.tab_id === tab.id && r.status === 'pending').length,
+    };
+  });
+}
+
+export interface TabDetail extends SaleDetail {
+  requests: TabRequest[];
+}
+
+export async function loadTabDetail(tabId: string): Promise<TabDetail | null> {
+  const sale = await loadSale(tabId);
+  if (!sale) return null;
+  const requests = await byIds<TabRequest>('tab_requests', 'tab_id', [tabId]);
+  return { ...sale, requests };
+}
+
+export const requestTabPayment = (id: string, tabId: string, amount: number, method: 'cash' | 'card') =>
+  rpc('tab_request', { p_id: id, p_tab: tabId, p_kind: 'pay', p_amount: amount, p_method: method });
+
+export const requestTabRename = (id: string, tabId: string, name: string) =>
+  rpc('tab_request', { p_id: id, p_tab: tabId, p_kind: 'rename', p_name: name });
+
+export const requestTabVoid = (id: string, tabId: string) => rpc('tab_request', { p_id: id, p_tab: tabId, p_kind: 'void' });
+
+/** The POS's open shift, if any (Bugün's vardiya göstergesi). */
+export async function loadOpenShift(): Promise<Shift | null> {
+  const { data, error } = await supabase.from('shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(1);
+  if (error) throw new Error(error.message);
+  return (data?.[0] as Shift | undefined) ?? null;
+}

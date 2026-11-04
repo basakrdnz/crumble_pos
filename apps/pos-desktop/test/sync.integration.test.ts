@@ -6,6 +6,7 @@ import type { Context } from '../src/db/database';
 import { refundPart } from '../src/db/refunds';
 import { addProduct, closeShift, getTab, openShift, openTab, pay, reopenShift, setTabDiscount, updateItem, voidItem, voidTab } from '../src/db/sales';
 import { pendingCount, pushPending } from '../src/sync/engine';
+import { applyPendingRequests, applyTabRequest, type TabRequest } from '../src/sync/requests';
 import { isLocalEmpty, restoreFromCloud } from '../src/sync/restore';
 import { SyncError, type SyncTransport } from '../src/sync/transport';
 import { findPgBin, type PgCluster, startCluster } from './pgCluster';
@@ -73,7 +74,7 @@ describe.skipIf(!bin)('sync to Postgres (Faz 5 entegrasyon testi)', () => {
   // the no-delete triggers for this admin-only cleanup.
   beforeEach(async () => {
     await admin.query(`set session_replication_role = replica;
-      truncate public.refunds, public.payments, public.tab_items, public.tabs, public.shifts,
+      truncate public.tab_requests, public.refunds, public.payments, public.tab_items, public.tabs, public.shifts,
         public.catalog_changes, public.products, public.categories, public.tables, public.floor_plans,
         public.device_status cascade;
       set session_replication_role = default;`);
@@ -209,6 +210,62 @@ describe.skipIf(!bin)('sync to Postgres (Faz 5 entegrasyon testi)', () => {
     await drain(ctx, transport);
     expect(await count(admin, 'select count(*) as n from public.shifts')).toBe(1);
     expect((await admin.query('select closed_at from public.shifts where id = $1', [shift.id])).rows[0].closed_at).not.toBeNull();
+  });
+
+  // Açık hesap istekleri telefondan (migration 0012): the POS applies them once.
+  it("applies the phone's tab requests (payment, rename, cancel) exactly once", async () => {
+    const partner = '00000000-0000-0000-0000-00000000a0f1';
+    await admin.query('insert into auth.users (id) values ($1) on conflict do nothing', [partner]);
+    await admin.query(
+      "insert into public.partners (user_id, email) select $1, 'ortak@test' where not exists (select 1 from public.partners where user_id = $1)",
+      [partner],
+    );
+    const ask = async (id: string, tab: string, kind: string, amount: number | null = null, method: string | null = null, name: string | null = null) => {
+      await admin.query('begin');
+      await admin.query('set local role authenticated');
+      await admin.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: partner })]);
+      await admin.query('select public.tab_request($1, $2, $3, $4, $5, $6)', [id, tab, kind, amount, method, name]);
+      await admin.query('commit');
+    };
+
+    const ctx = testContext();
+    const transport = pgTransport(device);
+    const kahve = createCategory(ctx, 'Kahve');
+    const latte = createProduct(ctx, { category_id: kahve.id, name: 'Latte', price: 21500 });
+    openShift(ctx);
+    const named = openTab(ctx, { kind: 'named', customer_name: 'Ayşe' });
+    addProduct(ctx, named.id, latte.id);
+    addProduct(ctx, named.id, latte.id); // 430 TL
+    const other = openTab(ctx, { kind: 'named', customer_name: 'Mehmet' });
+    addProduct(ctx, other.id, latte.id);
+    await drain(ctx, transport);
+
+    const [r1, r2, r3, r4, r5] = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    await ask(r1, named.id, 'pay', 30000, 'cash');
+    await ask(r2, named.id, 'rename', null, null, 'Ayşe Hanım');
+    await ask(r3, other.id, 'pay', 99900, 'card'); // more than is due: refused
+    await ask(r4, other.id, 'void');
+    await ask(r5, named.id, 'pay', 13000, 'card'); // the rest: closes the tab
+
+    const outcomes = await applyPendingRequests(ctx, transport);
+    expect(outcomes.map((o) => o.ok)).toEqual([true, true, false, true, true]);
+    expect(outcomes[2]).toMatchObject({ ok: false, error: 'Ödeme, kalan tutardan fazla olamaz.' });
+    await drain(ctx, transport);
+    for (const o of outcomes) await transport.reportTabRequest(o.id, o.ok, o.ok ? undefined : o.error);
+
+    expect(getTab(ctx, named.id).tab).toMatchObject({ status: 'paid', customer_name: 'Ayşe Hanım', total: 43000 });
+    expect(getTab(ctx, named.id).payments.map((p) => p.id).sort()).toEqual([r1, r5].sort());
+    expect(getTab(ctx, other.id).tab.status).toBe('void');
+    expect(await count(admin, `select count(*) as n from public.payments where tab_id = '${named.id}'`)).toBe(2);
+    expect(await count(admin, "select count(*) as n from public.tab_requests where status = 'done'")).toBe(4);
+    expect(await count(admin, "select count(*) as n from public.tab_requests where status = 'rejected'")).toBe(1);
+    expect((await transport.pendingTabRequests()).length).toBe(0);
+
+    // A lost report means the POS sees the requests again: nothing happens twice.
+    const again = (await admin.query('select * from public.tab_requests order by created_at')).rows as TabRequest[];
+    for (const r of again.filter((r) => r.id !== r3)) expect(applyTabRequest(ctx, r)).toEqual({ id: r.id, ok: true });
+    await drain(ctx, transport);
+    expect(await count(admin, `select count(*) as n from public.payments where tab_id = '${named.id}'`)).toBe(2);
   });
 
   it('heartbeat records the last sync time for the manager app', async () => {

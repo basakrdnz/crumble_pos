@@ -60,3 +60,23 @@ export function useCatalogVersion(): number {
   }, []);
   return version;
 }
+
+/** Changes when the phone's tab requests (payment, rename, cancel) changed open tabs: screens with tabs reload. */
+export function useTabsVersion(): number {
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = () =>
+      api
+        .getSyncStatus()
+        .then((s) => alive && setVersion(s.tabsVersion))
+        .catch(() => {});
+    void tick();
+    const id = window.setInterval(tick, 5000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
+  return version;
+}

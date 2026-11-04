@@ -38,6 +38,8 @@ function Gate() {
       <Stack.Screen name="shifts" options={{ title: 'Vardiyalar' }} />
       <Stack.Screen name="history" options={{ title: 'Değişiklik geçmişi' }} />
       <Stack.Screen name="notifications" options={{ title: 'Bildirimler' }} />
+      <Stack.Screen name="open-tabs" options={{ title: 'Açık hesaplar' }} />
+      <Stack.Screen name="tab/[id]" options={{ title: 'Açık hesap' }} />
       <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
     </Stack>
   );
