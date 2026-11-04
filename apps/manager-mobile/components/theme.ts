@@ -5,6 +5,9 @@ export const colors = {
   forest: '#1E3A2B',
   shiftOpen: '#4ADE80',
   shiftClosed: '#F87171',
+  /** Yoğunluk Sakin → Çok yoğun (kullanıcı 2026-11-04: hafif sarımsı, yoğun koyu turuncu). */
+  busy: ['#4ADE80', '#F5CF3D', '#EE6A1F', '#F05252'] as const,
+  gaugeIdle: 'rgba(255,255,255,0.18)',
   forestChip: '#284836',
   forestInk: '#FFFFFF',
   forestMuted: '#B9CFC0',

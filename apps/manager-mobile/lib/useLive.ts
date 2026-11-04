@@ -54,7 +54,9 @@ export function useLive<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const reload = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchNow();
+      // Keep the spinner up a moment even when the data is back at once, so the
+      // reload is visible (2026-11-04).
+      await Promise.all([fetchNow(), new Promise((r) => setTimeout(r, 700))]);
     } finally {
       if (alive.current) setRefreshing(false);
     }

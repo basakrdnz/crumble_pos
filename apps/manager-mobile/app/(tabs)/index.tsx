@@ -18,9 +18,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../components/theme';
-import { BusyMeter, Card, Columns, Delta, Fact, Label, LastSync, Screen, ShiftLight } from '../../components/ui';
+import { Card, Columns, Delta, Fact, Label, LastSync, Screen, StatusCard } from '../../components/ui';
 import { loadCatalog, loadItemsSince, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
 import { formatDay, formatTime, tabLabel } from '../../lib/format';
 import { useLive } from '../../lib/useLive';
@@ -42,7 +41,6 @@ const formatDayKey = (iso: string) => new Date(Date.parse(iso) + 3 * 3_600_000).
 
 /** Bugün (B1, 2026-10-30): live takings with "so far" comparisons and the hour chart. */
 export default function Today() {
-  const insets = useSafeAreaInsets();
   // The forest-green hero needs white status bar text; the other tabs are light.
   useFocusEffect(
     useCallback(() => {
@@ -91,14 +89,10 @@ export default function Today() {
   const minutes = oldest ? Math.round((Date.parse(now) - Date.parse(oldest.opened_at)) / 60_000) : 0;
 
   const hero = (
-    <View style={[s.hero, { paddingTop: insets.top + 16 }]}>
+    <View style={[s.hero, { paddingTop: 16 }]}>
       <View style={s.heroTop}>
         <Text style={s.brand}>CRUMBLE</Text>
         <LastSync onDark />
-      </View>
-      <View style={s.chips}>
-        <ShiftLight open={!!data.openShift} since={data.openShift ? `açılış ${formatTime(data.openShift.opened_at)}` : undefined} />
-        {data.openShift && <BusyMeter busy={busy} />}
       </View>
       <Text style={s.heroLabel}>
         Bugün · {formatDay(today)} · {formatTime(now)}
@@ -106,18 +100,23 @@ export default function Today() {
       <Text style={s.heroBig} testID="today-revenue">
         {formatTL(totals.revenue)}
       </Text>
-      <View style={s.pills}>
-        <View style={s.pill}>
-          <Text style={s.pillText}>Dün bu saatte {formatTL(cmp.yesterday.revenue)} · </Text>
-          <Delta value={cmp.vsYesterday} onDark />
+      <View style={s.compare}>
+        <View style={s.compareRow}>
+          <Text style={s.compareLabel}>Dün bu saatte</Text>
+          <Text style={s.compareValue}>{formatTL(cmp.yesterday.revenue)}</Text>
+          <View style={s.comparePct}>
+            <Delta value={cmp.vsYesterday} onDark size={14} />
+          </View>
         </View>
-        <View style={s.pill}>
-          <Text style={s.pillText}>
-            Geçen {WEEKDAY_LONG[weekday]} {formatTL(cmp.lastWeek.revenue)} ·{' '}
-          </Text>
-          <Delta value={cmp.vsLastWeek} onDark />
+        <View style={[s.compareRow, s.compareRule]}>
+          <Text style={s.compareLabel}>Geçen {WEEKDAY_LONG[weekday]}</Text>
+          <Text style={s.compareValue}>{formatTL(cmp.lastWeek.revenue)}</Text>
+          <View style={s.comparePct}>
+            <Delta value={cmp.vsLastWeek} onDark size={14} />
+          </View>
         </View>
       </View>
+      <StatusCard busy={busy} openedAt={data.openShift?.opened_at ?? null} />
       <View style={s.heroGrid}>
         <View style={s.heroCell}>
           <Text style={s.heroCellLabel}>Nakit</Text>
@@ -186,13 +185,16 @@ export default function Today() {
 const s = StyleSheet.create({
   hero: { backgroundColor: colors.forest, paddingHorizontal: 20, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8 },
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 14, letterSpacing: 2.5 },
   heroLabel: { marginTop: 16, fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted },
   heroBig: { fontSize: 42, fontFamily: fonts.heavy, color: '#fff', marginTop: 2 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  pill: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.forestChip, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText: { fontSize: 12, fontFamily: fonts.heavy, color: '#fff' },
+  // Tasarım D (2026-11-04): the comparisons as a two-row list, larger than the old pills.
+  compare: { marginTop: 10, backgroundColor: colors.forestChip, borderRadius: 14, overflow: 'hidden' },
+  compareRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  compareRule: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  compareLabel: { flex: 1, fontSize: 14, fontFamily: fonts.bold, color: colors.forestMuted },
+  compareValue: { fontSize: 14, fontFamily: fonts.heavy, color: '#fff' },
+  comparePct: { minWidth: 52, alignItems: 'flex-end' },
   heroGrid: { flexDirection: 'row', gap: 8, marginTop: 14 },
   heroCell: { flex: 1, backgroundColor: colors.forestChip, borderRadius: 14, padding: 10 },
   heroCellLabel: { fontSize: 11, fontFamily: fonts.bold, color: colors.forestMuted },

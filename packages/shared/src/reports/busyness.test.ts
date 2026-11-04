@@ -20,7 +20,7 @@ const item = (product_id: string, name: string, minutesAgo: number, extra: Parti
 const NOW = '2026-11-04T14:00:00.000Z';
 
 describe('busyWeight', () => {
-  it('çay 1, kahve ve pasta 2, yemek 3, hazır içecek 1', () => {
+  it('çay 1, kahve, pasta ve çorba 2, yemek 3, waffle ve hazır içecek 1', () => {
     expect(busyWeight('Çay', 'Çay ve Diğer Sıcaklar')).toBe(1);
     expect(busyWeight('Bitki Çayı (Büyük)', 'Çay ve Diğer Sıcaklar')).toBe(1);
     expect(busyWeight('Sıcak Çikolata', 'Çay ve Diğer Sıcaklar')).toBe(2);
@@ -28,7 +28,9 @@ describe('busyWeight', () => {
     expect(busyWeight('Iced Latte', 'Soğuk İçecekler')).toBe(2);
     expect(busyWeight('Mozaik Pasta', 'Teşhir')).toBe(2);
     expect(busyWeight('Kaşarlı Tost', 'Tost ve Baget')).toBe(3);
-    expect(busyWeight('Waffle', 'Teşhir')).toBe(3);
+    expect(busyWeight('Waffle', 'Teşhir')).toBe(1);
+    expect(busyWeight('Günün Çorbası', 'Granola ve Çorba')).toBe(2);
+    expect(busyWeight('Granola Kase', 'Granola ve Çorba')).toBe(3);
     expect(busyWeight('Su', 'Soğuk İçecekler')).toBe(1);
     expect(busyWeight('Bilinmeyen', undefined)).toBe(1);
   });
