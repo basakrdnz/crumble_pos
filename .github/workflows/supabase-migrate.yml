@@ -32,8 +32,9 @@ jobs:
       - name: Apply new migrations
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::SUPABASE_DB_URL secret is missing (see the top of this file)."
-            exit 1
+            # Not set up yet: new migrations are run by hand in the SQL Editor.
+            echo "::warning::SUPABASE_DB_URL secret is missing (see the top of this file); nothing applied."
+            exit 0
           fi
           supabase/apply.sh
         env:

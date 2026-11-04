@@ -198,6 +198,51 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await expect.poll(() => pos.page.getByText('Telefon', { exact: true }).count()).toBe(3);
   });
 
+  // Açık hesaplar telefondan (2026-11-04): partial payment, rename, then the rest; the POS applies them.
+  it('açık hesap: the phone takes 100 TL cash, renames, takes the rest by card', async () => {
+    await pos.page.getByRole('button', { name: 'Satış', exact: true }).click();
+    await pos.page.keyboard.press('F3');
+    const dialog = pos.page.getByRole('dialog', { name: 'İsimle hesap aç' });
+    await dialog.getByLabel('İsim soyisim').fill('Ayşe');
+    await dialog.getByRole('button', { name: 'Hesap aç', exact: true }).click();
+    await pick(pos.page, 'Yemek', 'Kaşarlı Tost');
+    await pos.page.locator('[data-line="Kaşarlı Tost"]').waitFor();
+    await pos.page.getByRole('button', { name: '← Geri' }).click();
+
+    await phone.getByRole('tab', { name: /Diğer/ }).click();
+    await phone.getByText('Açık hesaplar', { exact: true }).click();
+    const row = phone.getByTestId('open-tab-row').filter({ hasText: 'Ayşe' });
+    await expect.poll(() => row.count(), { timeout: 20_000 }).toBe(1);
+    expect(await row.textContent()).toContain('250,00 ₺');
+    await row.click();
+    await phone.getByText('Kaşarlı Tost').waitFor();
+    await phone.getByRole('button', { name: 'Ödeme al', exact: true }).click();
+    await phone.getByLabel('Alınan tutar').fill('100');
+    await phone.getByRole('button', { name: 'Nakit aldım' }).click();
+    await phone.getByRole('button', { name: 'Adını değiştir' }).click();
+    await phone.getByLabel('Hesap adı').fill('Ayşe Hanım');
+    await phone.getByRole('button', { name: 'Kaydet', exact: true }).click();
+    await expect.poll(() => phone.getByText('kasaya gidiyor').count()).toBe(2);
+    await snap(phone, 'faz6-open-tab-pending');
+
+    // The POS applies phone requests in its sync round (idle: 20 s).
+    const started = Date.now();
+    await expect.poll(() => phone.getByText('kasada yapıldı').count(), { timeout: 45_000, interval: 500 }).toBe(2);
+    console.log(`telefon isteği kasada: ${((Date.now() - started) / 1000).toFixed(1)} sn`);
+    await expect.poll(() => phone.getByTestId('tab-remaining').textContent(), { timeout: 15_000 }).toBe('150,00 ₺');
+    await pos.page.getByRole('button', { name: 'Masa', exact: true }).click();
+    await expect.poll(() => pos.page.locator('[data-tab="Ayşe Hanım"]').textContent(), { timeout: 10_000 }).toContain('150,00 ₺');
+    await snap(phone, 'faz6-open-tab');
+
+    await phone.getByRole('button', { name: 'Ödeme al', exact: true }).click();
+    await phone.getByRole('button', { name: 'Hepsi (150,00 ₺)' }).click();
+    await phone.getByRole('button', { name: 'Kartla aldım' }).click();
+    await expect.poll(() => phone.getByText('ödendi, kapandı', { exact: false }).count(), { timeout: 45_000, interval: 500 }).toBe(1);
+    await expect.poll(() => pos.page.locator('[data-tab="Ayşe Hanım"]').count(), { timeout: 10_000 }).toBe(0);
+    await phone.goBack();
+    await phone.goBack();
+  });
+
   it('the day end (no cash count) appears under Vardiyalar', async () => {
     await pos.page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await pos.page.getByRole('button', { name: 'Gün sonunu al' }).click();
@@ -207,7 +252,7 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await phone.getByText('Vardiyalar').click();
     await expect
       .poll(() => phone.getByTestId('shift-expected').first().textContent(), { timeout: 20_000 })
-      .toContain('Beklenen nakit 215,00 ₺');
+      .toContain('Beklenen nakit 315,00 ₺'); // 215 sale + 100 cash taken on the phone
     expect(await phone.getByTestId('shift-diff').count()).toBe(0);
     await snap(phone, 'faz6-shifts');
   });

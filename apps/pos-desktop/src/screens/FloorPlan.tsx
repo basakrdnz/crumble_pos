@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { FloorCanvas, type TableStatus } from '../components/FloorCanvas';
 import { PromptDialog } from '../components/PromptDialog';
-import { useApiData } from '../components/useApi';
+import { useApiData, useTabsVersion } from '../components/useApi';
 import { formatTime } from '../format';
 import { TabScreen, type TabTarget } from './TabScreen';
 
@@ -15,7 +15,8 @@ import { TabScreen, type TabTarget } from './TabScreen';
 export function FloorPlan({ newTabRequest = 0 }: { newTabRequest?: number }) {
   const [plans] = useApiData(() => api.listFloorPlans());
   const [tables] = useApiData(() => api.listTables());
-  const [open, reload] = useApiData(() => api.listOpenTabSummaries());
+  const tabsVersion = useTabsVersion();
+  const [open, reload] = useApiData(() => api.listOpenTabSummaries(), [tabsVersion]);
   const [planId, setPlanId] = useState<string>();
   const [target, setTarget] = useState<TabTarget | null>(null);
   const [asking, setAsking] = useState(false);

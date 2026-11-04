@@ -366,4 +366,44 @@ select pg_temp.expect_ok($$insert into public.shifts (id, opened_at, opening_cas
   values ('30000000-0000-0000-0000-0000000000f2', '2030-06-21 11:30:00+03', 0)$$, 'shift opens although the push fails');
 rollback;
 
+-- ===== Açık hesap istekleri telefondan (migration 0012) =====
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000d001","app_metadata":{"role":"device"}}', true);
+insert into public.shifts (id, opened_at, opening_cash) values ('30000000-0000-0000-0000-0000000000e1', now(), 0);
+insert into public.tabs (id, opened_shift_id, kind, customer_name, opened_at)
+  values ('40000000-0000-0000-0000-0000000000e1', '30000000-0000-0000-0000-0000000000e1', 'named', 'Ayşe', now());
+select pg_temp.expect_error($$select public.tab_request('70000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-0000000000e1', 'void')$$, 'device cannot leave a phone request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a001"}', true);
+select pg_temp.expect_ok($$select public.tab_request('70000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-0000000000e1', 'pay', 30000, 'cash')$$, 'partner asks for a payment');
+select pg_temp.expect_ok($$select public.tab_request('70000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-0000000000e1', 'pay', 30000, 'cash')$$, 'retrying the same request is harmless');
+select pg_temp.expect_ok($$select public.tab_request('70000000-0000-0000-0000-000000000002',
+  '40000000-0000-0000-0000-0000000000e1', 'rename', null, null, '  Ayşe Hanım ')$$, 'partner asks for a rename');
+select pg_temp.expect_error($$select public.tab_request('70000000-0000-0000-0000-000000000003',
+  '40000000-0000-0000-0000-0000000000e1', 'pay', 0, 'cash')$$, 'payment needs an amount');
+select pg_temp.expect_error($$select public.tab_request('70000000-0000-0000-0000-000000000003',
+  '40000000-0000-0000-0000-0000000000e1', 'pay', 100, 'cheque')$$, 'payment needs cash or card');
+select pg_temp.expect_count($$select count(*) from public.tab_requests where status = 'pending'$$, 2, 'partner sees its requests');
+select pg_temp.expect_count($$select count(*) from public.tab_requests where customer_name = 'Ayşe Hanım'$$, 1, 'name is trimmed');
+select pg_temp.expect_error($$update public.tab_requests set status = 'done'$$, 'partner cannot mark requests done');
+select pg_temp.expect_error($$select public.tab_request_result('70000000-0000-0000-0000-000000000001', true)$$, 'partner cannot report results');
+
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000d001","app_metadata":{"role":"device"}}', true);
+select pg_temp.expect_ok($$select public.tab_request_result('70000000-0000-0000-0000-000000000001', true)$$, 'device marks done');
+select pg_temp.expect_ok($$select public.tab_request_result('70000000-0000-0000-0000-000000000002', false, 'Vardiya kapalı.')$$, 'device rejects');
+select pg_temp.expect_ok($$select public.tab_request_result('70000000-0000-0000-0000-000000000002', true)$$, 'a finished request stays as it is');
+select pg_temp.expect_count($$select count(*) from public.tab_requests where status = 'rejected' and error = 'Vardiya kapalı.'$$, 1, 'rejection kept with reason');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e001"}', true);
+select pg_temp.expect_error($$select public.tab_request('70000000-0000-0000-0000-000000000004',
+  '40000000-0000-0000-0000-0000000000e1', 'void')$$, 'stranger cannot leave a request');
+select pg_temp.expect_count($$select count(*) from public.tab_requests$$, 0, 'stranger sees no requests');
+rollback;
+
 \echo 'ALL DATABASE TESTS PASSED'

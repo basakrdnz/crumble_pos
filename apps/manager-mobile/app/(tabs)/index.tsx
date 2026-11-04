@@ -12,14 +12,14 @@ import {
   weekdayIndex,
   WEEKDAYS_SHORT,
 } from '@crumble/shared';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../components/theme';
-import { Card, Columns, Delta, Fact, Label, LastSync, Screen } from '../../components/ui';
-import { loadCatalog, loadOpenTabTotals, loadReportData } from '../../lib/data';
+import { Card, Columns, Delta, Fact, Label, LastSync, Screen, ShiftLight } from '../../components/ui';
+import { loadCatalog, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
 import { formatDay, formatTime, tabLabel } from '../../lib/format';
 import { useLive } from '../../lib/useLive';
 
@@ -51,8 +51,8 @@ export default function Today() {
   const { data, error, refreshing, reload } = useLive(async () => {
     const today = todayIstanbul();
     const from = [addDays(today, -7), monthStart(today)].sort()[0]!;
-    const [report, open, catalog] = await Promise.all([loadReportData(from, today), loadOpenTabTotals(), loadCatalog()]);
-    return { today, report, open, catalog, now: new Date().toISOString() };
+    const [report, open, catalog, openShift] = await Promise.all([loadReportData(from, today), loadOpenTabTotals(), loadCatalog(), loadOpenShift()]);
+    return { today, report, open, catalog, openShift, now: new Date().toISOString() };
   });
 
   if (!data) return <Screen title="Bugün" refreshing={refreshing} onRefresh={() => void reload()} error={error}>{null}</Screen>;
@@ -85,6 +85,7 @@ export default function Today() {
         <Text style={s.brand}>CRUMBLE</Text>
         <LastSync onDark />
       </View>
+      <ShiftLight open={!!data.openShift} since={data.openShift ? `açılış ${formatTime(data.openShift.opened_at)}` : undefined} />
       <Text style={s.heroLabel}>
         Bugün · {formatDay(today)} · {formatTime(now)}
       </Text>
@@ -151,10 +152,12 @@ export default function Today() {
             En yoğun saat {String(peak).padStart(2, '0')}:00–{String(peak + 1).padStart(2, '0')}:00 · {formatTL(hours[peak]!)}
           </Fact>
         )}
-        <Fact tone="info">
-          Açık hesap {seated.length} · {formatTL(openTotal)}
-          {oldest ? ` · en eskisi ${tabLabel(oldest, catalog.tables)}, ${Math.floor(minutes / 60)} sa ${minutes % 60} dk` : ''}
-        </Fact>
+        <Pressable onPress={() => router.push('/open-tabs')} accessibilityRole="button" testID="today-open-tabs">
+          <Fact tone="info">
+            Açık hesap {seated.length} · {formatTL(openTotal)}
+            {oldest ? ` · en eskisi ${tabLabel(oldest, catalog.tables)}, ${Math.floor(minutes / 60)} sa ${minutes % 60} dk` : ''}  ›
+          </Fact>
+        </Pressable>
         <Fact tone="down">
           İndirim {formatTL(totals.discount)} · İptal {formatTL(totals.void)} · İade {formatTL(totals.refunds)}
         </Fact>

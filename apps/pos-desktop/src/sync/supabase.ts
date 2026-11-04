@@ -3,6 +3,7 @@
 // kept in the local settings table through `storage`, never the password.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { SyncedTable } from '../db/database';
+import type { TabRequest, TabRequestChannel } from './requests';
 import { type CatalogPuller, type CloudReader, type CloudShiftReader, type DeviceHeartbeat, type PushMode, SyncError, type SyncTransport } from './transport';
 
 export interface CloudConfig {
@@ -42,7 +43,7 @@ export async function signInDevice(client: SupabaseClient, email: string, passwo
   }
 }
 
-export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader & CatalogPuller & CloudShiftReader {
+export function supabaseTransport(client: SupabaseClient): SyncTransport & CloudReader & CatalogPuller & CloudShiftReader & TabRequestChannel {
   const since = async (table: string, column: string, value: string, filter?: [string, string]) => {
     let query = client.from(table).select('*').gt(column, value);
     if (filter) query = query.eq(filter[0], filter[1]);
@@ -69,6 +70,17 @@ export function supabaseTransport(client: SupabaseClient): SyncTransport & Cloud
         .from('device_status')
         .upsert({ id: DEVICE_STATUS_ID, ...status, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       const syncError = asSyncError(error);
+      if (syncError) throw syncError;
+    },
+    async pendingTabRequests() {
+      const { data, error } = await client.from('tab_requests').select('*').eq('status', 'pending').order('created_at').limit(50);
+      const syncError = asSyncError(error);
+      if (syncError) throw syncError;
+      return (data ?? []) as TabRequest[];
+    },
+    async reportTabRequest(id: string, ok: boolean, error?: string) {
+      const { error: rpcError } = await client.rpc('tab_request_result', { p_id: id, p_ok: ok, p_error: error ?? null });
+      const syncError = asSyncError(rpcError);
       if (syncError) throw syncError;
     },
     async readShifts() {

@@ -41,9 +41,9 @@ const claimsOf = (header: string | undefined): Claims | null => {
 const IDENT = /^[a-z_][a-z0-9_]*$/;
 const READABLE = new Set([
   'categories', 'products', 'floor_plans', 'tables', 'shifts', 'tabs', 'tab_items', 'payments', 'refunds',
-  'catalog_changes', 'partners', 'device_status',
+  'catalog_changes', 'partners', 'device_status', 'tab_requests',
 ]);
-const RPCS = new Set(['menu_set_price', 'menu_add_product', 'menu_delete_product']);
+const RPCS = new Set(['menu_set_price', 'menu_add_product', 'menu_delete_product', 'tab_request', 'tab_request_result']);
 const OPS: Record<string, string> = { eq: '=', neq: '<>', gt: '>', gte: '>=', lt: '<', lte: '<=' };
 
 function ident(name: string): string {

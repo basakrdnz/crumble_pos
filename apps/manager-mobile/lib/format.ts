@@ -1,4 +1,4 @@
-import type { FloorTable, Tab } from '@crumble/shared';
+import { type FloorTable, istanbulDay, type Tab, todayIstanbul } from '@crumble/shared';
 
 export { formatTL } from '@crumble/shared';
 
@@ -25,3 +25,9 @@ export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
 /** "YYYY-MM-DD" (already an Istanbul day) -> "2 Kasım Pazartesi". */
 export const formatDay = (day: string) => longDay.format(new Date(`${day}T12:00:00Z`));
 export const formatShortDay = (day: string) => shortDay.format(new Date(`${day}T12:00:00Z`));
+
+/** "bugün açıldı" / "dünden beri açık" / "5 gündür açık" (Istanbul days). */
+export function openFor(openedAt: string): string {
+  const days = Math.round((Date.parse(todayIstanbul()) - Date.parse(istanbulDay(openedAt))) / 86_400_000);
+  return days <= 0 ? 'bugün açıldı' : days === 1 ? 'dünden beri açık' : `${days} gündür açık`;
+}

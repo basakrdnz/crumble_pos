@@ -442,6 +442,8 @@ export function setTabDiscount(ctx: Context, tabId: string, percent: number | nu
 export interface PaymentPart {
   method: PaymentMethod;
   amount: number;
+  /** A phone request's id (tab_requests): the payment takes it, so applying twice is a no-op. */
+  id?: string;
 }
 
 export interface PayResult {
@@ -474,6 +476,7 @@ export function pay(ctx: Context, tabId: string, parts: readonly PaymentPart[]):
     for (const part of nonZero) {
       insertRow<Payment>(ctx, 'payments', {
         ...stamps(ctx),
+        ...(part.id ? { id: part.id } : {}),
         tab_id: tabId,
         shift_id: shift.id,
         method: part.method,

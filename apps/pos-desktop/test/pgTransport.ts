@@ -3,6 +3,7 @@
 // immutability triggers apply exactly as they would on Supabase.
 import type pg from 'pg';
 import type { SyncedTable } from '../src/db/database';
+import type { TabRequestChannel } from '../src/sync/requests';
 import {
   type CatalogPuller,
   type CloudReader,
@@ -43,7 +44,7 @@ async function upsert(client: pg.Client, table: string, rows: Record<string, unk
   );
 }
 
-export function pgTransport(client: pg.Client): SyncTransport & CloudReader & CatalogPuller & { online: boolean } {
+export function pgTransport(client: pg.Client): SyncTransport & CloudReader & CatalogPuller & TabRequestChannel & { online: boolean } {
   const transport = {
     online: true,
     async pullProducts(since: string) {
@@ -74,6 +75,16 @@ export function pgTransport(client: pg.Client): SyncTransport & CloudReader & Ca
     async heartbeat(status: DeviceHeartbeat) {
       if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
       await asDevice(client, () => upsert(client, 'device_status', [{ id: 'pos', ...status }], 'upsert'));
+    },
+    async pendingTabRequests() {
+      if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
+      return asDevice(client, async () =>
+        (await client.query("select * from public.tab_requests where status = 'pending' order by created_at, id limit 50")).rows,
+      );
+    },
+    async reportTabRequest(id: string, ok: boolean, error?: string) {
+      if (!transport.online) throw new SyncError('fetch failed (çevrimdışı)', true);
+      await asDevice(client, () => client.query('select public.tab_request_result($1, $2, $3)', [id, ok, error ?? null]));
     },
     async readAll(table: SyncedTable) {
       return asDevice(client, async () => (await client.query(`select * from public.${table} order by created_at, id`)).rows);

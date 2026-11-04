@@ -236,6 +236,11 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Geri yükleme bulutta açık vardiya varsa önce reddeder; ekran "Eski kasa bir daha kullanılmayacak mı?" diye sorar, evet derse açık vardiyaya burada devam edilir (`allowOpenShift`, eski kasa bozulduysa gerekli).
   - Vardiya açma: bulutta bu kasanın bilmediği açık vardiya varsa açtırmaz. "Bugünün vardiyasına devam et": bulutta başka açık ya da sonradan açılmış vardiya varsa izin vermez. İkisi de sadece bulut 5 sn içinde cevap verirse çalışır, çevrimdışı engel yok.
   - Senkron yine de bu tür bir redde takılırsa otomatik kurtarma yok, elle çözülür (bulutu sorgula, kasayı temiz kurup geri yükle).
+- **Açık hesaplar telefondan (2026-11-04, kullanıcı kararları):** Diğer → Açık hesaplar ve Bugün'deki "Açık hesap" satırı → liste (açılış, kaç gündür açık, alınan, kalan); detay `app/tab/[id].tsx` (kalemler eklendikleri güne göre, ödemeler, istek geçmişi).
+  - Telefon tablolara yazmaz: `tab_request()` ile `tab_requests`'e istek bırakır (`20261104000012_tab_requests.sql`). Türler: ödeme (tutar + nakit/kart sorulur; "Hepsi" kalanı doldurur), ad değiştirme, iptal (sadece hiç ödeme alınmamışsa; ödemeliyse önce kasada iade).
+  - Kasa `src/sync/requests.ts` ile senkron turunda bekleyen istekleri çeker, kendi kurallarıyla uygular (`pay`/`setCustomerName`/`voidTab`; ödeme açık vardiyaya yazılır, vardiya kapalıysa reddedilir), push'tan sonra `tab_request_result()` ile done/rejected yazar. Ödemenin id'si isteğin id'si: iki kez uygulamak zararsız. Telefon "kasaya gidiyor / kasada yapıldı / yapılamadı" gösterir. Kasa ekranları `tabsVersion` (`useTabsVersion`) ile yenilenir; açık TabScreen telefonda kapanan hesaptan çıkar.
+  - Kullanıcı: hesap düzenlemede sadece ad (ürün ekleme/çıkarma, adet yok).
+- **Mobil yenileme (2026-11-04):** `useLive` arka planda sessiz yeniler (spinner sadece aşağı çekince), yüklemeler üst üste binmez. RefreshControl uygulama renklerinde; Bugün'de yeşil zemin aşağı çekince de yeşil. Bugün'de vardiya göstergesi `ShiftLight` (açıkken yeşil nabız, kapalıyken kırmızı; işlevsiz).
 - Henüz yapılmayanlar: `supabase/seed`.
 
 ## Kafe bilgisayarına kurulum (Windows, kullanıcının o bilgisayardaki Claude oturumuyla)
