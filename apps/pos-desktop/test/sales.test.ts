@@ -330,7 +330,7 @@ describe('one shift per day (2026-11-02)', () => {
     closeShift(ctx);
 
     expect(getTodaysClosedShift(ctx)?.id).toBe(shift.id);
-    expect(() => openShift(ctx)).toThrow(/Bugünün vardiyası/);
+    expect(() => openShift(ctx)).toThrow(/Bugünün gün sonu zaten alındı/);
 
     const again = reopenShift(ctx, shift.id);
     expect(again).toMatchObject({ id: shift.id, closed_at: null, expected_cash: null });

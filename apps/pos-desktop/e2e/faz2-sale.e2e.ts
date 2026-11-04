@@ -134,6 +134,7 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     await expect.poll(() => page.locator('[data-stat="Nakit"]').textContent()).toBe('862,00 ₺');
     expect(await page.getByText('Açık hesap yok.').count()).toBe(1);
     await page.getByRole('button', { name: 'Gün sonunu al' }).click();
+    await page.getByRole('dialog', { name: 'Gün sonu alınsın mı?' }).getByRole('button', { name: 'Gün sonunu al' }).click();
 
     await page.getByRole('heading', { name: 'Gün sonu özeti' }).waitFor();
     const cell = (label: string) => page.locator(`[data-summary="${label}"]`).textContent();

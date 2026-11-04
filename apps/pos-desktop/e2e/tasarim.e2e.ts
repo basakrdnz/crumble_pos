@@ -123,7 +123,16 @@ describe('Tasarım: G2 ekran turu', () => {
     expect(await close.isDisabled()).toBe(true); // Masa 2 still open
     await page.locator('[data-decision="Masa 2"]').getByRole('button', { name: 'Nakit' }).click();
     await expect.poll(() => close.isDisabled()).toBe(false);
+    // It asks first, and Enter (on "Vazgeç") does not close the day (2026-11-04).
     await close.click();
+    const ask = page.getByRole('dialog', { name: 'Gün sonu alınsın mı?' });
+    await ask.waitFor();
+    await snap(page, 'tasarim-6c-gun-sonu-onay');
+    await page.keyboard.press('Enter');
+    await ask.waitFor({ state: 'detached' });
+    expect(await page.getByRole('heading', { name: 'Gün sonu özeti' }).count()).toBe(0);
+    await close.click();
+    await ask.getByRole('button', { name: 'Gün sonunu al' }).click();
     await page.getByRole('heading', { name: 'Gün sonu özeti' }).waitFor();
     const cell = (label: string) => page.locator(`[data-summary="${label}"]`).textContent();
     // Nakit: Masa 2 100 + kalan (2 × 160 + 65 − 100 = 285) = 385 ₺
@@ -135,8 +144,16 @@ describe('Tasarım: G2 ekran turu', () => {
     await page.getByRole('button', { name: 'Satış', exact: true }).click();
     await page.getByTestId('continue-shift').waitFor();
     expect(await page.getByRole('button', { name: 'Vardiyayı aç' }).count()).toBe(0);
+    await page.getByRole('heading', { name: /^Gün sonu alındı · \d\d:\d\d$/ }).waitFor();
     await snap(page, 'tasarim-6b-devam');
-    await page.getByRole('button', { name: 'Bugünün vardiyasına devam et' }).click();
+    // Enter does not reopen it; the small button asks first.
+    await page.keyboard.press('Enter');
+    expect(await page.getByRole('dialog').count()).toBe(0);
+    await page.getByRole('button', { name: 'Günü yeniden aç' }).click();
+    const again = page.getByRole('dialog', { name: 'Gün sonu zaten alındı' });
+    await again.waitFor();
+    await snap(page, 'tasarim-6d-yeniden-ac-onay');
+    await again.getByRole('button', { name: 'Yeniden aç' }).click();
     await page.getByTestId('shift-status').filter({ hasText: 'Vardiya açık' }).waitFor();
     // The earlier sales are still in today's shift.
     await page.getByRole('button', { name: 'Vardiya', exact: true }).click();

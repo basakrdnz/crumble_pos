@@ -54,7 +54,7 @@ export function openShift(ctx: Context, openingCash = 0): Shift {
   if (openingCash < 0) throw new Error('Açılış kasası negatif olamaz.');
   return tx(ctx, () => {
     if (getOpenShift(ctx)) throw new Error('Zaten açık bir vardiya var.');
-    if (getTodaysClosedShift(ctx)) throw new Error('Bugünün vardiyası zaten açılıp kapatılmış. Bugünün vardiyasına devam edin.');
+    if (getTodaysClosedShift(ctx)) throw new Error('Bugünün gün sonu zaten alındı. Vardiya ekranından günü yeniden açabilirsiniz.');
     const s = stamps(ctx);
     return insertRow<Shift>(ctx, 'shifts', {
       ...s,
