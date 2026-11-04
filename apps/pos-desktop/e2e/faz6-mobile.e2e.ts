@@ -248,6 +248,7 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
   it('the day end (no cash count) appears under Vardiyalar', async () => {
     await pos.page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await pos.page.getByRole('button', { name: 'Gün sonunu al' }).click();
+    await pos.page.getByRole('dialog', { name: 'Gün sonu alınsın mı?' }).getByRole('button', { name: 'Gün sonunu al' }).click();
     await pos.page.getByRole('heading', { name: 'Gün sonu özeti' }).waitFor();
 
     await phone.getByRole('tab', { name: /Diğer/ }).click();

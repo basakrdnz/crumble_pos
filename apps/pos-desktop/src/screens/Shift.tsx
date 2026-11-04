@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import { useAction, useApiData } from '../components/useApi';
 import type { OpenTabSummary } from '../db/sales';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { formatDateTime, formatLongDate, formatTime } from '../format';
 
@@ -13,6 +14,7 @@ import { formatDateTime, formatLongDate, formatTime } from '../format';
  */
 export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
   const [today] = useApiData(() => api.getTodaysClosedShift());
+  const [asking, setAsking] = useState(false);
   const run = useAction();
   const open = () =>
     run(async () => {
@@ -23,20 +25,31 @@ export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
     run(async () => {
       await api.reopenShift(id);
       onOpened();
-    }, 'Bugünün vardiyasına devam ediliyor.');
+    }, 'Gün yeniden açıldı.');
   if (today === undefined) return null;
   return (
     <div className="content center">
       {today ? (
+        // 2026-11-04: the day was reopened and closed again by mistake (Enter on
+        // the focused button). Now a small, unfocused button and a question.
         <div className="panel open-shift" data-testid="continue-shift">
-          <h2>Bugünün vardiyası kapalı</h2>
-          <p className="muted">
-            Açılış {formatTime(today.opened_at)} · kapanış {formatTime(today.closed_at!)}. Günde tek vardiya açılır: devam edersen
-            yeni satışlar bugünün vardiyasına eklenir, gün sonunu tekrar alırsın.
-          </p>
-          <button className="btn primary big" autoFocus onClick={() => void reopen(today.id)}>
-            Bugünün vardiyasına devam et
+          <h2>Gün sonu alındı · {formatTime(today.closed_at!)}</h2>
+          <p className="muted">Açılış {formatTime(today.opened_at)}</p>
+          <button className="btn small reopen-day" onClick={() => setAsking(true)}>
+            Günü yeniden aç
           </button>
+          {asking && (
+            <ConfirmDialog
+              title="Gün sonu zaten alındı"
+              text="Yeniden açarsan gün sonunu tekrar alman gerekir."
+              confirmLabel="Yeniden aç"
+              onClose={() => setAsking(false)}
+              onConfirm={() => {
+                setAsking(false);
+                void reopen(today.id);
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className="panel open-shift">
@@ -195,6 +208,7 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
   const open = allOpen?.filter((o) => o.itemCount > 0 || o.total > 0 || o.remaining > 0);
   const [decided, setDecided] = useState<Map<string, { title: string; amount: number; decision: Decision }>>(new Map());
   const [notes, setNotes] = useState('');
+  const [asking, setAsking] = useState(false);
   const run = useAction();
 
   if (!summary || !open) return null;
@@ -330,9 +344,21 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
           onChange={(e) => setNotes(e.target.value)}
         />
         {pending.length > 0 && <div className="blocker">{pending.length} hesap karar bekliyor</div>}
-        <button className="btn dark big" disabled={pending.length > 0} onClick={() => void close()}>
+        <button className="btn dark big" disabled={pending.length > 0} onClick={() => setAsking(true)}>
           Gün sonunu al
         </button>
+        {asking && (
+          <ConfirmDialog
+            title="Gün sonu alınsın mı?"
+            text="Bugünün satışları kapanır."
+            confirmLabel="Gün sonunu al"
+            onClose={() => setAsking(false)}
+            onConfirm={() => {
+              setAsking(false);
+              void close();
+            }}
+          />
+        )}
       </div>
     </div>
   );

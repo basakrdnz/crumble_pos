@@ -349,6 +349,9 @@ kbd {
 .content.center { display: flex; align-items: flex-start; justify-content: center; }
 .open-shift { width: 420px; display: flex; flex-direction: column; gap: 12px; margin-top: 48px; text-align: center; }
 .open-shift h2 { margin: 0; }
+.open-shift .reopen-day { align-self: center; background: transparent; color: var(--muted); }
+.dialog.confirm { max-width: 440px; text-align: left; }
+.dialog.confirm p { margin: 0; }
 /* Gün sonu takvimi (2026-11-02) */
 .day-end-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .week-cal { display: flex; flex-direction: column; gap: 8px; }

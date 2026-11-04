@@ -86,6 +86,7 @@ describe('Faz 4: iptal ve iade', () => {
     await page.getByRole('button', { name: 'Vardiya', exact: true }).click();
     await expect.poll(() => page.locator('[data-stat="İade"]').textContent()).toBe('640,00 ₺'); // 350 + 290
     await page.getByRole('button', { name: 'Gün sonunu al' }).click();
+    await page.getByRole('dialog', { name: 'Gün sonu alınsın mı?' }).getByRole('button', { name: 'Gün sonunu al' }).click();
     const cell = (label: string) => page.locator(`[data-summary="${label}"]`).textContent();
     await expect.poll(() => cell('Nakit iadeler')).toBe('350,00 ₺'); // 250 + 100
     expect(await cell('Kart iadeler')).toBe('290,00 ₺');
