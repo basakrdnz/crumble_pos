@@ -356,6 +356,29 @@ select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'ti
   and body->0->>'body' = 'Ciro 120,00 ₺ · 1 satış · kasada nakit 60,00 ₺.'$$, 1, 'day end summary');
 select pg_temp.expect_count($$select count(*) from public.push_log where day = '2030-06-20'$$, 4, 'push log rows of the day');
 
+-- Reopened and closed again with nothing new: no second day end (migration 0013).
+set local role authenticated;
+update public.shifts set closed_at = null, expected_cash = null where id = '30000000-0000-0000-0000-0000000000f1';
+update public.shifts set closed_at = '2030-06-20 11:57:00+03', expected_cash = 6000 where id = '30000000-0000-0000-0000-0000000000f1';
+update public.shifts set closed_at = null, expected_cash = null where id = '30000000-0000-0000-0000-0000000000f1';
+update public.shifts set closed_at = '2030-06-20 11:58:00+03', expected_cash = 6000 where id = '30000000-0000-0000-0000-0000000000f1';
+reset role;
+select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Gün sonu'$$, 1, 'same day end not sent again');
+-- Reopened, one more sale, closed: the new numbers go out.
+set local role authenticated;
+update public.shifts set closed_at = null, expected_cash = null where id = '30000000-0000-0000-0000-0000000000f1';
+insert into public.tabs (id, opened_shift_id, kind, opened_at)
+  values ('40000000-0000-0000-0000-0000000000f2', '30000000-0000-0000-0000-0000000000f1', 'quick', '2030-06-20 11:59:00+03');
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at)
+  values ('60000000-0000-0000-0000-0000000000f4', '40000000-0000-0000-0000-0000000000f2',
+          '30000000-0000-0000-0000-0000000000f1', 'cash', 2000, '2030-06-20 11:59:00+03');
+update public.tabs set status = 'paid', closed_shift_id = '30000000-0000-0000-0000-0000000000f1', total = 2000,
+  closed_at = '2030-06-20 11:59:30+03' where id = '40000000-0000-0000-0000-0000000000f2';
+update public.shifts set closed_at = '2030-06-20 11:59:40+03', expected_cash = 8000 where id = '30000000-0000-0000-0000-0000000000f1';
+reset role;
+select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Gün sonu'
+  and body->0->>'body' = 'Ciro 140,00 ₺ · 2 satış · kasada nakit 80,00 ₺.'$$, 1, 'changed day end sent again');
+
 -- A broken push never blocks the POS write.
 create or replace function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
                                          headers jsonb default '{}', timeout_milliseconds integer default 5000)

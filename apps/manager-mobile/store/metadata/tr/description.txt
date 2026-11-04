@@ -1,0 +1,11 @@
+Crumble Yönetim, Crumble Cafe ortaklarının kafeyi telefondan takip ettiği uygulamadır. Kasadaki her satış birkaç saniye içinde telefona düşer.
+
+• Bugün: anlık ciro, kafenin şu anki yoğunluğu (sakin → çok yoğun), nakit/kart, satış sayısı; dünün ve geçen haftanın aynı saatiyle kıyas
+• Satışlar: gün gün tüm satışlar ve ayrıntıları
+• Ürünler: kategori ve ürün bazında satış raporu
+• Raporlar: günlük ciro, saat saat yoğunluk haritası, en yoğun ve en sakin saatler, gün/hafta/ay kıyası
+• Açık hesaplar: hangi gün ne alındığı; telefondan ödeme kaydı, ad değiştirme, iptal
+• Menü: fiyat değiştirme, ürün ekleme ve silme, kasaya kendiliğinden gider
+• Bildirimler: gün açıldı, gün sonu, ortalamanın üstü, ayın rekoru
+
+Uygulama sadece kafe ortaklarına verilmiş hesaplarla kullanılabilir.

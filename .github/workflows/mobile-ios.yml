@@ -30,6 +30,7 @@ on:
     branches: [main]
     paths:
       - 'apps/manager-mobile/**'
+      - '!apps/manager-mobile/store/**' # App Store page only (app-store-metadata.yml)
       - 'packages/shared/**'
       - '.github/workflows/mobile-ios.yml'
 

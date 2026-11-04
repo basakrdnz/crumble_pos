@@ -1,0 +1,103 @@
+# Sends the App Store page of Crumble Yönetim (texts and screenshots in
+# apps/manager-mobile/store) to App Store Connect with fastlane deliver, so
+# they no longer have to be typed and dragged in by hand. Runs when those files
+# change (on main or on a Claude branch) or by hand: Actions -> "App Store
+# sayfası" -> Run workflow.
+#
+# Uses the App Store Connect API key of mobile-ios.yml (ASC_KEY_ID,
+# ASC_ISSUER_ID, ASC_KEY_P8). It never uploads a build, never submits for
+# review and leaves App Review information (demo account and password),
+# App Privacy and pricing alone: those stay in App Store Connect.
+name: App Store sayfası
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'apps/manager-mobile/store/metadata/**'
+      - 'apps/manager-mobile/store/screenshots/**'
+      - 'apps/manager-mobile/store/screenshots-6.5/**'
+      - '.github/workflows/app-store-metadata.yml'
+
+concurrency:
+  group: app-store-metadata
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/manager-mobile/store
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: fastlane
+        run: gem install fastlane --no-document
+
+      - name: App Store Connect key
+        run: |
+          jq -n --arg id "$ASC_KEY_ID" --arg issuer "$ASC_ISSUER_ID" --arg key "$ASC_KEY_P8" \
+            '{key_id: $id, issuer_id: $issuer, key: $key, in_house: false}' > "$RUNNER_TEMP/asc.json"
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+
+      # deliver reads <folder>/<language>/*.png and picks the display (6.9",
+      # 6.5") from each image's size; the prefixes keep the two sets apart.
+      - name: Screenshots
+        run: |
+          mkdir -p "$RUNNER_TEMP/shots/tr"
+          for f in screenshots/*.png; do cp "$f" "$RUNNER_TEMP/shots/tr/69_$(basename "$f")"; done
+          for f in screenshots-6.5/*.png; do cp "$f" "$RUNNER_TEMP/shots/tr/65_$(basename "$f")"; done
+          ls -l "$RUNNER_TEMP/shots/tr"
+
+      # Screenshots first and on their own: the text step below fails on a
+      # first version until App Review Information has been saved once in App
+      # Store Connect (fastlane issue 20538, "No data").
+      - name: Upload screenshots
+        run: |
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/asc.json" \
+            --app_identifier com.crumble.yonetim \
+            --platform ios \
+            --screenshots_path "$RUNNER_TEMP/shots" \
+            --overwrite_screenshots true \
+            --skip_metadata true \
+            --skip_binary_upload true \
+            --skip_app_version_update true \
+            --submit_for_review false \
+            --run_precheck_before_submit false \
+            --force true
+
+      # Until App Review Information is saved once in App Store Connect, deliver
+      # writes every text and then stops at the missing review record
+      # (fastlane issue 20538). Only that case is a warning; any other error fails.
+      - name: Upload texts
+        run: |
+          set +e
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/asc.json" \
+            --app_identifier com.crumble.yonetim \
+            --platform ios \
+            --metadata_path metadata \
+            --skip_screenshots true \
+            --skip_binary_upload true \
+            --skip_app_version_update true \
+            --submit_for_review false \
+            --automatic_release false \
+            --run_precheck_before_submit false \
+            --force true 2>&1 | tee "$RUNNER_TEMP/deliver.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ] && grep -q "fetch_app_store_review_detail" "$RUNNER_TEMP/deliver.log"; then
+            echo "::warning::Texts uploaded; App Review Information is not saved yet in App Store Connect (fastlane issue 20538)."
+            exit 0
+          fi
+          exit "$status"
