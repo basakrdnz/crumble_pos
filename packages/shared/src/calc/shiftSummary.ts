@@ -1,11 +1,13 @@
 import type { Kurus } from '../money';
 import { sumKurus } from '../money';
-import type { PaymentMethod, TabStatus } from '../types';
+import type { PaymentMethod, TabKind, TabStatus } from '../types';
 import { cashDifference, expectedCash } from './shift';
 import { type CalcItem, tabTotals } from './tab';
 
 export interface SummaryTab {
   status: TabStatus;
+  /** Quick sales (2026-11-04): lines taken out and a cleared cart are not "iptal". */
+  kind?: TabKind;
   discount_percent: number | null;
   items: readonly CalcItem[];
 }
@@ -36,7 +38,11 @@ export interface ShiftSummary {
   /** Line + cart discounts on paid tabs. */
   discountTotal: Kurus;
   compTotal: Kurus;
-  /** Voided lines on closed tabs plus everything on voided tabs. */
+  /**
+   * Voided lines on closed table/named tabs plus everything on voided
+   * table/named tabs. A quick sale's removed lines or cleared cart do not
+   * count (kullanıcı 2026-11-04: "vazgeçilen bir şey").
+   */
   voidTotal: Kurus;
   voidedTabCount: number;
   /** Σ (menu price − charged price) on paid tabs. */
@@ -56,6 +62,8 @@ export function shiftSummary(input: ShiftSummaryInput): ShiftSummary {
   let priceChangeTotal = 0;
   for (const tab of input.closedTabs) {
     const totals = tabTotals(tab.items, tab.discount_percent);
+    const quick = tab.kind === 'quick';
+    if (tab.status === 'void' && quick) continue;
     if (tab.status === 'void') {
       voidedTabCount++;
       voidTotal += totals.voided + sumKurus(tab.items.filter((i) => !i.voided_at).map((i) => i.unit_price * i.quantity));
@@ -65,7 +73,7 @@ export function shiftSummary(input: ShiftSummaryInput): ShiftSummary {
     salesTotal += totals.total;
     discountTotal += totals.lineDiscount + totals.cartDiscount;
     compTotal += totals.comp;
-    voidTotal += totals.voided;
+    if (!quick) voidTotal += totals.voided;
     priceChangeTotal += totals.priceChange;
   }
   const expected = expectedCash(input.openingCash, input.payments, input.refunds);

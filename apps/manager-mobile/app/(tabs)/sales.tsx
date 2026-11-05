@@ -18,7 +18,8 @@ export default function Sales() {
 
   const rows = data
     ? [...data[0].tabs]
-        .filter((t) => t.status !== 'open')
+        // An emptied quick-sale cart is not a sale (2026-11-04).
+        .filter((t) => t.status !== 'open' && !(t.status === 'void' && t.kind === 'quick'))
         .sort((a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
         .map((tab) => {
           const pays = data[0].payments.filter((p) => p.tab_id === tab.id);

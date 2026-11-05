@@ -40,6 +40,9 @@ export function TabWorkspace({
   onCancelTab,
   cancelLabel = 'Satışı iptal et',
   extraActions,
+  frozenLineIds,
+  banner,
+  idle,
 }: {
   title: string;
   subtitle?: string;
@@ -55,6 +58,15 @@ export function TabWorkspace({
   onCancelTab?(): void;
   cancelLabel?: string;
   extraActions?: ReactNode;
+  /**
+   * Lines already on the tab when it was opened again (2026-11-04): the tiles'
+   * "− adet +" count only this round, and "+" starts new lines.
+   */
+  frozenLineIds?: ReadonlySet<string>;
+  /** Above the cart lines: the open tab's state (TabScreen). */
+  banner?: ReactNode;
+  /** Middle column while no line is selected (quick sale: the open tabs). */
+  idle?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [entry, setEntry] = useState<PadEntry | null>(null);
@@ -71,10 +83,10 @@ export function TabWorkspace({
   const inCart = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of detail?.items ?? []) {
-      if (!item.voided_at) map.set(item.product_id, (map.get(item.product_id) ?? 0) + item.quantity);
+      if (!item.voided_at && !frozenLineIds?.has(item.id)) map.set(item.product_id, (map.get(item.product_id) ?? 0) + item.quantity);
     }
     return map;
-  }, [detail]);
+  }, [detail, frozenLineIds]);
 
   // A changed total makes a typed partial amount stale.
   useEffect(() => setPayAmount(null), [detail?.tab.id, remaining]);
@@ -120,7 +132,7 @@ export function TabWorkspace({
   const pick = (product: Product) =>
     run(async () => {
       const tab = await ensureTab();
-      const next = await api.addProduct(tab.tab.id, product.id);
+      const next = await api.addProduct(tab.tab.id, product.id, frozenLineIds ? [...frozenLineIds] : undefined);
       setDetail(next);
       const line = next.items
         .filter((i) => i.product_id === product.id && !i.voided_at)
@@ -135,7 +147,7 @@ export function TabWorkspace({
   // removed (kept as a void record, like "Satırı çıkar").
   const decrease = (product: Product) =>
     run(async () => {
-      const line = detail?.items.filter((i) => i.product_id === product.id && !i.voided_at).at(-1);
+      const line = detail?.items.filter((i) => i.product_id === product.id && !i.voided_at && !frozenLineIds?.has(i.id)).at(-1);
       if (!line) return;
       if (line.quantity > 1) {
         setDetail(await api.updateItem(line.id, { quantity: line.quantity - 1 }));
@@ -157,6 +169,7 @@ export function TabWorkspace({
       <LineActions
         item={selected}
         entry={selected ? null : entry}
+        idle={idle}
         onClose={() => {
           setSelectedId(null);
           setEntry(null);
@@ -181,6 +194,7 @@ export function TabWorkspace({
         title={title}
         subtitle={subtitle}
         tools={tools}
+        banner={banner}
         detail={detail}
         selectedItemId={selectedId}
         onSelect={(item) => {

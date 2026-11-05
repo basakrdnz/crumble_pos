@@ -1,6 +1,6 @@
 import type { TabItem } from '@crumble/shared';
 import { formatTL } from '@crumble/shared';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Keypad, keypadToInt, keypadToKurus } from '../../components/Keypad';
 import type { ItemPatch } from '../../db/sales';
 
@@ -28,11 +28,14 @@ export function LineActions({
   entry,
   handlers,
   onClose,
+  idle,
 }: {
   item: TabItem | null;
   entry: PadEntry | null;
   handlers: LineActionHandlers;
   onClose(): void;
+  /** Shown instead of the hint while nothing is selected. */
+  idle?: ReactNode;
 }) {
   const [field, setField] = useState<Field>('quantity');
   const [buffer, setBuffer] = useState('');
@@ -50,6 +53,13 @@ export function LineActions({
   useEffect(() => setBuffer(''), [entry?.kind]);
 
   if (!item && !entry) {
+    if (idle) {
+      return (
+        <aside className="actions-col" aria-label="İşlemler">
+          {idle}
+        </aside>
+      );
+    }
     return (
       <aside className="actions-col" aria-label="İşlemler">
         <div className="actions-hint">

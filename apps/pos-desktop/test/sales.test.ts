@@ -271,8 +271,9 @@ describe('örnek gün (vardiya kapanışı entegrasyon testi)', () => {
       salesTotal: 43000 + 31500 + 25200 + 17000 + 6500,
       discountTotal: 2800 + 3000,
       compTotal: 0,
-      voidTotal: 21500 + 25000,
-      voidedTabCount: 1,
+      // Quick sales: a cleared cart (5) and a line taken out (6) are not "iptal" (2026-11-04).
+      voidTotal: 0,
+      voidedTabCount: 0,
       priceChangeTotal: 5000,
     });
 

@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { useAction, useApiData } from '../components/useApi';
 import type { OpenTabSummary } from '../db/sales';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { TabViewDialog } from '../components/TabViewDialog';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { formatDateTime, formatLongDate, formatTime } from '../format';
 
@@ -209,6 +210,8 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
   const [decided, setDecided] = useState<Map<string, { title: string; amount: number; decision: Decision }>>(new Map());
   const [notes, setNotes] = useState('');
   const [asking, setAsking] = useState(false);
+  // "Hesabı gör" (2026-11-04): no cancelling at day end; a wrong tab is cancelled inside the tab.
+  const [viewing, setViewing] = useState<OpenTabSummary | null>(null);
   const run = useAction();
 
   if (!summary || !open) return null;
@@ -237,18 +240,6 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
       note(o, { kind: 'paid', method });
       await refresh();
     });
-  const voidTab = (o: OpenTabSummary) => {
-    const question =
-      o.total !== o.remaining
-        ? `${o.title}: alınan ${formatTL(o.total - o.remaining)} iade edilip hesap iptal edilsin mi?`
-        : `${o.title} iptal edilsin mi? İptal kaydı tutulur.`;
-    if (!window.confirm(question)) return;
-    void run(async () => {
-      await api.refundAndVoid(o.tab.id, 'gün sonu');
-      note(o, { kind: 'void' });
-      await refresh();
-    });
-  };
   const close = () =>
     run(async () => {
       const result = await api.closeShift({ carryOverTabIds: carry, notes });
@@ -269,17 +260,12 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
           <WeekCalendar refreshKey={shift.id} />
         </div>
         <Stats summary={summary} />
-        <div className="panel muted" style={{ fontSize: 14, lineHeight: '22px' }}>
-          Ürün bazlı rapor ve en çok satanlar <b style={{ color: 'var(--ink)' }}>yönetim uygulamasında</b>. Kasadaki gün sonu
-          sadece özeti gösterir.
-        </div>
       </div>
       <div className="panel decision-col" aria-label="Açık hesaplar">
         <div>
           <h3 style={{ margin: 0 }}>Açık hesaplar</h3>
           <div className="muted" style={{ fontSize: 13, lineHeight: '19px', marginTop: 4 }}>
-            Her açık hesap için karar ver: ödet, sonraki vardiyaya devret veya iptal et. Hepsine karar verilmeden gün sonu
-            alınamaz.
+            Her açık hesap için karar ver: ödet ya da sonraki vardiyaya devret. Hepsine karar verilmeden gün sonu alınamaz.
           </div>
         </div>
         {rows.length === 0 && <div className="muted">Açık hesap yok.</div>}
@@ -327,8 +313,8 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
                   <button className="btn apply" onClick={() => note(o as OpenTabSummary, { kind: 'carry' })}>
                     Devret
                   </button>
-                  <button className="btn danger" onClick={() => voidTab(o as OpenTabSummary)}>
-                    İptal
+                  <button className="btn" onClick={() => setViewing(o as OpenTabSummary)}>
+                    Hesabı gör
                   </button>
                 </div>
               )}
@@ -347,6 +333,7 @@ function DayEnd({ shift, onClosed }: { shift: ShiftRow; onClosed(report: Report)
         <button className="btn dark big" disabled={pending.length > 0} onClick={() => setAsking(true)}>
           Gün sonunu al
         </button>
+        {viewing && <TabViewDialog tabId={viewing.tab.id} title={viewing.title} onClose={() => setViewing(null)} />}
         {asking && (
           <ConfirmDialog
             title="Gün sonu alınsın mı?"

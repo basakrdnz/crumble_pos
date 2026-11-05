@@ -36,7 +36,7 @@ export function summarizeShift(shift: Shift, data: ReportData): ShiftSummary {
     refunds: data.refunds.filter((r) => r.shift_id === shift.id),
     closedTabs: data.tabs
       .filter((t) => t.closed_shift_id === shift.id && t.status !== 'open')
-      .map((t) => ({ status: t.status, discount_percent: t.discount_percent, items: byTab.get(t.id) ?? [] })),
+      .map((t) => ({ status: t.status, kind: t.kind, discount_percent: t.discount_percent, items: byTab.get(t.id) ?? [] })),
   });
 }
 

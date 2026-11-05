@@ -339,6 +339,16 @@ when old.closed_at is not null and (${anyChanged(shiftColumns)})
 begin select raise(abort, 'Kapanmış vardiya değiştirilemez.'); end;
 `;
 
+// v7 (2026-11-04, "kartını unutmuş, masaya çeviricez"): an open quick sale
+// may become a table or named tab. Every other kind change stays forbidden.
+const quickToTab = `
+drop trigger tabs_immutable_fields;
+create trigger tabs_immutable_fields before update on tabs
+when ${anyChanged(['id', 'opened_shift_id', 'opened_at', 'created_at'])}
+  or (new.kind is not old.kind and not (old.kind = 'quick' and old.status = 'open' and new.kind in ('table', 'named')))
+begin select raise(abort, 'Hesapta sadece yaşam döngüsü alanları değiştirilebilir.'); end;
+`;
+
 export const MIGRATIONS: readonly string[] = [
   [tablesV1, noDelete, insertOnly, lifecycle].join('\n'),
   voidRule,
@@ -346,4 +356,5 @@ export const MIGRATIONS: readonly string[] = [
   catalogSource,
   hearthShape,
   shiftReopen,
+  quickToTab,
 ];

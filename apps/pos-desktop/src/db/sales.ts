@@ -253,6 +253,24 @@ export function moveTab(ctx: Context, tabId: string, tableId: string): Tab {
   });
 }
 
+/**
+ * Hızlı satışı masaya/isme aktar (2026-11-04): an open quick sale becomes a
+ * table or named tab and keeps its lines and payments ("kartını unutmuş").
+ */
+export function convertQuickTab(ctx: Context, tabId: string, to: { tableId: string } | { customerName: string }): Tab {
+  return tx(ctx, () => {
+    const tab = requireOpenTab(ctx, tabId);
+    if (tab.kind !== 'quick') throw new Error('Sadece hızlı satış aktarılabilir.');
+    if ('tableId' in to) {
+      requireFreeTable(ctx, to.tableId, tabId);
+      return updateRow<Tab>(ctx, 'tabs', tabId, { kind: 'table', table_id: to.tableId });
+    }
+    const name = to.customerName.trim();
+    if (!name) throw new Error('İsim girin.');
+    return updateRow<Tab>(ctx, 'tabs', tabId, { kind: 'named', customer_name: name });
+  });
+}
+
 /** Sets or clears the customer name; a named tab must keep one. */
 export function setCustomerName(ctx: Context, tabId: string, name: string | null): Tab {
   return tx(ctx, () => {
@@ -335,7 +353,12 @@ export function getOpenQuickTab(ctx: Context): Tab | null {
  * Adds one of a product. Clicking the same product again raises the quantity
  * of its plain line (same price, no discount, not comp, no note).
  */
-export function addProduct(ctx: Context, tabId: string, productId: string): TabItem {
+/**
+ * Adds one of a product. Counts up the newest plain line of it, except the
+ * lines in `frozenLineIds`: a tab opened again starts a new round
+ * (2026-11-04), so earlier rounds' lines keep their day and count.
+ */
+export function addProduct(ctx: Context, tabId: string, productId: string, frozenLineIds: readonly string[] = []): TabItem {
   return tx(ctx, () => {
     requireOpenTab(ctx, tabId);
     const product = getRow<Product>(ctx, 'products', productId);
@@ -345,9 +368,10 @@ export function addProduct(ctx: Context, tabId: string, productId: string): TabI
       .prepare(
         `select * from tab_items where tab_id = ? and product_id = ? and voided_at is null
          and unit_price = ? and list_price = ? and discount_percent is null and is_comp = 0 and note is null
+         and id not in (select value from json_each(?))
          order by created_at desc limit 1`,
       )
-      .get(tabId, productId, product.price, product.price) as TabItem | undefined;
+      .get(tabId, productId, product.price, product.price, JSON.stringify(frozenLineIds)) as TabItem | undefined;
     if (plain) {
       return updateRow<TabItem>(ctx, 'tab_items', plain.id, { quantity: plain.quantity + 1 });
     }

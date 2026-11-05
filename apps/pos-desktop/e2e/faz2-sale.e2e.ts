@@ -122,8 +122,9 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
 
     await pick(page, 'Kahve', 'Mocha');
     await page.locator('[data-line="Mocha"]').waitFor();
-    page.once('dialog', (d) => void d.accept());
-    await page.getByRole('button', { name: /Satışı iptal et/ }).click();
+    // 2026-11-04: a quick sale is emptied, not "iptal" (asks once, Enter does not confirm).
+    await page.getByRole('button', { name: /Sepeti boşalt/ }).click();
+    await page.getByRole('dialog', { name: 'Sepet boşaltılsın mı?' }).getByRole('button', { name: 'Boşalt' }).click();
     await page.getByText('Sepet boş. Soldan ürün seçin.').waitFor();
   });
 
@@ -144,7 +145,8 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     expect(await cell('Kart satışlar')).toBe('712,40 ₺'); // 422,40 + 290
     expect(await cell('Satış adedi')).toBe('4');
     expect(await cell('İndirim toplamı')).toBe('105,60 ₺'); // 48 + 57,60
-    expect(await cell('İptal toplamı')).toBe('635,00 ₺ (1 hesap)'); // karışık tost 285 + espresso 110 + mocha 240
+    // Quick sales only: removed lines and the emptied cart are not "iptal" (2026-11-04).
+    expect(await cell('İptal toplamı')).toBe('0,00 ₺');
     expect(await cell('Fiyat değişikliği farkı')).toBe('50,00 ₺');
     await snap(page, 'faz2-end-of-day');
     await page.getByRole('button', { name: 'Tamam' }).click();

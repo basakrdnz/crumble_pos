@@ -14,6 +14,7 @@ import {
 import {
   addProduct,
   closeShift,
+  convertQuickTab,
   getShiftSummary,
   getTab,
   listOpenTabSummaries,
@@ -22,6 +23,7 @@ import {
   openTab,
   pay,
   setCustomerName,
+  voidTab,
 } from '../src/db/sales';
 import { nextDay, testContext } from './helpers';
 
@@ -95,6 +97,38 @@ describe('tabs (hesap)', () => {
     expect(() => openTab(ctx, { kind: 'table', table_id: t1.id })).toThrow(/zaten açık/);
     expect(() => openTab(ctx, { kind: 'named', customer_name: '  ' })).toThrow(/İsim/);
     expect(openTab(ctx, { kind: 'named', customer_name: ' Ali Veli ' }).customer_name).toBe('Ali Veli');
+  });
+
+  it('turns an open quick sale into a table or named tab, lines kept (2026-11-04)', () => {
+    const ctx = testContext();
+    const { t1, latte } = setup(ctx);
+    openShift(ctx, 0);
+    const busy = openTab(ctx, { kind: 'table', table_id: t1.id });
+    const quick = openTab(ctx, { kind: 'quick' });
+    addProduct(ctx, quick.id, latte.id);
+    expect(() => convertQuickTab(ctx, quick.id, { tableId: t1.id })).toThrow(/zaten açık/);
+    expect(() => convertQuickTab(ctx, quick.id, { customerName: ' ' })).toThrow(/İsim/);
+    const named = convertQuickTab(ctx, quick.id, { customerName: ' Ayşe ' });
+    expect(named).toMatchObject({ kind: 'named', customer_name: 'Ayşe', status: 'open' });
+    expect(getTab(ctx, quick.id).items).toHaveLength(1);
+    expect(() => convertQuickTab(ctx, quick.id, { tableId: t1.id })).toThrow(/Sadece hızlı satış/);
+    expect(() => convertQuickTab(ctx, busy.id, { customerName: 'X' })).toThrow(/Sadece hızlı satış/);
+    // The table case.
+    const quick2 = openTab(ctx, { kind: 'quick' });
+    voidTab(ctx, busy.id);
+    expect(convertQuickTab(ctx, quick2.id, { tableId: t1.id })).toMatchObject({ kind: 'table', table_id: t1.id });
+  });
+
+  it('a new round adds new lines instead of counting up earlier ones (2026-11-04)', () => {
+    const ctx = testContext();
+    const { latte } = setup(ctx);
+    openShift(ctx, 0);
+    const tab = openTab(ctx, { kind: 'named', customer_name: 'Elif' });
+    const first = addProduct(ctx, tab.id, latte.id);
+    expect(addProduct(ctx, tab.id, latte.id).id).toBe(first.id); // same round: counted up
+    const second = addProduct(ctx, tab.id, latte.id, [first.id]);
+    expect(second.id).not.toBe(first.id);
+    expect(getTab(ctx, tab.id).items.map((i) => i.quantity)).toEqual([2, 1]);
   });
 
   it('moves a tab to a free table and attaches a name', () => {

@@ -291,6 +291,19 @@ kbd {
 }
 .actions-hint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; color: var(--muted); padding: 20px; }
 .actions-hint strong { color: var(--ink); font-size: 16px; }
+.open-tabs { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 16px 14px; overflow: auto; min-height: 0; }
+.open-tabs > strong { font-size: 16px; margin-bottom: 4px; }
+.open-tab { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--surface); cursor: pointer; font: inherit; }
+.open-tab:hover { border-color: var(--primary); }
+.open-tab .name { font-weight: 800; font-size: 14px; }
+.open-tab .num { font-weight: 800; font-size: 14px; }
+.open-tab .sub { grid-column: 1 / -1; color: var(--muted); font-size: 12px; font-weight: 600; }
+.transfer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tab-view { min-width: 440px; }
+.tab-view .lines { display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow: auto; }
+.tab-view .row-line { display: flex; justify-content: space-between; gap: 12px; padding: 6px 2px; font-size: 14px; }
+.tab-view .row-line.voided { color: var(--muted); text-decoration: line-through; }
+.tab-view .sum { display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 8px; padding-top: 10px; font-weight: 800; }
 .note-input { height: 40px; background: var(--bg); }
 .void-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r-box); background: var(--danger-bg); }
 
@@ -298,6 +311,15 @@ kbd {
 .cart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px 10px; }
 .cart-head strong { display: block; font-size: 20px; font-weight: 800; }
 .cart-head .muted { font-size: 12px; font-weight: 700; }
+.cart-day { display: flex; align-items: center; gap: 8px; margin: 8px 4px 2px; color: var(--muted); font-size: 12px; font-weight: 800; }
+.cart-day::before, .cart-day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.cart-day::before { flex: 0 0 10px; }
+.tab-banner { margin: 0 12px 10px; padding: 10px 14px; border-radius: 14px; background: var(--primary); color: #fff; display: grid; gap: 2px; }
+.tab-banner .t { font-size: 13px; font-weight: 800; letter-spacing: .4px; display: flex; align-items: center; gap: 8px; }
+.tab-banner .t::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,.3); }
+.tab-banner .s { font-size: 12px; font-weight: 600; opacity: .85; }
+.tab-banner.new { background: var(--key-alt); color: var(--ink); }
+.tab-banner.new .t::before { background: var(--muted); box-shadow: none; }
 .cart-lines { flex: 1; overflow: auto; padding: 0 10px; display: flex; flex-direction: column; gap: 4px; }
 .cart-line { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--r-btn); cursor: pointer; }
 .cart-line:hover { background: var(--key-alt); }
