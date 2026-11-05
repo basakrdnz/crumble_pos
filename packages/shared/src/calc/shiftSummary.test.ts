@@ -27,8 +27,8 @@ describe('shiftSummary', () => {
       closedTabs: [
         { status: 'paid', discount_percent: null, items: [item(21500)] },
         { status: 'paid', discount_percent: 10, items: [item(23000, { quantity: 2 }), item(11000, { is_comp: true })] },
-        { status: 'paid', discount_percent: null, items: [item(15000, { unit_price: 13000 }), item(9000, { voided_at: 'x' })] },
-        { status: 'void', discount_percent: null, items: [item(5000), item(2000, { voided_at: 'x' })] },
+        { status: 'paid', kind: 'table', discount_percent: null, items: [item(15000, { unit_price: 13000 }), item(9000, { voided_at: 'x' })] },
+        { status: 'void', kind: 'named', discount_percent: null, items: [item(5000), item(2000, { voided_at: 'x' })] },
       ],
     });
     expect(summary).toEqual({
@@ -48,6 +48,22 @@ describe('shiftSummary', () => {
       voidedTabCount: 1,
       priceChangeTotal: 2000,
     });
+  });
+
+  it('a quick sale is never "iptal": lines taken out and a cleared cart do not count (2026-11-04)', () => {
+    const summary = shiftSummary({
+      openingCash: 0,
+      payments: [{ method: 'cash', amount: 5000 }],
+      refunds: [],
+      closedTabs: [
+        { status: 'paid', kind: 'quick', discount_percent: null, items: [item(5000), item(3000, { voided_at: 'x' })] },
+        { status: 'void', kind: 'quick', discount_percent: null, items: [item(4000)] },
+        { status: 'paid', kind: 'table', discount_percent: null, items: [item(1000, { voided_at: 'x' })] },
+      ],
+    });
+    expect(summary.voidTotal).toBe(1000);
+    expect(summary.voidedTabCount).toBe(0);
+    expect(summary.salesCount).toBe(2);
   });
 
   it('has no difference before the drawer is counted', () => {

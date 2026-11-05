@@ -216,6 +216,14 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Kategori çipleri kaymaz, alt satıra geçer (hepsi görünür).
   - Gün sonu başlığı tarih gösterir: "2 Kasım 2026 Pazartesi · açılış 18:30" (`formatLongDate`).
   - Boş hesap (aktif satırı yok, ödeme yok; ör. ürün eklenip çıkarılan hızlı satış) gün sonunda karar istemez: `closeShift` onu kendiliğinden void yapar, gün sonu listesinde görünmez.
+- **Kasada hesaplar (2026-11-05, kullanıcı geri bildirimi):**
+  - Masa/isim hesabında sepetin üstünde yeşil bant (`TabBanner`, `TabScreen.tsx`): "MASA 5 · AÇIK HESAP", açılış, ne kadar süredir açık (`openFor`), ödeme varsa alınan/kalan. Hesap henüz açılmadıysa gri "YENİ HESAP".
+  - Sepette ürünler birden fazla güne yayılınca günlerin arasında tarihli ayraç (`Cart.tsx`, `.cart-day`).
+  - Yeni tur: hesap yeniden açılınca önceki kalemler donuk (`frozenLineIds`). Ürün kutusundaki "− adet +" sadece bu turu sayar, "+" eski satırın adedini artırmaz, yeni satır açar (`addProduct(…, frozenLineIds)`).
+  - Hızlı satış: "Masaya aktar" / "İsme aktar" (`convertQuickTab`; kind quick → table/named, sadece açıkken; SQLite v7 + `20261104000014_quick_to_tab.sql`). Satır seçili değilken orta kolonda açık hesaplar listesi, tıklayınca hesap açılır (Sale içinde TabScreen).
+  - İptal kuralı (kullanıcı): hızlı satışta çıkarılan satırlar ve "Sepeti boşalt" (eski "Satışı iptal et", tek onay) **iptal sayılmaz**: `shiftSummary` `kind = quick` olanları iptal toplamına katmaz, boşaltılan sepet Satışlar listelerinde (kasa ve telefon) görünmez. Masa/isim hesabında çıkarılan satır ve hesap iptali iptal sayılır; hesap iptali iki onaylı ("Hesap iptal edilsin mi?" → "Emin misin?").
+  - Gün sonunda "İptal" yok, yerine "Hesabı gör" (`components/TabViewDialog.tsx`, günlere ayrılmış). Yanlış açılmış hesap, hesaba girilip iptal edilir. "Ürün bazlı rapor… yönetim uygulamasında" yazısı kaldırıldı.
+  - E2E: `e2e/kasa-hesaplar.e2e.ts`.
 - **Günde tek vardiya ve takvim (2026-11-02):**
   - Aynı İstanbul gününde (vardiyanın açılış günü) ikinci vardiya açılmaz. Bugünün vardiyası kapatılmışsa "Vardiyayı aç" yerine "Bugünün vardiyasına devam et" çıkar (`getTodaysClosedShift`, `reopenShift`): kapanış alanları boşalır, satışlar aynı vardiyada toplanır, gün sonu tekrar alınır. "Sıfırla" yok (silme yok kuralı).
   - DB'de de zorunlu: kapanmış vardiya, kendisinden sonra açılmış vardiya yoksa yeniden açılabilir (SQLite v6 `shifts_frozen`, Supabase `20261102000010_shift_reopen.sql`). Başka değişiklik yine yasak. Migration 0010 kullanıcının projesine 2026-11-02'de uygulandı.

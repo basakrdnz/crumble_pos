@@ -149,7 +149,10 @@ export function listSales(ctx: Context, shiftId: string): SaleRow[] {
   const tabs = ctx.db
     .prepare(
       `select t.*, tb.label as table_label from tabs t left join tables tb on tb.id = t.table_id
-       where t.closed_shift_id = ? and t.status <> 'open' order by t.closed_at desc`,
+       where t.closed_shift_id = ? and t.status <> 'open'
+         -- An emptied quick-sale cart is not a sale (2026-11-04).
+         and not (t.status = 'void' and t.kind = 'quick')
+       order by t.closed_at desc`,
     )
     .all(shiftId) as (Tab & { table_label: string | null })[];
   return tabs.map((tab) => {

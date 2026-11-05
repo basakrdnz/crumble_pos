@@ -99,8 +99,8 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     getOpenQuickTab: () => sales.getOpenQuickTab(ctx),
     listOpenTabs: () => sales.listOpenTabs(ctx),
     listClosedTabs: (shiftId) => sales.listClosedTabs(ctx, shiftId),
-    addProduct: (tabId, productId) => {
-      sales.addProduct(ctx, tabId, productId);
+    addProduct: (tabId, productId, frozenLineIds) => {
+      sales.addProduct(ctx, tabId, productId, frozenLineIds ?? []);
       return sales.getTab(ctx, tabId);
     },
     updateItem: (itemId, patch) => {
@@ -124,6 +124,10 @@ export function createApi(ctx: Context, deps?: CloudDeps, maintenance?: Maintena
     },
     setCustomerName: (tabId, name) => {
       sales.setCustomerName(ctx, tabId, name);
+      return sales.getTab(ctx, tabId);
+    },
+    convertQuickTab: (tabId, to) => {
+      sales.convertQuickTab(ctx, tabId, to);
       return sales.getTab(ctx, tabId);
     },
 

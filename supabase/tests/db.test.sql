@@ -148,6 +148,15 @@ select pg_temp.expect_error($$insert into public.tabs (id, opened_shift_id, kind
 select pg_temp.expect_error($$insert into public.tabs (id, opened_shift_id, kind, opened_at)
   values ('40000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000001', 'table', now())$$,
   'table tab without table_id');
+-- Quick sale to a named tab while open (migration 0014); nothing else may change kind.
+insert into public.tabs (id, opened_shift_id, kind, opened_at)
+  values ('40000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-000000000001', 'quick', now());
+select pg_temp.expect_error($$update public.tabs set kind = 'named'
+  where id = '40000000-0000-0000-0000-00000000000a'$$, 'quick to named without a name');
+select pg_temp.expect_ok($$update public.tabs set kind = 'named', customer_name = 'Ayşe'
+  where id = '40000000-0000-0000-0000-00000000000a'$$, 'open quick sale becomes a named tab');
+select pg_temp.expect_error($$update public.tabs set kind = 'quick'
+  where id = '40000000-0000-0000-0000-00000000000a'$$, 'named tab back to quick');
 
 -- Catalog: updates and soft delete are fine, history is insert-only.
 select pg_temp.expect_ok($$update public.products set price = 13000, updated_at = now()

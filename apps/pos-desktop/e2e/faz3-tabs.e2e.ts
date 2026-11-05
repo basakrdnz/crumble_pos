@@ -75,12 +75,12 @@ describe('Faz 3: hesap ve kroki', () => {
     const { page } = run;
     await page.locator('[data-table="1"]').click();
     await page.getByRole('button', { name: 'Taşı', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Masa değiştir' }).getByRole('button', { name: 'Pencere' }).click();
+    await page.getByRole('dialog', { name: 'Hangi masaya taşınsın?' }).getByRole('button', { name: 'Pencere' }).click();
     await page.getByRole('button', { name: 'İsim', exact: true }).click();
     const nameDialog = page.getByRole('dialog', { name: 'Hesap ismi' });
     await nameDialog.getByLabel('İsim soyisim').fill('Zeynep');
     await nameDialog.getByRole('button', { name: 'Tamam' }).click();
-    await page.getByText('Pencere · Zeynep').waitFor();
+    await page.getByText('Pencere · Zeynep', { exact: true }).waitFor();
     await page.getByRole('button', { name: '← Geri' }).click();
     await expect.poll(() => page.locator('[data-table="Pencere"]').textContent()).toContain('Zeynep');
     expect(await page.locator('[data-table="1"]').textContent()).toBe('Masa 1Boş'); // free again

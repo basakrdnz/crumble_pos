@@ -100,11 +100,15 @@ describe('refunds (iade)', () => {
     const { shift, tab, latte } = sale(ctx);
     pay(ctx, tab.id, [{ method: 'card', amount: 46500 }]);
     refundPart(ctx, tab.id, { amount: 5000, method: 'card' });
-    const cancelled = openTab(ctx, { kind: 'quick' });
+    const cancelled = openTab(ctx, { kind: 'named', customer_name: 'Ali' });
     addProduct(ctx, cancelled.id, latte.id);
     voidTab(ctx, cancelled.id);
+    // An emptied quick-sale cart is not a sale and is not listed (2026-11-04).
+    const emptied = openTab(ctx, { kind: 'quick' });
+    addProduct(ctx, emptied.id, latte.id);
+    voidTab(ctx, emptied.id);
     expect(listSales(ctx, shift.id).map((s) => [s.label, s.status, s.total, s.card, s.refunded])).toEqual([
-      ['Hızlı satış', 'void', 21500, 0, 0],
+      ['Ali', 'void', 21500, 0, 0],
       ['Hızlı satış', 'paid', 46500, 46500, 5000],
     ]);
   });

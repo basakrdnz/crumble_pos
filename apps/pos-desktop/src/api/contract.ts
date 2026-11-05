@@ -63,7 +63,8 @@ export interface PosApi {
   getOpenQuickTab(): Tab | null;
   listOpenTabs(): Tab[];
   listClosedTabs(shiftId: string): Tab[];
-  addProduct(tabId: string, productId: string): TabDetail;
+  /** `frozenLineIds`: lines of earlier rounds that are not counted up (2026-11-04). */
+  addProduct(tabId: string, productId: string, frozenLineIds?: string[]): TabDetail;
   updateItem(itemId: string, patch: ItemPatch): TabDetail;
   voidItem(itemId: string, reason?: string | null): TabDetail;
   setTabDiscount(tabId: string, percent: number | null): TabDetail;
@@ -71,6 +72,8 @@ export interface PosApi {
   voidTab(tabId: string): Tab;
   listOpenTabSummaries(includeQuick?: boolean): OpenTabSummary[];
   moveTab(tabId: string, tableId: string): TabDetail;
+  /** Open quick sale to a table or named tab (2026-11-04). */
+  convertQuickTab(tabId: string, to: { tableId: string } | { customerName: string }): TabDetail;
   setCustomerName(tabId: string, name: string | null): TabDetail;
 
   // Sales list and refunds (iade)

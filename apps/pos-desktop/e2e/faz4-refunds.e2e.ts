@@ -73,11 +73,12 @@ describe('Faz 4: iptal ve iade', () => {
     await page.getByRole('button', { name: /Nakit ödendi/ }).click();
     await page.getByText('Ödenen').waitFor();
 
-    page.once('dialog', (d) => {
-      expect(d.message()).toContain('100,00 ₺ iade edilip');
-      void d.accept();
-    });
+    // Two questions before a named tab is cancelled (2026-11-04).
     await page.getByRole('button', { name: /Hesabı iptal et/ }).click();
+    const first = page.getByRole('dialog', { name: 'Hesap iptal edilsin mi?' });
+    expect(await first.textContent()).toContain('100,00 ₺ iade edilir');
+    await first.getByRole('button', { name: 'İptal et', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Emin misin?' }).getByRole('button', { name: 'Evet, iptal et' }).click();
     await page.getByText('Açık hesap yok.').waitFor();
   });
 

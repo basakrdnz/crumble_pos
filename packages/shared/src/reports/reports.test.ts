@@ -46,8 +46,8 @@ function data() {
   const tabs = [
     tab('t1', 's1', { total: 43000, closed_at: '2026-11-02T06:10:00.000Z' }), // 09:10
     tab('t2', 's1', { total: 19350, closed_at: '2026-11-02T06:40:00.000Z' }), // 09:40
-    tab('t3', 's2', { total: 30600, discount_percent: 10, closed_at: '2026-11-03T09:05:00.000Z' }), // 12:05
-    tab('t4', 's2', { status: 'void', total: null }),
+    tab('t3', 's2', { kind: 'table', total: 30600, discount_percent: 10, closed_at: '2026-11-03T09:05:00.000Z' }), // 12:05
+    tab('t4', 's2', { kind: 'named', customer_name: 'Ali', status: 'void', total: null }),
   ];
   const items = [
     item('i1', 't1', 'latte', 21500, { quantity: 2 }),

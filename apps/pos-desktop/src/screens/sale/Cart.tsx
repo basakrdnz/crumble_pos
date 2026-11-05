@@ -1,7 +1,8 @@
 import type { TabItem } from '@crumble/shared';
-import { DISCOUNT_PRESETS, formatTL, lineTotals } from '@crumble/shared';
-import type { ReactNode } from 'react';
+import { DISCOUNT_PRESETS, formatTL, istanbulDay, lineTotals } from '@crumble/shared';
+import { Fragment, type ReactNode } from 'react';
 import type { TabDetail } from '../../db/sales';
+import { formatLongDate } from '../../format';
 
 /**
  * Cart column: lines (click opens the line panel; a click on the empty area
@@ -12,6 +13,7 @@ export function Cart({
   title,
   subtitle,
   tools,
+  banner,
   detail,
   selectedItemId,
   onSelect,
@@ -24,6 +26,7 @@ export function Cart({
   title: string;
   subtitle?: string;
   tools?: ReactNode;
+  banner?: ReactNode;
   detail: TabDetail | null;
   selectedItemId: string | null;
   onSelect(item: TabItem | null): void;
@@ -39,6 +42,10 @@ export function Cart({
   const percent = detail?.tab.discount_percent ?? null;
   const custom = percent !== null && !(DISCOUNT_PRESETS as readonly number[]).includes(percent);
   const hasItems = (totals?.itemCount ?? 0) > 0;
+  // A tab kept over several days shows a dated divider where the day changes
+  // (2026-11-04: "hangi gün ne alındı").
+  const days = new Set(items.map((i) => istanbulDay(i.created_at)));
+  const dividers = days.size > 1;
 
   return (
     <section className="cart" aria-label="Sepet">
@@ -51,13 +58,21 @@ export function Cart({
         </div>
         {tools}
       </header>
+      {banner}
       <div className="cart-lines" onClick={() => onSelect(null)}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const line = lineTotals(item);
           const changed = item.unit_price !== item.list_price;
+          const day = istanbulDay(item.created_at);
+          const newDay = dividers && (index === 0 || istanbulDay(items[index - 1]!.created_at) !== day);
           return (
+            <Fragment key={item.id}>
+            {newDay && (
+              <div className="cart-day" data-day={day}>
+                <span>{formatLongDate(item.created_at)}</span>
+              </div>
+            )}
             <div
-              key={item.id}
               className={`cart-line${item.id === selectedItemId ? ' selected' : ''}`}
               data-line={item.name_snapshot}
               onClick={(e) => {
@@ -94,6 +109,7 @@ export function Cart({
                 </button>
               )}
             </div>
+            </Fragment>
           );
         })}
         {items.length === 0 && <div className="empty">Sepet boş. Soldan ürün seçin.</div>}
