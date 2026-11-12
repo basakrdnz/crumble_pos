@@ -223,6 +223,7 @@ Kaynak repo kökündeki `crumble_menu_seed.csv` (Google Doc `Crumble_Menu_Kasim2
   - Hızlı satış: "Masaya aktar" / "İsme aktar" (`convertQuickTab`; kind quick → table/named, sadece açıkken; SQLite v7 + `20261104000014_quick_to_tab.sql`). Satır seçili değilken orta kolonda açık hesaplar listesi, tıklayınca hesap açılır (Sale içinde TabScreen).
   - İptal kuralı (kullanıcı): hızlı satışta çıkarılan satırlar ve "Sepeti boşalt" (eski "Satışı iptal et", tek onay) **iptal sayılmaz**: `shiftSummary` `kind = quick` olanları iptal toplamına katmaz, boşaltılan sepet Satışlar listelerinde (kasa ve telefon) görünmez. Masa/isim hesabında çıkarılan satır ve hesap iptali iptal sayılır; hesap iptali iki onaylı ("Hesap iptal edilsin mi?" → "Emin misin?").
   - Gün sonunda "İptal" yok, yerine "Hesabı gör" (`components/TabViewDialog.tsx`, günlere ayrılmış). Yanlış açılmış hesap, hesaba girilip iptal edilir. "Ürün bazlı rapor… yönetim uygulamasında" yazısı kaldırıldı.
+  - Masa seçme penceresi (`MoveDialog`: Taşı ve Masaya aktar, 2026-11-12): masalar, hangilerinin dolu olduğu yüklenmeden gösterilmez; dolu masa yeşil dolu kutu, tıklanamaz, yazı yok (kullanıcı).
   - E2E: `e2e/kasa-hesaplar.e2e.ts`.
 - **Günde tek vardiya ve takvim (2026-11-02):**
   - Aynı İstanbul gününde (vardiyanın açılış günü) ikinci vardiya açılmaz. Bugünün vardiyası kapatılmışsa "Vardiyayı aç" yerine "Bugünün vardiyasına devam et" çıkar (`getTodaysClosedShift`, `reopenShift`): kapanış alanları boşalır, satışlar aynı vardiyada toplanır, gün sonu tekrar alınır. "Sıfırla" yok (silme yok kuralı).
