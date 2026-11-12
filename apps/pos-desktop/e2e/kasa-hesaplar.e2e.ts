@@ -36,6 +36,23 @@ describe('Kasa: açık hesaplar ve hızlı satış aktarma', () => {
     await snap(page, 'hesap-1-hizli-satis-acik-hesaplar');
   });
 
+  it('a taken table is filled green and cannot be picked (2026-11-12)', async () => {
+    const { page } = run;
+    await pick(page, 'Kahve', 'Espresso');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Masaya aktar' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Hangi masaya aktarılsın?' });
+    const taken = dialog.getByRole('button', { name: '5', exact: true });
+    await taken.waitFor();
+    expect(await taken.isDisabled()).toBe(true);
+    expect(await dialog.getByRole('button', { name: '4', exact: true }).isDisabled()).toBe(false);
+    await snap(page, 'hesap-1b-dolu-masa');
+    await dialog.getByRole('button', { name: 'Vazgeç' }).click();
+    await page.getByRole('button', { name: /Sepeti boşalt/ }).click();
+    await page.getByRole('dialog', { name: 'Sepet boşaltılsın mı?' }).getByRole('button', { name: 'Boşalt' }).click();
+    await page.getByText('Sepet boş. Soldan ürün seçin.').waitFor();
+  });
+
   it('opens it with a green bar; this round counts from 0', async () => {
     const { page } = run;
     await page.locator('[data-open-tab="Masa 5"]').click();

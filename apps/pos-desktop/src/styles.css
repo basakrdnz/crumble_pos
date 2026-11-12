@@ -92,6 +92,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .btn:hover:not(:disabled) { border-color: var(--second); }
 .btn:disabled { opacity: 0.45; cursor: default; }
+.btn.table-pick.taken { opacity: 1; background: var(--primary); border-color: var(--primary); color: #fff; cursor: not-allowed; }
 .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
 .btn.apply { background: var(--apply); border-color: var(--apply); color: var(--on-apply); }

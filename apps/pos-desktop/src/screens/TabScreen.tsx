@@ -229,30 +229,39 @@ export function MoveDialog({
 }) {
   const [plans] = useApiData(() => api.listFloorPlans());
   const [open] = useApiData(() => api.listOpenTabSummaries());
-  const busy = new Set(open?.map((o) => o.tab.table_id).filter(Boolean));
+  const busy = new Map(open?.filter((o) => o.tab.table_id).map((o) => [o.tab.table_id!, o.title]));
+  // 2026-11-12: no table is offered before we know which ones are taken; a
+  // taken one is filled green (like on the floor plan) and cannot be clicked.
+  const ready = plans !== undefined && open !== undefined;
   return (
     <div className="overlay" onClick={onClose}>
       <div className="dialog" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <h3>{title}</h3>
-        {(plans ?? []).map((plan) => (
-          <div key={plan.id} style={{ marginBottom: 10 }}>
-            <div className="muted">{plan.name}</div>
-            <div className="row wrap">
-              {tables
-                .filter((t) => t.floor_plan_id === plan.id)
-                .map((t) => (
-                  <button
-                    key={t.id}
-                    className="btn"
-                    disabled={t.id === currentTableId || busy.has(t.id)}
-                    onClick={() => onMove(t.id)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+        {!ready && <p className="muted">Masalar yükleniyor…</p>}
+        {ready &&
+          plans.map((plan) => (
+            <div key={plan.id} style={{ marginBottom: 10 }}>
+              <div className="muted">{plan.name}</div>
+              <div className="row wrap">
+                {tables
+                  .filter((t) => t.floor_plan_id === plan.id)
+                  .map((t) => {
+                    const taken = t.id === currentTableId || busy.has(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        className={`btn table-pick${taken ? ' taken' : ''}`}
+                        disabled={taken}
+                        title={taken ? `Dolu${busy.get(t.id) ? `: ${busy.get(t.id)}` : ''}` : undefined}
+                        onClick={() => onMove(t.id)}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
         {tables.length === 0 && <p className="muted">Krokide masa yok. Ayarlar → Kroki düzenle.</p>}
         <div className="actions">
           <button className="btn" onClick={onClose}>
