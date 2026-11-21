@@ -6,7 +6,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { Sheet, sheetStyles as s } from '../../components/Menu';
 import { colors } from '../../components/theme';
 import { Badge, Card, Label, Row, Screen, Section, Stat, styles } from '../../components/ui';
-import { loadCatalog, loadTabDetail, requestTabPayment, requestTabRename, requestTabVoid, type TabRequest } from '../../lib/data';
+import { loadCatalog, loadOpenShift, loadTabDetail, requestTabPayment, requestTabRename, requestTabVoid, type TabRequest } from '../../lib/data';
 import { formatDateTime, formatDay, formatTime, openFor, tabLabel } from '../../lib/format';
 import { useLive } from '../../lib/useLive';
 
@@ -31,7 +31,7 @@ function byDay(items: TabItem[]): [string, TabItem[]][] {
 /** Açık hesap detayı (2026-11-04): what was taken when, payments, and actions that go to the POS. */
 export default function TabDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data, error, refreshing, reload } = useLive(async () => Promise.all([loadTabDetail(id), loadCatalog()]), [id]);
+  const { data, error, refreshing, reload } = useLive(async () => Promise.all([loadTabDetail(id), loadCatalog(), loadOpenShift()]), [id]);
   const [sheet, setSheet] = useState<'pay' | 'rename' | 'void' | null>(null);
   const detail = data?.[0];
   if (!data) return <Screen underHeader title="Hesap" error={error}>{null}</Screen>;
@@ -45,6 +45,11 @@ export default function TabDetailScreen() {
   const open = tab.status === 'open';
   const pendingVoid = requests.some((r) => r.status === 'pending' && r.kind === 'void');
   const title = tabLabel(tab, data[1].tables);
+  // The POS applies payments and cancels into its open shift; with the day
+  // closed it rejects them ("Açık vardiya yok"), so they are not offered (2026-11-21).
+  const dayOpen = data[2] !== null;
+  const canPay = dayOpen && remaining - pendingPay > 0 && !pendingVoid;
+  const canVoid = dayOpen && paid === 0 && pendingPay === 0 && !pendingVoid;
 
   return (
     <Screen underHeader title={title} refreshing={refreshing} onRefresh={() => void reload()} error={error}>
@@ -60,8 +65,8 @@ export default function TabDetailScreen() {
       {open && (
         <Card>
           <Pressable
-            style={[s.primary, (remaining - pendingPay <= 0 || pendingVoid) && { opacity: 0.5 }]}
-            disabled={remaining - pendingPay <= 0 || pendingVoid}
+            style={[s.primary, !canPay && { opacity: 0.5 }]}
+            disabled={!canPay}
             onPress={() => setSheet('pay')}
             accessibilityRole="button"
           >
@@ -72,14 +77,19 @@ export default function TabDetailScreen() {
               <Text style={[s.secondaryText, { color: colors.text }]}>Adını değiştir</Text>
             </Pressable>
             <Pressable
-              style={[s.secondary, { flex: 1 }, (paid > 0 || pendingPay > 0 || pendingVoid) && { opacity: 0.5 }]}
-              disabled={paid > 0 || pendingPay > 0 || pendingVoid}
+              style={[s.secondary, { flex: 1 }, !canVoid && { opacity: 0.5 }]}
+              disabled={!canVoid}
               onPress={() => setSheet('void')}
               accessibilityRole="button"
             >
               <Text style={s.secondaryText}>Hesabı iptal et</Text>
             </Pressable>
           </View>
+          {!dayOpen && (
+            <Text style={[styles.rowSub, { marginTop: 8 }]} testID="day-closed">
+              Kasada gün kapalı. Ödeme ve iptal, gün açılınca yapılabilir.
+            </Text>
+          )}
           {paid > 0 && <Text style={[styles.rowSub, { marginTop: 8 }]}>Ödeme alınmış hesap telefondan iptal edilemez; önce kasada iade yapılır.</Text>}
         </Card>
       )}
