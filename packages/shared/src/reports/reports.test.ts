@@ -41,7 +41,7 @@ const payment = (id: string, tabId: string, shiftId: string, method: 'cash' | 'c
 });
 
 function data() {
-  const s1 = shift('s1', '2026-11-02T05:00:00.000Z');
+  const s1 = shift('s1', '2026-11-02T05:00:00.000Z', { closed_at: '2026-11-02T20:00:00.000Z' });
   const s2 = shift('s2', '2026-11-03T05:00:00.000Z');
   const tabs = [
     tab('t1', 's1', { total: 43000, closed_at: '2026-11-02T06:10:00.000Z' }), // 09:10
@@ -53,10 +53,10 @@ function data() {
     item('i1', 't1', 'latte', 21500, { quantity: 2 }),
     item('i2', 't2', 'latte', 21500, { discount_percent: 10 }),
     item('i3', 't2', 'cay', 6500, { is_comp: true }),
-    item('i4', 't3', 'tost', 25000),
-    item('i5', 't3', 'latte', 9000, { list_price: 21500 }),
-    item('i6', 't3', 'cay', 6500, { voided_at: T }),
-    item('i7', 't4', 'latte', 21500),
+    item('i4', 't3', 'tost', 25000, { created_at: '2026-11-03T09:00:00.000Z' }),
+    item('i5', 't3', 'latte', 9000, { list_price: 21500, created_at: '2026-11-03T09:00:00.000Z' }),
+    item('i6', 't3', 'cay', 6500, { voided_at: T, created_at: '2026-11-03T09:00:00.000Z' }),
+    item('i7', 't4', 'latte', 21500, { created_at: '2026-11-03T09:00:00.000Z' }),
   ];
   const payments = [
     payment('p1', 't1', 's1', 'cash', 43000),
@@ -73,9 +73,11 @@ describe('reports', () => {
     expect(summarizeShift(d.shifts[1]!, d)).toMatchObject({ cardSales: 30600, cashRefunds: 1000, salesCount: 1, voidTotal: 6500 + 21500 });
   });
 
-  it('totals a period (revenue = payments − refunds)', () => {
+  it('totals a period (ciro = what was taken − refunds)', () => {
     expect(periodTotals(data())).toEqual({
       revenue: 43000 + 19350 + 30600 - 1000,
+      open: 0,
+      collected: 43000 + 19350 + 30600 - 1000,
       cash: 42000,
       card: 49950,
       refunds: 1000,
@@ -97,9 +99,36 @@ describe('reports', () => {
     expect(revenueSeries(data(), 'month')[0]!.key).toBe('2026-11-01');
   });
 
+  it('a week-long tab counts on the days things were taken, money on the day it was paid (2026-11-21)', () => {
+    const days = ['2026-11-16', '2026-11-17', '2026-11-20'].map((d, i) =>
+      shift(`w${i}`, `${d}T06:00:00.000Z`, { closed_at: `${d}T20:00:00.000Z` }),
+    );
+    // Masa 1: latte on Monday, tost on Tuesday, %10 off, paid by card on Friday.
+    const t = tab('w', 'w0', { kind: 'table', closed_shift_id: 'w2', total: 41850, discount_percent: 10 });
+    const items = [
+      item('a', 'w', 'latte', 21500, { created_at: '2026-11-16T07:00:00.000Z' }),
+      item('b', 'w', 'tost', 25000, { created_at: '2026-11-17T08:00:00.000Z' }),
+    ];
+    const pay = payment('wp', 'w', 'w2', 'card', 41850);
+    const d = { shifts: days, tabs: [t], items, payments: [pay], refunds: [] };
+    const series = revenueSeries(d, 'day').map((p) => [p.key, p.totals.revenue, p.totals.collected]);
+    // Discount so far: floor(21500 × 10%) = 2150, then floor(46500 × 10%) = 4650 → 2500 on Tuesday.
+    expect(series).toEqual([
+      ['2026-11-16', 21500 - 2150, 0],
+      ['2026-11-17', 25000 - 2500, 0],
+      ['2026-11-20', 0, 41850],
+    ]);
+    // Before it is paid, the same lines already count, marked as open.
+    const open = { ...d, tabs: [{ ...t, status: 'open' as const, closed_shift_id: null, total: null, closed_at: null }], payments: [] };
+    expect(periodTotals(open)).toMatchObject({ revenue: 41850, open: 41850, collected: 0, salesCount: 2 });
+    // An open quick sale (a cart being filled) is not ciro yet; a cancelled tab never is.
+    expect(periodTotals({ ...open, tabs: [{ ...open.tabs[0]!, kind: 'quick' as const }] }).revenue).toBe(0);
+  });
+
   it('counts sales per Istanbul hour', () => {
     const hours = hourlyActivity(data());
     expect(hours[9]).toEqual({ hour: 9, sales: 2, revenue: 62350 });
+    // t3's lines were taken at 12:00 Istanbul.
     expect(hours[12]).toEqual({ hour: 12, sales: 1, revenue: 30600 });
     expect(hours.reduce((n, h) => n + h.sales, 0)).toBe(3);
   });

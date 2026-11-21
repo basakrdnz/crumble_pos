@@ -123,6 +123,8 @@ describe('Faz 3: hesap ve kroki', () => {
     // cash 400 + 75
     await expect.poll(() => page.locator('[data-stat="Nakit"]').textContent()).toBe('475,00 ₺');
     expect(await page.locator('[data-stat="Kart"]').textContent()).toBe('500,00 ₺');
-    expect(await page.locator('[data-stat="Ciro"]').textContent()).toBe('975,00 ₺');
+    // Ciro counts what was taken, Mehmet Can's open tab too (2026-11-21).
+    expect(await page.locator('[data-stat="Ciro"]').textContent()).toBe('1.085,00 ₺');
+    await page.getByText('110,00 ₺ açık hesapta').waitFor();
   });
 });

@@ -66,6 +66,7 @@ function Summary() {
             <Text style={[styles.statValue, styles.statBig]} testID="reports-revenue">
               {formatTL(totals.revenue)}
             </Text>
+            {totals.open > 0 && <Text style={styles.rowSub}>Açık hesapta bekleyen: {formatTL(totals.open)}</Text>}
           </Card>
           <View style={styles.grid}>
             <Stat label="Nakit" value={formatTL(totals.cash)} />
@@ -104,7 +105,7 @@ function Hours() {
     const { from, to } = hoursRange(range);
     return { report: await loadReportData(from, to), from, to };
   }, [range]);
-  const map = data ? heatmap(data.report.tabs, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
+  const map = data ? heatmap(data.report, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
   const hours = map ? Array.from({ length: map.toHour - map.fromHour + 1 }, (_, i) => map.fromHour + i) : [];
   const max = map ? Math.max(1, ...map.cells.flat().map((c) => c?.revenue ?? 0)) : 1;
   const anyOpen = map ? map.cells.some((row) => row.some(Boolean)) : false;

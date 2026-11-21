@@ -1,16 +1,18 @@
 // Reports for the manager app (plan §6), computed from synced rows. A "day"
-// is the opening day of a shift (plan §4); money is counted in the shift it
-// was taken in (payments.shift_id / refunds.shift_id).
+// is the opening day of a shift (plan §4). Ciro counts each line in the shift
+// it was added in, paid or not (2026-11-21, sold.ts); money taken (nakit/kart)
+// and refunds count in the shift they happened in (payments.shift_id / refunds.shift_id).
 import { shiftSummary, type ShiftSummary } from '../calc/shiftSummary';
-import { lineTotals, tabTotals } from '../calc/tab';
+import { linesInShift, type SoldLine, soldLines } from '../calc/sold';
 import { sumKurus, type Kurus } from '../money';
 import type { Category, Payment, Product, Refund, Shift, Tab, TabItem } from '../types';
 import { type Day, istanbulDay, istanbulHour, monthStart, weekStart } from './dates';
 
 export interface ReportData {
   shifts: readonly Shift[];
-  /** Tabs closed in these shifts (and any open ones, for counts). */
+  /** Tabs closed in these shifts and tabs with lines added in them (open ones too). */
   tabs: readonly Tab[];
+  /** All lines of those tabs. */
   items: readonly TabItem[];
   payments: readonly Payment[];
   refunds: readonly Refund[];
@@ -26,6 +28,24 @@ function itemsByTab(items: readonly TabItem[]): Map<string, TabItem[]> {
   return map;
 }
 
+const soldCache = new WeakMap<object, SoldLine[]>();
+
+/** Sold lines of the data (computed once per data object). */
+export function reportLines(data: Pick<ReportData, 'tabs' | 'items'>): SoldLine[] {
+  let lines = soldCache.get(data);
+  if (!lines) {
+    lines = soldLines(data.tabs, data.items);
+    soldCache.set(data, lines);
+  }
+  return lines;
+}
+
+/** Sold lines added in the data's shifts. */
+export function periodLines(data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>): SoldLine[] {
+  const lines = reportLines(data);
+  return data.shifts.flatMap((shift) => linesInShift(lines, shift));
+}
+
 /** One shift's summary from the synced rows (same rules as the POS close screen). */
 export function summarizeShift(shift: Shift, data: ReportData): ShiftSummary {
   const byTab = itemsByTab(data.items);
@@ -37,15 +57,21 @@ export function summarizeShift(shift: Shift, data: ReportData): ShiftSummary {
     closedTabs: data.tabs
       .filter((t) => t.closed_shift_id === shift.id && t.status !== 'open')
       .map((t) => ({ status: t.status, kind: t.kind, discount_percent: t.discount_percent, items: byTab.get(t.id) ?? [] })),
+    sold: linesInShift(reportLines(data), shift),
   });
 }
 
 export interface PeriodTotals {
-  /** Net takings: payments − refunds. */
+  /** Ciro: what was taken in the period (paid or still on open tabs) − refunds. */
   revenue: Kurus;
+  /** The part of the ciro still on open tabs. */
+  open: Kurus;
+  /** Money taken in the period, net of refunds (cash + card). */
+  collected: Kurus;
   cash: Kurus;
   card: Kurus;
   refunds: Kurus;
+  /** Tabs with something taken in the period (counted per day). */
   salesCount: number;
   discount: Kurus;
   comp: Kurus;
@@ -54,17 +80,19 @@ export interface PeriodTotals {
 }
 
 export function emptyTotals(): PeriodTotals {
-  return { revenue: 0, cash: 0, card: 0, refunds: 0, salesCount: 0, discount: 0, comp: 0, void: 0, priceChange: 0 };
+  return { revenue: 0, open: 0, collected: 0, cash: 0, card: 0, refunds: 0, salesCount: 0, discount: 0, comp: 0, void: 0, priceChange: 0 };
 }
 
 function addSummary(total: PeriodTotals, s: ShiftSummary): PeriodTotals {
   const refunds = s.cashRefunds + s.cardRefunds;
   return {
-    revenue: total.revenue + s.cashSales + s.cardSales - refunds,
+    revenue: total.revenue + s.revenue - refunds,
+    open: total.open + s.openRevenue,
+    collected: total.collected + s.cashSales + s.cardSales - refunds,
     cash: total.cash + s.cashSales - s.cashRefunds,
     card: total.card + s.cardSales - s.cardRefunds,
     refunds: total.refunds + refunds,
-    salesCount: total.salesCount + s.salesCount,
+    salesCount: total.salesCount + s.revenueTabCount,
     discount: total.discount + s.discountTotal,
     comp: total.comp + s.compTotal,
     void: total.void + s.voidTotal,
@@ -102,14 +130,19 @@ export interface HourBucket {
   revenue: Kurus;
 }
 
-/** Paid tabs per closing hour (saatlik yoğunluk). */
+/** Ciro per hour the lines were added (saatlik yoğunluk); sales = tabs served in that hour. */
 export function hourlyActivity(data: ReportData): HourBucket[] {
   const hours: HourBucket[] = Array.from({ length: 24 }, (_, hour) => ({ hour, sales: 0, revenue: 0 }));
-  for (const tab of data.tabs) {
-    if (tab.status !== 'paid' || !tab.closed_at) continue;
-    const bucket = hours[istanbulHour(tab.closed_at)]!;
-    bucket.sales++;
-    bucket.revenue += tab.total ?? 0;
+  const seen = new Set<string>();
+  for (const line of periodLines(data)) {
+    const hour = istanbulHour(line.at);
+    const bucket = hours[hour]!;
+    bucket.revenue += line.amount;
+    const key = `${line.tabId}|${istanbulDay(line.at)}|${hour}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      bucket.sales++;
+    }
   }
   return hours;
 }
@@ -138,17 +171,22 @@ export interface ProductReport {
   totalRevenue: Kurus;
 }
 
-/** Units and revenue per product and category over paid tabs (plan §6 Ürün raporu). */
+/**
+ * Units and revenue per product and category (plan §6 Ürün raporu): lines
+ * added in the data's shifts on tabs that count as sold, paid or still open.
+ */
 export function productReport(
-  data: Pick<ReportData, 'tabs' | 'items'>,
+  data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>,
   products: readonly Pick<Product, 'id' | 'name' | 'category_id'>[],
   categories: readonly Pick<Category, 'id' | 'name' | 'sort_order'>[],
+  lines: readonly SoldLine[] = periodLines(data),
 ): ProductReport {
-  const paid = new Map(data.tabs.filter((t) => t.status === 'paid').map((t) => [t.id, t]));
   const productById = new Map(products.map((p) => [p.id, p]));
   const rows = new Map<string, ProductRow>();
-  for (const item of data.items) {
-    if (!paid.has(item.tab_id) || item.voided_at) continue;
+  let cartDiscount = 0;
+  for (const line of lines) {
+    const item = line.item as TabItem;
+    cartDiscount += line.lineTotal - line.amount;
     const product = productById.get(item.product_id);
     let row = rows.get(item.product_id);
     if (!row) {
@@ -165,13 +203,9 @@ export function productReport(
     if (item.is_comp) row.compQuantity += item.quantity;
     else {
       row.quantity += item.quantity;
-      row.revenue += lineTotals(item).total;
+      row.revenue += line.lineTotal;
     }
   }
-  const byTab = itemsByTab(data.items);
-  const cartDiscount = sumKurus(
-    [...paid.values()].map((t) => tabTotals(byTab.get(t.id) ?? [], t.discount_percent).cartDiscount),
-  );
 
   const order = new Map(categories.map((c) => [c.id, c.sort_order]));
   const names = new Map(categories.map((c) => [c.id, c.name]));

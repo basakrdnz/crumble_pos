@@ -32,6 +32,9 @@ describe('shiftSummary', () => {
       ],
     });
     expect(summary).toEqual({
+      revenue: 21500 + (46000 - 4600) + 13000, // no sold lines given: the paid tabs
+      openRevenue: 0,
+      revenueTabCount: 3,
       openingCash: 50000,
       cashSales: 24500,
       cardSales: 56000,
@@ -64,6 +67,21 @@ describe('shiftSummary', () => {
     expect(summary.voidTotal).toBe(1000);
     expect(summary.voidedTabCount).toBe(0);
     expect(summary.salesCount).toBe(2);
+  });
+
+  it('ciro comes from the lines sold in the shift, paid or open (2026-11-21)', () => {
+    const summary = shiftSummary({
+      openingCash: 0,
+      payments: [{ method: 'card', amount: 9000 }], // an older tab paid today: money, not ciro
+      refunds: [],
+      closedTabs: [],
+      sold: [
+        { tabId: 'a', amount: 3000, open: false },
+        { tabId: 'b', amount: 2000, open: true },
+        { tabId: 'b', amount: 500, open: true },
+      ],
+    });
+    expect(summary).toMatchObject({ revenue: 5500, openRevenue: 2500, revenueTabCount: 2, cardSales: 9000 });
   });
 
   it('has no difference before the drawer is counted', () => {

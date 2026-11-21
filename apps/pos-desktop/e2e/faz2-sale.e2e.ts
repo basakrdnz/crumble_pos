@@ -142,7 +142,7 @@ describe('Faz 2: vardiya ve hızlı satış', () => {
     expect(await cell('Beklenen nakit')).toBe('862,00 ₺');
     expect(await page.locator('[data-summary="Sayılan nakit"]').count()).toBe(0);
     expect(await page.locator('[data-summary="İkram toplamı"]').count()).toBe(0);
-    expect(await cell('Kart satışlar')).toBe('712,40 ₺'); // 422,40 + 290
+    expect(await cell('Kart tahsilat')).toBe('712,40 ₺'); // 422,40 + 290
     expect(await cell('Satış adedi')).toBe('4');
     expect(await cell('İndirim toplamı')).toBe('105,60 ₺'); // 48 + 57,60
     // Quick sales only: removed lines and the emptied cart are not "iptal" (2026-11-04).
