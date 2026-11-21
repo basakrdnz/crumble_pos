@@ -31,7 +31,8 @@ function onlyDay(data: ReportData, day: string): ReportData {
   const ids = new Set(shifts.map((s) => s.id));
   return {
     shifts,
-    tabs: data.tabs.filter((t) => t.closed_shift_id && ids.has(t.closed_shift_id)),
+    // All tabs: ciro takes the lines added in the day's shift, whenever the tab closes.
+    tabs: data.tabs,
     items: data.items,
     payments: data.payments.filter((p) => ids.has(p.shift_id)),
     refunds: data.refunds.filter((r) => ids.has(r.shift_id)),
@@ -68,13 +69,13 @@ export default function Today() {
   const { today, report, open, catalog, now } = data;
   const todayData = onlyDay(report, today);
   const totals = periodTotals(todayData);
-  const cmp = compareSoFar(report.tabs, now);
+  const cmp = compareSoFar(report, now);
   const weekday = weekdayIndex(today);
   const currentHour = Number(formatTime(now).slice(0, 2));
 
   // Today's hours against this month's average for the same weekday (before today).
-  const avg = today > monthStart(today) ? heatmap(report.tabs, report.shifts, monthStart(today), addDays(today, -1), now).cells[weekday]! : [];
-  const hours = hourlyRevenue(report.tabs, today);
+  const avg = today > monthStart(today) ? heatmap(report, report.shifts, monthStart(today), addDays(today, -1), now).cells[weekday]! : [];
+  const hours = hourlyRevenue(report, today);
   const openHours = [...hours.keys()].filter((h) => hours[h]! > 0 || avg[h]);
   const from = Math.min(...(openHours.length ? openHours : [8]), currentHour);
   const to = Math.max(...(openHours.length ? openHours : [20]), currentHour);
@@ -100,6 +101,11 @@ export default function Today() {
       <Text style={s.heroBig} testID="today-revenue">
         {formatTL(totals.revenue)}
       </Text>
+      {totals.open > 0 && (
+        <Text style={s.heroOpen} testID="today-open">
+          Açık hesapta bekleyen: {formatTL(totals.open)}
+        </Text>
+      )}
       <View style={s.compare}>
         <View style={s.compareRow}>
           <Text style={s.compareLabel}>Dün bu saatte</Text>
@@ -130,12 +136,12 @@ export default function Today() {
             {formatTL(totals.card)}
           </Text>
         </View>
-        <View style={s.heroCell}>
+        <Pressable style={s.heroCell} onPress={() => router.navigate('/sales')} accessibilityRole="button" testID="today-sales-link">
           <Text style={s.heroCellLabel}>Satış</Text>
           <Text style={s.heroCellValue} testID="today-count">
             {totals.salesCount}
           </Text>
-        </View>
+        </Pressable>
       </View>
     </View>
   );
@@ -188,6 +194,7 @@ const s = StyleSheet.create({
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 14, letterSpacing: 2.5 },
   heroLabel: { marginTop: 16, fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted },
   heroBig: { fontSize: 42, fontFamily: fonts.heavy, color: '#fff', marginTop: 2 },
+  heroOpen: { fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted, marginTop: 2 },
   // Tasarım D (2026-11-04): the comparisons as a two-row list, larger than the old pills.
   compare: { marginTop: 10, backgroundColor: colors.forestChip, borderRadius: 14, overflow: 'hidden' },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8 },

@@ -17,7 +17,8 @@ import {
   WEEKDAYS_SHORT,
 } from '@crumble/shared';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 import { type RangeKey, RangePicker, rangeOf } from '../../components/pickers';
 import { colors, fonts, heat } from '../../components/theme';
 import { Bars, Card, Chip, Chips, Columns, Delta, Empty, HeatGrid, Label, Row, Screen, Section, Segmented, Stat, styles } from '../../components/ui';
@@ -48,7 +49,8 @@ export default function Reports() {
 }
 
 function Summary() {
-  const [range, setRange] = useState<RangeKey>('week');
+  // Raporlar always opens on today (kullanıcı 2026-11-21).
+  const [range, setRange] = useState<RangeKey>('today');
   const { data, error } = useLive(async () => {
     const { from, to } = rangeOf(range);
     return loadReportData(from, to);
@@ -58,6 +60,17 @@ function Summary() {
   return (
     <>
       <RangePicker value={range} onChange={setRange} />
+      <Pressable onPress={() => router.push('/months')} accessibilityRole="button" testID="months-link">
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={styles.rowLeft}>Ay ay satışlar</Text>
+              <Text style={styles.rowSub}>Her ayın cirosu, günleriyle</Text>
+            </View>
+            <Text style={[styles.rowLeft, { color: colors.muted }]}>›</Text>
+          </View>
+        </Card>
+      </Pressable>
       {error && <Text style={styles.error}>{error}</Text>}
       {totals && (
         <>
@@ -66,6 +79,7 @@ function Summary() {
             <Text style={[styles.statValue, styles.statBig]} testID="reports-revenue">
               {formatTL(totals.revenue)}
             </Text>
+            {totals.open > 0 && <Text style={styles.rowSub}>Açık hesapta bekleyen: {formatTL(totals.open)}</Text>}
           </Card>
           <View style={styles.grid}>
             <Stat label="Nakit" value={formatTL(totals.cash)} />
@@ -104,7 +118,7 @@ function Hours() {
     const { from, to } = hoursRange(range);
     return { report: await loadReportData(from, to), from, to };
   }, [range]);
-  const map = data ? heatmap(data.report.tabs, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
+  const map = data ? heatmap(data.report, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
   const hours = map ? Array.from({ length: map.toHour - map.fromHour + 1 }, (_, i) => map.fromHour + i) : [];
   const max = map ? Math.max(1, ...map.cells.flat().map((c) => c?.revenue ?? 0)) : 1;
   const anyOpen = map ? map.cells.some((row) => row.some(Boolean)) : false;
@@ -182,7 +196,7 @@ function sameLengthBefore(from: Day, to: Day): { from: Day; to: Day } {
 }
 
 function ProductsPart() {
-  const [range, setRange] = useState<RangeKey>('week');
+  const [range, setRange] = useState<RangeKey>('today');
   const { data, error } = useLive(async () => {
     const cur = rangeOf(range);
     const prev = sameLengthBefore(cur.from, cur.to);
@@ -275,7 +289,7 @@ function kpisOf(data: ReportData) {
 }
 
 function Compare() {
-  const [grain, setGrain] = useState<Grain>('week');
+  const [grain, setGrain] = useState<Grain>('day');
   const { data, error } = useLive(async () => {
     const p = periods(grain);
     const [cur, prev] = await Promise.all([loadReportData(p.cur.from, p.cur.to), loadReportData(p.prev.from, p.prev.to)]);

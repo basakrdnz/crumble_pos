@@ -68,9 +68,15 @@ export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
 function Stats({ summary }: { summary: ShiftSummary }) {
   const refunds = summary.cashRefunds + summary.cardRefunds;
   const stats: [string, string, string][] = [
-    ['Ciro', formatTL(summary.salesTotal), `${summary.salesCount} satış`],
-    ['Nakit', formatTL(summary.cashSales), summary.cashRefunds ? `iade −${formatTL(summary.cashRefunds)}` : 'nakit ödemeler'],
-    ['Kart', formatTL(summary.cardSales), summary.cardRefunds ? `iade −${formatTL(summary.cardRefunds)}` : 'kart ödemeler'],
+    // Ciro = what was taken today, paid or still on an open tab (2026-11-21);
+    // Nakit/Kart = money taken today, also for tabs opened on earlier days.
+    [
+      'Ciro',
+      formatTL(summary.revenue),
+      summary.openRevenue > 0 ? `${formatTL(summary.openRevenue)} açık hesapta` : `${summary.revenueTabCount} satış`,
+    ],
+    ['Nakit', formatTL(summary.cashSales), summary.cashRefunds ? `iade −${formatTL(summary.cashRefunds)}` : 'bugün alınan nakit'],
+    ['Kart', formatTL(summary.cardSales), summary.cardRefunds ? `iade −${formatTL(summary.cardRefunds)}` : 'bugün alınan kart'],
     ['İndirim', formatTL(summary.discountTotal), 'sepet indirimleri'],
     ['İade', formatTL(refunds), 'nakit + kart'],
     ['İptal', formatTL(summary.voidTotal), summary.voidedTabCount ? `${summary.voidedTabCount} hesap iptal` : 'çıkarılan satırlar'],
@@ -94,10 +100,11 @@ function SummaryTable({ summary, shift }: { summary: ShiftSummary; shift: ShiftR
   const rows: [string, string, string?][] = [
     ['Açılış', formatDateTime(shift.opened_at)],
     ['Kapanış', shift.closed_at ? formatDateTime(shift.closed_at) : 'Açık'],
-    ['Satış adedi', String(summary.salesCount)],
-    ['Satış toplamı', formatTL(summary.salesTotal), 'strong'],
-    ['Nakit satışlar', formatTL(summary.cashSales)],
-    ['Kart satışlar', formatTL(summary.cardSales)],
+    ['Ciro', formatTL(summary.revenue), 'strong'],
+    ...(summary.openRevenue > 0 ? ([['Açık hesapta (ödenmedi)', formatTL(summary.openRevenue)]] as [string, string][]) : []),
+    ['Satış adedi', String(summary.revenueTabCount)],
+    ['Nakit tahsilat', formatTL(summary.cashSales)],
+    ['Kart tahsilat', formatTL(summary.cardSales)],
     ['Nakit iadeler', formatTL(summary.cashRefunds)],
     ['Kart iadeler', formatTL(summary.cardRefunds)],
     // Older shifts were opened with a cash amount and counted at close.

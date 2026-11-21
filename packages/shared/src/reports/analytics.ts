@@ -1,12 +1,15 @@
 // Analysis for the manager app (Raporlar · Saatler / Ürünler / Kıyas and the
-// Bugün comparisons, 2026-10-30). Hour-based views use the sale time: a sale
-// is a paid tab at its closing time, in Istanbul time, worth tabs.total.
+// Bugün comparisons, 2026-10-30). Hour-based views use the time things were
+// taken (2026-11-21, sold.ts): a "sale" is what one tab took in one hour of
+// one day, open tabs included, in Istanbul time.
 // Opening hours change from day to day, so the hours that count as "open"
 // come from the shifts themselves (vardiya açılışı → gün sonu).
 import { sumKurus, type Kurus } from '../money';
-import type { Category, Product, Shift, Tab } from '../types';
+import type { Category, Product, Shift } from '../types';
 import { addDays, type Day, daysBetween, istanbulDay, istanbulHour } from './dates';
-import { productReport, type ReportData } from './reports';
+import { periodLines, productReport, type ReportData, reportLines } from './reports';
+
+type SalesData = Pick<ReportData, 'tabs' | 'items'>;
 
 const OFFSET_MS = 3 * 60 * 60 * 1000;
 
@@ -23,10 +26,33 @@ export function weekdayIndex(day: Day): number {
 
 export const WEEKDAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
 
-function paidSales(tabs: readonly Tab[]): { day: Day; minute: number; hour: number; total: Kurus }[] {
-  return tabs
-    .filter((t) => t.status === 'paid' && t.closed_at)
-    .map((t) => ({ day: istanbulDay(t.closed_at!), minute: istanbulMinute(t.closed_at!), hour: istanbulHour(t.closed_at!), total: t.total ?? 0 }));
+interface SaleEvent {
+  day: Day;
+  minute: number;
+  hour: number;
+  total: Kurus;
+}
+const eventCache = new WeakMap<object, SaleEvent[]>();
+
+/** What each tab took per Istanbul day and hour, at the first line's minute. */
+function salesEvents(data: SalesData): SaleEvent[] {
+  const cached = eventCache.get(data);
+  if (cached) return cached;
+  const map = new Map<string, SaleEvent>();
+  for (const line of reportLines(data)) {
+    const day = istanbulDay(line.at);
+    const hour = istanbulHour(line.at);
+    const minute = istanbulMinute(line.at);
+    const key = `${line.tabId}|${day}|${hour}`;
+    const event = map.get(key);
+    if (event) {
+      event.total += line.amount;
+      event.minute = Math.min(event.minute, minute);
+    } else map.set(key, { day, hour, minute, total: line.amount });
+  }
+  const events = [...map.values()];
+  eventCache.set(data, events);
+  return events;
 }
 
 export interface SoFar {
@@ -34,10 +60,10 @@ export interface SoFar {
   sales: number;
 }
 
-/** Sales of `day` up to `minute` (exclusive) in Istanbul time. */
-export function salesSoFar(tabs: readonly Tab[], day: Day, minute: number): SoFar {
-  const rows = paidSales(tabs).filter((s) => s.day === day && s.minute < minute);
-  return { revenue: sumKurus(rows.map((r) => r.total)), sales: rows.length };
+/** What was taken on `day` up to `minute` (exclusive) in Istanbul time. */
+export function salesSoFar(data: SalesData, day: Day, minute: number): SoFar {
+  const lines = reportLines(data).filter((l) => istanbulDay(l.at) === day && istanbulMinute(l.at) < minute);
+  return { revenue: sumKurus(lines.map((l) => l.amount)), sales: new Set(lines.map((l) => l.tabId)).size };
 }
 
 /** Whole-number percent change, null when there is nothing to compare with. */
@@ -55,12 +81,12 @@ export interface SoFarComparison {
 }
 
 /** Bugün: today so far vs yesterday and the same weekday last week, up to the same time. */
-export function compareSoFar(tabs: readonly Tab[], now: string): SoFarComparison {
+export function compareSoFar(data: SalesData, now: string): SoFarComparison {
   const day = istanbulDay(now);
   const minute = istanbulMinute(now);
-  const today = salesSoFar(tabs, day, minute + 1);
-  const yesterday = salesSoFar(tabs, addDays(day, -1), minute + 1);
-  const lastWeek = salesSoFar(tabs, addDays(day, -7), minute + 1);
+  const today = salesSoFar(data, day, minute + 1);
+  const yesterday = salesSoFar(data, addDays(day, -1), minute + 1);
+  const lastWeek = salesSoFar(data, addDays(day, -7), minute + 1);
   return {
     today,
     yesterday,
@@ -71,9 +97,9 @@ export function compareSoFar(tabs: readonly Tab[], now: string): SoFarComparison
 }
 
 /** Revenue per Istanbul hour for one day (24 entries). */
-export function hourlyRevenue(tabs: readonly Tab[], day: Day): Kurus[] {
+export function hourlyRevenue(data: SalesData, day: Day): Kurus[] {
   const hours = Array<Kurus>(24).fill(0);
-  for (const s of paidSales(tabs)) if (s.day === day) hours[s.hour]! += s.total;
+  for (const s of salesEvents(data)) if (s.day === day) hours[s.hour]! += s.total;
   return hours;
 }
 
@@ -104,14 +130,14 @@ export function openHoursByDay(shifts: readonly Shift[], now: string): Map<Day, 
  * days on which the cafe was open in that hour. null = never open then.
  */
 export function weekdayHourAverage(
-  tabs: readonly Tab[],
+  data: SalesData,
   shifts: readonly Shift[],
   weekday: number,
   from: Day,
   to: Day,
   now: string,
 ): (Kurus | null)[] {
-  return heatmap(tabs, shifts, from, to, now).cells[weekday]!.map((c) => (c ? c.revenue : null));
+  return heatmap(data, shifts, from, to, now).cells[weekday]!.map((c) => (c ? c.revenue : null));
 }
 
 export interface HeatCell {
@@ -142,7 +168,7 @@ export interface Heatmap {
 }
 
 /** Raporlar · Saatler: weekday × hour averages, busiest and quietest two-hour windows. */
-export function heatmap(tabs: readonly Tab[], shifts: readonly Shift[], from: Day, to: Day, now: string): Heatmap {
+export function heatmap(data: SalesData, shifts: readonly Shift[], from: Day, to: Day, now: string): Heatmap {
   const open = openHoursByDay(shifts, now);
   const sums = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ revenue: 0, sales: 0, days: 0 })));
   for (const day of daysBetween(from, to)) {
@@ -150,7 +176,7 @@ export function heatmap(tabs: readonly Tab[], shifts: readonly Shift[], from: Da
     if (!hours) continue;
     for (const h of hours) sums[weekdayIndex(day)]![h]!.days++;
   }
-  for (const s of paidSales(tabs)) {
+  for (const s of salesEvents(data)) {
     if (s.day < from || s.day > to) continue;
     const cell = sums[weekdayIndex(s.day)]![s.hour]!;
     cell.revenue += s.total;
@@ -192,14 +218,17 @@ export interface Kpis {
   void: Kurus;
 }
 
-/** Raporlar · Kıyas indicators for one period (sales at closing time). */
-export function periodKpis(data: Pick<ReportData, 'tabs'>, totals: { discount: Kurus; void: Kurus }): Kpis {
-  const paid = data.tabs.filter((t) => t.status === 'paid');
-  const revenue = sumKurus(paid.map((t) => t.total ?? 0));
+/** Raporlar · Kıyas indicators for one period (ciro by the time things were taken). */
+export function periodKpis(
+  data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>,
+  totals: { discount: Kurus; void: Kurus; salesCount: number },
+): Kpis {
+  const revenue = sumKurus(periodLines(data).map((l) => l.amount));
+  const sales = totals.salesCount;
   return {
     revenue,
-    sales: paid.length,
-    avgBasket: paid.length ? Math.round(revenue / paid.length) : 0,
+    sales,
+    avgBasket: sales ? Math.round(revenue / sales) : 0,
     discountPermille: revenue + totals.discount > 0 ? Math.round((totals.discount / (revenue + totals.discount)) * 1000) : 0,
     void: totals.void,
   };
@@ -221,8 +250,8 @@ type Catalog = {
 
 /** Best sellers of `current` with their change against `previous`. */
 export function productTrends(
-  current: Pick<ReportData, 'tabs' | 'items'>,
-  previous: Pick<ReportData, 'tabs' | 'items'>,
+  current: Pick<ReportData, 'tabs' | 'items' | 'shifts'>,
+  previous: Pick<ReportData, 'tabs' | 'items' | 'shifts'>,
   catalog: Catalog,
 ): ProductTrend[] {
   const before = new Map(productReport(previous, catalog.products, catalog.categories).products.map((p) => [p.productId, p.revenue]));
@@ -251,19 +280,18 @@ export interface DaypartTop {
   top: { name: string; quantity: number }[];
 }
 
-/** Most sold products per part of the day (by sale time), top `n` each. */
-export function daypartTops(data: Pick<ReportData, 'tabs' | 'items'>, catalog: Catalog, n = 3): DaypartTop[] {
+/** Most sold products per part of the day (by the time they were taken), top `n` each. */
+export function daypartTops(data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>, catalog: Catalog, n = 3): DaypartTop[] {
+  const lines = periodLines(data);
   return DAYPARTS.map((part) => {
-    const tabs = data.tabs.filter((t) => {
-      if (t.status !== 'paid' || !t.closed_at) return false;
-      const h = istanbulHour(t.closed_at);
+    const inPart = lines.filter((l) => {
+      const h = istanbulHour(l.at);
       return h >= part.from && h < part.to;
     });
-    const ids = new Set(tabs.map((t) => t.id));
-    const report = productReport({ tabs, items: data.items.filter((i) => ids.has(i.tab_id)) }, catalog.products, catalog.categories);
+    const report = productReport(data, catalog.products, catalog.categories, inPart);
     return {
       ...part,
-      sales: tabs.length,
+      sales: new Set(inPart.map((l) => `${l.tabId}|${istanbulDay(l.at)}`)).size,
       top: [...report.products]
         .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
         .slice(0, n)

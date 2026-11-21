@@ -18,8 +18,10 @@ export default function Sales() {
 
   const rows = data
     ? [...data[0].tabs]
-        // An emptied quick-sale cart is not a sale (2026-11-04).
+        // Tabs closed that day (the data also has tabs that only took something
+        // that day, 2026-11-21). An emptied quick-sale cart is not a sale (2026-11-04).
         .filter((t) => t.status !== 'open' && !(t.status === 'void' && t.kind === 'quick'))
+        .filter((t) => data[0].shifts.some((sh) => sh.id === t.closed_shift_id))
         .sort((a, b) => (b.closed_at ?? '').localeCompare(a.closed_at ?? ''))
         .map((tab) => {
           const pays = data[0].payments.filter((p) => p.tab_id === tab.id);

@@ -41,7 +41,12 @@ async function byIds<T>(table: string, column: string, ids: readonly string[], o
   return out;
 }
 
-/** Everything needed for reports of shifts opened between two Istanbul days (inclusive). */
+/**
+ * Everything needed for reports of shifts opened between two Istanbul days
+ * (inclusive): their payments and refunds, the tabs closed in them and every
+ * tab with lines added in them (ciro by the day things were taken, open tabs
+ * included, 2026-11-21), each with all its lines.
+ */
 export async function loadReportData(from: Day, to: Day): Promise<ReportData> {
   const shifts = await all<Shift>(() =>
     supabase
@@ -54,11 +59,19 @@ export async function loadReportData(from: Day, to: Day): Promise<ReportData> {
   );
   const ids = shifts.map((s) => s.id);
   if (ids.length === 0) return { shifts, tabs: [], items: [], payments: [], refunds: [] };
-  const [tabs, payments, refunds] = await Promise.all([
+  const last = shifts[shifts.length - 1]!;
+  const [closedTabs, payments, refunds, added] = await Promise.all([
     byIds<Tab>('tabs', 'closed_shift_id', ids),
     byIds<Payment>('payments', 'shift_id', ids),
     byIds<Refund>('refunds', 'shift_id', ids),
+    all<Pick<TabItem, 'tab_id'>>(() => {
+      const q = supabase.from('tab_items').select('tab_id').gte('created_at', shifts[0]!.opened_at);
+      return (last.closed_at ? q.lt('created_at', last.closed_at) : q).order('created_at').order('id');
+    }),
   ]);
+  const known = new Set(closedTabs.map((t) => t.id));
+  const more = [...new Set(added.map((i) => i.tab_id))].filter((id) => !known.has(id));
+  const tabs = [...closedTabs, ...(await byIds<Tab>('tabs', 'id', more))];
   const items = await byIds<TabItem>('tab_items', 'tab_id', tabs.map((t) => t.id));
   return { shifts, tabs, items, payments, refunds };
 }

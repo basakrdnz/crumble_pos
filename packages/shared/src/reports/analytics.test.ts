@@ -29,9 +29,12 @@ const shift = (day: string, open: string, close: string | null): Shift => ({
   counted_cash: null, expected_cash: 0, cash_difference: null, notes: null,
 });
 const item = (tab: Tab, productId: string, qty: number, price: number): TabItem => ({
-  ...base, id: `${tab.id}-${productId}`, tab_id: tab.id, product_id: productId, name_snapshot: productId, list_price: price,
+  ...base, created_at: tab.opened_at, id: `${tab.id}-${productId}`, tab_id: tab.id, product_id: productId, name_snapshot: productId, list_price: price,
   unit_price: price, quantity: qty, discount_percent: null, is_comp: false, note: null, voided_at: null, void_reason: null,
 });
+
+/** Each tab with one line worth its total, taken at the tab's time. */
+const asData = (tabs: Tab[]) => ({ tabs, items: tabs.map((t) => item(t, 'p', 1, t.total ?? 0)) });
 
 describe('analytics basics', () => {
   it('weeks start on Monday and minutes are Istanbul time', () => {
@@ -53,12 +56,21 @@ describe('Bugün: so far vs yesterday and last week', () => {
       sale('2026-10-28', '11:00', 20000), // last Wednesday
       sale('2026-11-04', '13:00', 7000, { status: 'void' }),
     ];
-    const c = compareSoFar(tabs, at('2026-11-04', '14:32'));
+    const c = compareSoFar(asData(tabs), at('2026-11-04', '14:32'));
     expect(c.today).toEqual({ revenue: 15000, sales: 2 });
     expect(c.yesterday).toEqual({ revenue: 12000, sales: 1 });
     expect(c.vsYesterday).toBe(25);
     expect(c.vsLastWeek).toBe(-25);
-    expect(hourlyRevenue(tabs, '2026-11-04')[9]).toBe(10000);
+    expect(hourlyRevenue(asData(tabs), '2026-11-04')[9]).toBe(10000);
+  });
+
+  it('counts an open table tab at once, at the time each line was taken', () => {
+    const open = sale('2026-11-04', '10:00', 0, { kind: 'table', status: 'open', closed_shift_id: null, closed_at: null, total: null });
+    const later = { ...item(open, 'tost', 1, 25000), created_at: at('2026-11-04', '13:10') };
+    const data = { tabs: [open], items: [item(open, 'latte', 1, 21500), later] };
+    const c = compareSoFar(data, at('2026-11-04', '12:00'));
+    expect(c.today).toEqual({ revenue: 21500, sales: 1 });
+    expect(hourlyRevenue(data, '2026-11-04')[13]).toBe(25000);
   });
 });
 
@@ -73,7 +85,7 @@ describe('Saatler: heatmap from shift hours', () => {
       sale('2026-11-09', '16:30', 4000),
       sale('2026-11-03', '10:15', 2000),
     ];
-    const h = heatmap(tabs, shifts, '2026-11-02', '2026-11-09', at('2026-11-10', '00:00'));
+    const h = heatmap(asData(tabs), shifts, '2026-11-02', '2026-11-09', at('2026-11-10', '00:00'));
     expect(h.cells[0]![9]).toEqual({ revenue: 20000, sales: 1, days: 2 }); // (10000 + 30000) / 2 Mondays
     expect(h.cells[0]![16]).toEqual({ revenue: 4000, sales: 1, days: 1 }); // open only on one Monday
     expect(h.cells[0]![8]).toBeNull(); // never open
@@ -90,7 +102,8 @@ describe('Kıyas and Ürünler', () => {
       sale('2026-11-02', '12:00', 20000),
       sale('2026-11-02', '13:00', 10000, { kind: 'table', opened_at: at('2026-11-02', '12:20') }),
     ];
-    expect(periodKpis({ tabs }, { discount: 1000, void: 500 })).toEqual({
+    const shifts = [shift('2026-11-02', '08:00', '22:00')];
+    expect(periodKpis({ ...asData(tabs), shifts }, { discount: 1000, void: 500, salesCount: 2 })).toEqual({
       revenue: 30000, sales: 2, avgBasket: 15000, discountPermille: 32, void: 500,
     });
   });
@@ -106,8 +119,8 @@ describe('Kıyas and Ürünler', () => {
       ],
       categories: [{ id: 'c', name: 'Kahve', sort_order: 0 }],
     };
-    const current = { tabs: [now1, now2], items: [item(now1, 'latte', 2, 21500), item(now2, 'tost', 1, 25000)] };
-    const previous = { tabs: [old], items: [item(old, 'latte', 1, 21500)] };
+    const current = { shifts: [shift('2026-11-09', '08:00', '22:00')], tabs: [now1, now2], items: [item(now1, 'latte', 2, 21500), item(now2, 'tost', 1, 25000)] };
+    const previous = { shifts: [shift('2026-11-02', '08:00', '22:00')], tabs: [old], items: [item(old, 'latte', 1, 21500)] };
     const trends = productTrends(current, previous, catalog);
     expect(trends.find((t) => t.productId === 'latte')).toMatchObject({ revenue: 43000, change: 100 });
     expect(trends.find((t) => t.productId === 'tost')!.change).toBeNull(); // new
