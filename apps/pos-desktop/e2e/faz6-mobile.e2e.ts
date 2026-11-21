@@ -121,7 +121,8 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
 
   it('lists the sale and its detail', async () => {
     await posSale(pos.page, 'Yemek', 'Kaşarlı Tost', 'Kart');
-    await phone.getByRole('tab', { name: /Satışlar/ }).click();
+    // Bugün's "Satış" box opens Satışlar (2026-11-21).
+    await phone.getByTestId('today-sales-link').click();
     await expect.poll(() => phone.getByTestId('sale-row').count(), { timeout: 15_000 }).toBe(2);
     await phone.getByTestId('sale-row').filter({ hasText: '250,00 ₺' }).click();
     await phone.getByText('Kaşarlı Tost').waitFor();
@@ -135,8 +136,14 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     expect(await phone.getByTestId('product-row').count()).toBe(2);
     await snap(phone, 'faz6-products');
     await phone.getByRole('tab', { name: /Raporlar/ }).click();
+    // Opens on today (2026-11-21).
     await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
     await snap(phone, 'faz6-reports');
+    // Ay ay satışlar: this month, opened on its days.
+    await phone.getByTestId('months-link').click();
+    await expect.poll(() => phone.getByTestId('month-row').first().textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
+    await snap(phone, 'faz6-months');
+    await phone.goBack();
     await phone.getByRole('tab', { name: 'Saatler', exact: true }).click();
     await phone.getByText('Yoğunluk haritası', { exact: false }).waitFor();
     await snap(phone, 'faz6-reports-hours');

@@ -136,12 +136,12 @@ export default function Today() {
             {formatTL(totals.card)}
           </Text>
         </View>
-        <View style={s.heroCell}>
+        <Pressable style={s.heroCell} onPress={() => router.navigate('/sales')} accessibilityRole="button" testID="today-sales-link">
           <Text style={s.heroCellLabel}>Satış</Text>
           <Text style={s.heroCellValue} testID="today-count">
             {totals.salesCount}
           </Text>
-        </View>
+        </Pressable>
       </View>
     </View>
   );
