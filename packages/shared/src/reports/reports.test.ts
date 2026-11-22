@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Payment, Refund, Shift, Tab, TabItem } from '../types';
 import { addDays, dayBounds, daysBetween, istanbulDay, istanbulHour, monthStart, weekStart } from './dates';
-import { hourlyActivity, periodTotals, productReport, revenueSeries, summarizeShift } from './reports';
+import { hourlyActivity, periodSales, periodTotals, productReport, revenueSeries, summarizeShift } from './reports';
 
 describe('dates (Europe/Istanbul, UTC+3)', () => {
   it('maps UTC timestamps to Istanbul days and hours', () => {
@@ -63,7 +63,7 @@ function data() {
     payment('p2', 't2', 's1', 'card', 19350),
     payment('p3', 't3', 's2', 'card', 30600),
   ];
-  const refunds: Refund[] = [{ ...base, id: 'r1', tab_id: 't1', tab_item_id: null, shift_id: 's2', amount: 1000, method: 'cash', reason: null }];
+  const refunds: Refund[] = [{ ...base, created_at: '2026-11-03T10:00:00.000Z', id: 'r1', tab_id: 't1', tab_item_id: null, shift_id: 's2', amount: 1000, method: 'cash', reason: null }];
   return { shifts: [s1, s2], tabs, items, payments, refunds };
 }
 
@@ -123,6 +123,14 @@ describe('reports', () => {
     expect(periodTotals(open)).toMatchObject({ revenue: 41850, open: 41850, collected: 0, salesCount: 2 });
     // An open quick sale (a cart being filled) is not ciro yet; a cancelled tab never is.
     expect(periodTotals({ ...open, tabs: [{ ...open.tabs[0]!, kind: 'quick' as const }] }).revenue).toBe(0);
+  });
+
+  it('periodSales: the whole period equals periodTotals; a cutoff keeps only what came before it', () => {
+    const d = data();
+    const t = periodTotals(d);
+    expect(periodSales(d)).toEqual({ revenue: t.revenue, sales: t.salesCount });
+    // Before 2026-11-03 07:00Z: only day 1 (t1 + t2) and no refund yet.
+    expect(periodSales(d, '2026-11-03T07:00:00.000Z')).toEqual({ revenue: 43000 + 19350, sales: 2 });
   });
 
   it('counts sales per Istanbul hour', () => {

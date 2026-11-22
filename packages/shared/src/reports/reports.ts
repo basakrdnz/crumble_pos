@@ -105,6 +105,34 @@ export function periodTotals(data: ReportData): PeriodTotals {
   return data.shifts.reduce((acc, shift) => addSummary(acc, summarizeShift(shift, data)), emptyTotals());
 }
 
+export interface PeriodSales {
+  /** Ciro − refunds, as in periodTotals. */
+  revenue: Kurus;
+  /** Tabs with something taken, counted per shift (as periodTotals.salesCount). */
+  sales: number;
+}
+
+/**
+ * Ciro and sales of the data's shifts up to an instant (Raporlar kıyası,
+ * 2026-11-22): an unfinished period is compared with the same stretch of the
+ * one before ("geçen Cumartesi aynı saate kadar"). No cutoff = the whole period,
+ * equal to periodTotals' revenue and salesCount.
+ */
+export function periodSales(data: ReportData, cutoff?: string): PeriodSales {
+  const end = cutoff ? Date.parse(cutoff) : Infinity;
+  const lines = reportLines(data);
+  let revenue = 0;
+  let sales = 0;
+  for (const shift of data.shifts) {
+    const inShift = linesInShift(lines, shift).filter((l) => Date.parse(l.at) < end);
+    revenue += sumKurus(inShift.map((l) => l.amount));
+    sales += new Set(inShift.map((l) => l.tabId)).size;
+  }
+  const ids = new Set(data.shifts.map((s) => s.id));
+  revenue -= sumKurus(data.refunds.filter((r) => ids.has(r.shift_id) && Date.parse(r.created_at) < end).map((r) => r.amount));
+  return { revenue, sales };
+}
+
 export type Granularity = 'day' | 'week' | 'month';
 
 export interface SeriesPoint {

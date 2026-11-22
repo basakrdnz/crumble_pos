@@ -36,7 +36,6 @@ function Gate() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="sale/[id]" options={{ title: 'Satış detayı' }} />
       <Stack.Screen name="shifts" options={{ title: 'Vardiyalar' }} />
-      <Stack.Screen name="months" options={{ title: 'Ay ay satışlar' }} />
       <Stack.Screen name="history" options={{ title: 'Değişiklik geçmişi' }} />
       <Stack.Screen name="notifications" options={{ title: 'Bildirimler' }} />
       <Stack.Screen name="open-tabs" options={{ title: 'Açık hesaplar' }} />

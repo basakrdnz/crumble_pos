@@ -222,9 +222,8 @@ describe.skipIf(!OUT || !bin || !existsSync(CHROMIUM))('App Store ekran görünt
     await nav('Raporlar');
     await phone.getByTestId('reports-revenue').waitFor();
     await shot('2-raporlar');
-    await phone.getByRole('tab', { name: 'Saatler', exact: true }).click();
-    await phone.getByText('Yoğunluk haritası', { exact: false }).waitFor();
-    await phone.getByText('Son 3 ay', { exact: true }).click(); // "Bu ay" is only four days old here
+    await phone.getByRole('tab', { name: 'Hafta', exact: true }).click();
+    await phone.getByTestId('busy-hours').waitFor();
     await phone.waitForTimeout(500);
     await shot('3-saatler');
 

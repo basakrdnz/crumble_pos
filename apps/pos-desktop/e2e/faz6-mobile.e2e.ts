@@ -139,14 +139,19 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     // Opens on today (2026-11-21).
     await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
     await snap(phone, 'faz6-reports');
-    // Ay ay satışlar: this month, opened on its days.
-    await phone.getByTestId('months-link').click();
+    // Every comparison says what it is compared with; nothing to compare here (2026-11-22).
+    expect(await phone.getByTestId('reports-compare').textContent()).toMatch(/^Geçen .*karşılaştıracak veri yok/);
+    // Hafta: when we are busy, and a day opens that day's report.
+    await phone.getByRole('tab', { name: 'Hafta', exact: true }).click();
+    await phone.getByTestId('busy-hours').waitFor();
+    await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
+    await snap(phone, 'faz6-reports-week');
+    await phone.getByTestId('week-day-row').filter({ hasText: '465,00 ₺' }).click();
+    await expect.poll(() => phone.getByTestId('report-period').textContent()).toMatch(/^\d+ \S+ \S+$/);
+    // Ay: the month list.
+    await phone.getByRole('tab', { name: 'Ay', exact: true }).click();
     await expect.poll(() => phone.getByTestId('month-row').first().textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
-    await snap(phone, 'faz6-months');
-    await phone.goBack();
-    await phone.getByRole('tab', { name: 'Saatler', exact: true }).click();
-    await phone.getByText('Yoğunluk haritası', { exact: false }).waitFor();
-    await snap(phone, 'faz6-reports-hours');
+    await snap(phone, 'faz6-reports-month');
   });
 
   it('change history shows a POS price change (old -> new)', async () => {
@@ -224,7 +229,8 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await expect.poll(() => row.count(), { timeout: 20_000 }).toBe(1);
     expect(await row.textContent()).toContain('250,00 ₺');
     await row.click();
-    await phone.getByText('Kaşarlı Tost').waitFor();
+    // The Raporlar tab stays mounted behind and lists the product too.
+    await phone.getByText('Kaşarlı Tost').filter({ visible: true }).waitFor();
     await phone.getByRole('button', { name: 'Ödeme al', exact: true }).click();
     await phone.getByLabel('Alınan tutar').fill('100');
     await phone.getByRole('button', { name: 'Nakit aldım' }).click();
