@@ -1,325 +1,169 @@
+// Raporlar (yeniden tasarım 2026-11-22, Design artifact "Raporlar yeniden
+// tasarım"): one page with Gün / Hafta / Ay, arrows to any period, and every
+// comparison saying what it compares with, by date. Fixed rule: a day against
+// the same weekday last week, a week against last week, a month against last
+// month; an unfinished period against the same stretch of the one before.
 import {
   addDays,
   type Day,
-  daypartTops,
+  dayBounds,
+  daysBetween,
   formatTL,
   heatmap,
+  hourlyRevenue,
+  istanbulDay,
+  type Kurus,
   monthStart,
   percentChange,
-  periodKpis,
+  periodSales,
   periodTotals,
   productReport,
-  productTrends,
   type ReportData,
   revenueSeries,
   todayIstanbul,
-  weekStart,
+  weekdayIndex,
   WEEKDAYS_SHORT,
+  weekStart,
 } from '@crumble/shared';
-import { useState } from 'react';
-import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+import { type ReactNode, useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { type RangeKey, RangePicker, rangeOf } from '../../components/pickers';
-import { colors, fonts, heat } from '../../components/theme';
-import { Bars, Card, Chip, Chips, Columns, Delta, Empty, HeatGrid, Label, Row, Screen, Section, Segmented, Stat, styles } from '../../components/ui';
-import { loadCatalog, loadReportData } from '../../lib/data';
-import { formatShortDay } from '../../lib/format';
+import { colors, heat } from '../../components/theme';
+import { Card, Columns, Empty, HeatGrid, Label, Row, Screen, Section, Segmented, styles } from '../../components/ui';
+import { type Catalog, loadCatalog, loadReportData } from '../../lib/data';
 import { useLive } from '../../lib/useLive';
-
-type Part = 'summary' | 'hours' | 'products' | 'compare';
-const PARTS = [
-  ['summary', 'Özet'],
-  ['hours', 'Saatler'],
-  ['products', 'Ürünler'],
-  ['compare', 'Kıyas'],
-] as const;
-
-/** Raporlar (plan §6.5, analiz 2026-10-30): Özet · Saatler · Ürünler · Kıyas. Numbers only, no commentary. */
-export default function Reports() {
-  const [part, setPart] = useState<Part>('summary');
-  return (
-    <Screen title="Raporlar">
-      <Segmented<Part> value={part} options={PARTS} onChange={setPart} />
-      {part === 'summary' && <Summary />}
-      {part === 'hours' && <Hours />}
-      {part === 'products' && <ProductsPart />}
-      {part === 'compare' && <Compare />}
-    </Screen>
-  );
-}
-
-function Summary() {
-  // Raporlar always opens on today (kullanıcı 2026-11-21).
-  const [range, setRange] = useState<RangeKey>('today');
-  const { data, error } = useLive(async () => {
-    const { from, to } = rangeOf(range);
-    return loadReportData(from, to);
-  }, [range]);
-  const totals = data ? periodTotals(data) : null;
-  const series = data ? revenueSeries(data, 'day') : [];
-  return (
-    <>
-      <RangePicker value={range} onChange={setRange} />
-      <Pressable onPress={() => router.push('/months')} accessibilityRole="button" testID="months-link">
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text style={styles.rowLeft}>Ay ay satışlar</Text>
-              <Text style={styles.rowSub}>Her ayın cirosu, günleriyle</Text>
-            </View>
-            <Text style={[styles.rowLeft, { color: colors.muted }]}>›</Text>
-          </View>
-        </Card>
-      </Pressable>
-      {error && <Text style={styles.error}>{error}</Text>}
-      {totals && (
-        <>
-          <Card>
-            <Label>Ciro · {totals.salesCount} satış</Label>
-            <Text style={[styles.statValue, styles.statBig]} testID="reports-revenue">
-              {formatTL(totals.revenue)}
-            </Text>
-            {totals.open > 0 && <Text style={styles.rowSub}>Açık hesapta bekleyen: {formatTL(totals.open)}</Text>}
-          </Card>
-          <View style={styles.grid}>
-            <Stat label="Nakit" value={formatTL(totals.cash)} />
-            <Stat label="Kart" value={formatTL(totals.card)} />
-          </View>
-          {series.length > 1 && (
-            <Section title="Günlük ciro">
-              <Bars rows={series.map((p) => ({ label: formatShortDay(p.key), value: p.totals.revenue }))} />
-            </Section>
-          )}
-          <Section title="İndirim / iptal / iade">
-            <Row left="İndirim" right={formatTL(totals.discount)} />
-            {totals.comp > 0 && <Row left="İkram" right={formatTL(totals.comp)} />}
-            <Row left="İptal" right={formatTL(totals.void)} />
-            <Row left="İade" right={formatTL(totals.refunds)} />
-            <Row left="Fiyat değişikliği farkı" right={formatTL(totals.priceChange)} />
-          </Section>
-        </>
-      )}
-    </>
-  );
-}
-
-type HoursRange = 'week' | 'month' | '3m';
-function hoursRange(key: HoursRange): { from: Day; to: Day } {
-  const to = todayIstanbul();
-  if (key === 'week') return { from: weekStart(to), to };
-  if (key === 'month') return { from: monthStart(to), to };
-  return { from: addDays(to, -89), to };
-}
-const hh = (h: number) => String(h).padStart(2, '0');
-
-function Hours() {
-  const [range, setRange] = useState<HoursRange>('month');
-  const { data, error } = useLive(async () => {
-    const { from, to } = hoursRange(range);
-    return { report: await loadReportData(from, to), from, to };
-  }, [range]);
-  const map = data ? heatmap(data.report, data.report.shifts, data.from, data.to, new Date().toISOString()) : null;
-  const hours = map ? Array.from({ length: map.toHour - map.fromHour + 1 }, (_, i) => map.fromHour + i) : [];
-  const max = map ? Math.max(1, ...map.cells.flat().map((c) => c?.revenue ?? 0)) : 1;
-  const anyOpen = map ? map.cells.some((row) => row.some(Boolean)) : false;
-  return (
-    <>
-      <Chips>
-        {(
-          [
-            ['week', 'Bu hafta'],
-            ['month', 'Bu ay'],
-            ['3m', 'Son 3 ay'],
-          ] as const
-        ).map(([key, label]) => (
-          <Chip key={key} label={label} active={key === range} onPress={() => setRange(key)} />
-        ))}
-      </Chips>
-      {error && <Text style={styles.error}>{error}</Text>}
-      {map && (anyOpen ? (
-        <>
-          <Card>
-            <Label>Yoğunluk haritası · saat başı ortalama ciro</Label>
-            <View style={{ marginTop: 10 }}>
-              <HeatGrid
-                rowLabels={[...WEEKDAYS_SHORT]}
-                hours={hours}
-                rows={map.cells.map((row) => hours.map((h) => (row[h] ? row[h]!.revenue / max : null)))}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <Text style={styles.axis}>Ölü</Text>
-              <View style={{ flexDirection: 'row', gap: 2 }}>
-                {heat.map((c) => (
-                  <View key={c} style={{ width: 14, height: 10, borderRadius: 3, backgroundColor: c }} />
-                ))}
-              </View>
-              <Text style={styles.axis}>Yoğun</Text>
-            </View>
-            <Text style={[styles.rowSub, { marginTop: 6 }]}>Saatler vardiya açılışı ile gün sonu arasından; boş kutu = o saatte kapalıydı.</Text>
-          </Card>
-          {map.busiest && (
-            <View style={styles.grid}>
-              <Stat
-                label="En yoğun"
-                value={`${WEEKDAYS_SHORT[map.busiest.weekday]} ${hh(map.busiest.hour)}–${hh(map.busiest.hour + 2)}`}
-                sub={`${formatTL(map.busiest.revenue)} · ${map.busiest.sales} satış`}
-                testID="busiest"
-              />
-              <Stat
-                label="En ölü"
-                value={`${WEEKDAYS_SHORT[map.quietest!.weekday]} ${hh(map.quietest!.hour)}–${hh(map.quietest!.hour + 2)}`}
-                sub={`${formatTL(map.quietest!.revenue)} · ${map.quietest!.sales} satış`}
-                testID="quietest"
-              />
-            </View>
-          )}
-          <Section title="Günlere göre saat başı ortalama">
-            {map.cells.map((row, d) => {
-              const open = row.filter(Boolean);
-              if (!open.length) return null;
-              const avg = Math.round(open.reduce((a, c) => a + c!.revenue, 0) / open.length);
-              return <Row key={d} left={WEEKDAYS_SHORT[d]!} sub={`${open.length} saat açık`} right={formatTL(avg)} />;
-            })}
-          </Section>
-        </>
-      ) : (
-        <Empty text="Bu aralıkta vardiya yok." />
-      ))}
-    </>
-  );
-}
-
-function sameLengthBefore(from: Day, to: Day): { from: Day; to: Day } {
-  const days = (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
-  return { from: addDays(from, -days), to: addDays(from, -1) };
-}
-
-function ProductsPart() {
-  const [range, setRange] = useState<RangeKey>('today');
-  const { data, error } = useLive(async () => {
-    const cur = rangeOf(range);
-    const prev = sameLengthBefore(cur.from, cur.to);
-    const [now, before, catalog] = await Promise.all([loadReportData(cur.from, cur.to), loadReportData(prev.from, prev.to), loadCatalog()]);
-    return {
-      report: productReport(now, catalog.products, catalog.categories),
-      trends: productTrends(now, before, catalog),
-      parts: daypartTops(now, catalog),
-    };
-  }, [range]);
-  const total = data ? Math.max(1, data.report.categories.reduce((a, c) => a + c.revenue, 0)) : 1;
-  const shades = ['#1E3A2B', '#2E6B47', '#4F8C64', '#86B596', '#B9D3C2', '#DCE8E0', '#EDEFEB', '#D8DCD5'];
-  return (
-    <>
-      <RangePicker value={range} onChange={setRange} />
-      {error && <Text style={styles.error}>{error}</Text>}
-      {data && (data.trends.length === 0 ? (
-        <Empty text="Bu aralıkta satış yok." />
-      ) : (
-        <>
-          <Card>
-            <Label>Kategori payı</Label>
-            <View style={{ flexDirection: 'row', height: 14, borderRadius: 9, overflow: 'hidden', gap: 2, marginTop: 8 }}>
-              {data.report.categories.map((c, i) => (
-                <View key={c.name} style={{ flex: c.revenue / total, backgroundColor: shades[i % shades.length] }} />
-              ))}
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
-              {data.report.categories.map((c, i) => (
-                <Text key={c.name} style={styles.rowSub}>
-                  <Text style={{ color: shades[i % shades.length] }}>■ </Text>
-                  {c.name} %{Math.round((c.revenue / total) * 100)}
-                </Text>
-              ))}
-            </View>
-          </Card>
-          <Section title="En çok kazandıranlar · önceki döneme göre">
-            {data.trends.slice(0, 10).map((t) => (
-              <Row
-                key={t.productId}
-                left={t.name}
-                sub={`${t.quantity} adet`}
-                right={formatTL(t.revenue)}
-                badge={t.change === null ? <Text style={[styles.delta, { color: colors.info }]}>yeni</Text> : <Delta value={t.change} />}
-                testID="trend-row"
-              />
-            ))}
-          </Section>
-          <Section title="Günün bölümüne göre en çok satanlar">
-            {data.parts
-              .filter((p) => p.sales > 0)
-              .map((p) => (
-                <Row
-                  key={p.id}
-                  left={`${p.label} ${hh(p.from === 0 ? 0 : p.from)}–${hh(p.to === 24 ? 24 : p.to)}`}
-                  sub={p.top.map((t) => `${t.name} ${t.quantity}`).join(' · ')}
-                  right={`${p.sales} satış`}
-                />
-              ))}
-          </Section>
-          {data.report.cartDiscount > 0 && (
-            <Text style={styles.rowSub}>Sepet indirimi ürünlere dağıtılmaz: −{formatTL(data.report.cartDiscount)}</Text>
-          )}
-        </>
-      ))}
-    </>
-  );
-}
 
 type Grain = 'day' | 'week' | 'month';
 
-function periods(grain: Grain): { cur: { from: Day; to: Day }; prev: { from: Day; to: Day }; label: string; prevLabel: string } {
-  const today = todayIstanbul();
-  if (grain === 'day') return { cur: { from: today, to: today }, prev: { from: addDays(today, -7), to: addDays(today, -7) }, label: 'Bugün', prevLabel: 'Geçen hafta aynı gün' };
+const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const WEEKDAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const dayNum = (d: Day) => Number(d.slice(8, 10));
+const monthName = (d: Day) => MONTHS[Number(d.slice(5, 7)) - 1]!;
+const shortDate = (d: Day) => `${dayNum(d)} ${monthName(d)}`;
+const longDate = (d: Day) => `${shortDate(d)} ${WEEKDAYS[weekdayIndex(d)]}`;
+const monthTitle = (d: Day) => `${monthName(d)} ${d.slice(0, 4)}`;
+const monthEnd = (m: Day) => addDays(monthStart(addDays(m, 32)), -1);
+const minDay = (a: Day, b: Day) => (a < b ? a : b);
+function rangeText(from: Day, to: Day): string {
+  if (from === to) return shortDate(from);
+  return from.slice(0, 7) === to.slice(0, 7) ? `${dayNum(from)} – ${shortDate(to)}` : `${shortDate(from)} – ${shortDate(to)}`;
+}
+const hh = (h: number) => String(h).padStart(2, '0');
+
+interface Period {
+  grain: Grain;
+  from: Day;
+  /** Last day with data so far (today for a running period). */
+  to: Day;
+  /** Last day of the whole period. */
+  end: Day;
+  prev: { from: Day; to: Day };
+  ongoing: boolean;
+  title: string;
+  subtitle: string;
+  /** "Geçen Cumartesi (15 Kasım)" — what the numbers are compared with. */
+  prevLabel: string;
+  /** Short form for list rows: "geçen Cmt". */
+  prevShort: string;
+}
+
+function periodOf(grain: Grain, anchor: Day, today: Day): Period {
+  if (grain === 'day') {
+    const prev = addDays(anchor, -7);
+    const w = weekdayIndex(anchor);
+    const ongoing = anchor === today;
+    return {
+      grain,
+      from: anchor,
+      to: anchor,
+      end: anchor,
+      prev: { from: prev, to: prev },
+      ongoing,
+      title: longDate(anchor),
+      subtitle: ongoing ? 'Bugün' : anchor === addDays(today, -1) ? 'Dün' : '',
+      prevLabel: `Geçen ${WEEKDAYS[w]} (${shortDate(prev)})${ongoing ? ', aynı saate kadar' : ''}`,
+      prevShort: `geçen ${WEEKDAYS_SHORT[w]}`,
+    };
+  }
   if (grain === 'week') {
-    const from = weekStart(today);
-    const days = (Date.parse(today) - Date.parse(from)) / 86_400_000;
-    return { cur: { from, to: today }, prev: { from: addDays(from, -7), to: addDays(from, -7 + days) }, label: 'Bu hafta', prevLabel: 'Geçen hafta aynı günler' };
+    const from = weekStart(anchor);
+    const end = addDays(from, 6);
+    const to = minDay(end, today);
+    const ongoing = today <= end;
+    const prev = { from: addDays(from, -7), to: addDays(to, -7) };
+    const days = daysBetween(from, to).length;
+    return {
+      grain,
+      from,
+      to,
+      end,
+      prev,
+      ongoing,
+      title: rangeText(from, end),
+      subtitle: ongoing ? `Bu hafta · Pazartesi'den bugüne ${days} gün` : '',
+      prevLabel: ongoing ? `Geçen hafta aynı günler (${rangeText(prev.from, prev.to)}), aynı saate kadar` : `Geçen hafta (${rangeText(prev.from, prev.to)})`,
+      prevShort: 'geçen hafta',
+    };
   }
-  const from = monthStart(today);
+  const from = monthStart(anchor);
+  const end = monthEnd(from);
+  const to = minDay(end, today);
+  const ongoing = today <= end;
   const prevFrom = monthStart(addDays(from, -1));
-  const days = (Date.parse(today) - Date.parse(from)) / 86_400_000;
-  const prevTo = [addDays(prevFrom, days), addDays(from, -1)].sort()[0]!;
-  return { cur: { from, to: today }, prev: { from: prevFrom, to: prevTo }, label: 'Bu ay', prevLabel: 'Geçen ay aynı günler' };
+  const prevEnd = addDays(from, -1);
+  const prevTo = ongoing ? minDay(addDays(prevFrom, daysBetween(from, to).length - 1), prevEnd) : prevEnd;
+  return {
+    grain,
+    from,
+    to,
+    end,
+    prev: { from: prevFrom, to: prevTo },
+    ongoing,
+    title: monthTitle(from),
+    subtitle: ongoing ? `Bu ay · ${rangeText(from, to)}` : '',
+    prevLabel: ongoing ? `${monthName(prevFrom)} aynı günler (${rangeText(prevFrom, prevTo)}), aynı saate kadar` : monthTitle(prevFrom),
+    prevShort: `${monthName(prevFrom)}`,
+  };
 }
 
-function kpisOf(data: ReportData) {
-  const totals = periodTotals(data);
-  return { totals, kpis: periodKpis(data, totals) };
+function step(grain: Grain, anchor: Day, dir: -1 | 1): Day {
+  if (grain === 'day') return addDays(anchor, dir);
+  if (grain === 'week') return addDays(weekStart(anchor), 7 * dir);
+  const m = monthStart(anchor);
+  return dir < 0 ? monthStart(addDays(m, -1)) : addDays(monthEnd(m), 1);
 }
 
-function Compare() {
+/** The same moment as now, on the last day of the previous period (an unfinished period's comparison). */
+function cutoffFor(p: Period, today: Day): string | undefined {
+  if (!p.ongoing) return undefined;
+  const sinceMidnight = Date.now() - Date.parse(dayBounds(today).start);
+  return new Date(Date.parse(dayBounds(p.prev.to).start) + sinceMidnight).toISOString();
+}
+
+export default function Reports() {
   const [grain, setGrain] = useState<Grain>('day');
-  const { data, error } = useLive(async () => {
-    const p = periods(grain);
-    const [cur, prev] = await Promise.all([loadReportData(p.cur.from, p.cur.to), loadReportData(p.prev.from, p.prev.to)]);
-    return { p, cur, prev };
-  }, [grain]);
-
-  let chart: { values: number[]; compare: number[]; labels: string[] } | null = null;
-  if (data && grain !== 'day') {
-    const a = revenueSeries(data.cur, 'day');
-    const b = revenueSeries(data.prev, 'day');
-    const days = grain === 'week' ? 7 : Math.ceil(((Date.parse(data.p.cur.to) - Date.parse(data.p.cur.from)) / 86_400_000 + 1) / 7);
-    const bucket = (series: typeof a, start: Day) => {
-      const out = Array<number>(days).fill(0);
-      for (const pt of series) {
-        const i = Math.floor((Date.parse(pt.key) - Date.parse(start)) / 86_400_000 / (grain === 'week' ? 1 : 7));
-        if (i >= 0 && i < days) out[i]! += pt.totals.revenue;
-      }
-      return out;
-    };
-    chart = {
-      values: bucket(a, data.p.cur.from),
-      compare: bucket(b, data.p.prev.from),
-      labels: grain === 'week' ? [...WEEKDAYS_SHORT] : Array.from({ length: days }, (_, i) => `${i + 1}. hf`),
-    };
-  }
-  const cur = data ? kpisOf(data.cur) : null;
-  const prev = data ? kpisOf(data.prev) : null;
+  const [anchor, setAnchor] = useState<Day>(todayIstanbul());
+  // Raporlar always opens on today (kullanıcı 2026-11-21).
+  useFocusEffect(
+    useCallback(() => {
+      setGrain('day');
+      setAnchor(todayIstanbul());
+    }, []),
+  );
+  const today = todayIstanbul();
+  const p = periodOf(grain, anchor, today);
+  const { data, error, refreshing, reload } = useLive(async () => {
+    const [cur, prev, catalog] = await Promise.all([loadReportData(p.from, p.to), loadReportData(p.prev.from, p.prev.to), loadCatalog()]);
+    return { cur, prev, catalog };
+  }, [grain, anchor]);
+  const go = (g: Grain, day: Day) => {
+    setGrain(g);
+    setAnchor(day);
+  };
+  const canNext = step(grain, anchor, 1) <= today;
 
   return (
-    <>
+    <Screen title="Raporlar" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
       <Segmented<Grain>
         value={grain}
         options={[
@@ -327,66 +171,454 @@ function Compare() {
           ['week', 'Hafta'],
           ['month', 'Ay'],
         ]}
-        onChange={setGrain}
+        onChange={(g) => go(g, grain === 'day' && anchor !== today ? anchor : today)}
       />
-      {error && <Text style={styles.error}>{error}</Text>}
-      {data && cur && prev && (
-        <>
-          <Card>
-            <Label>{data.p.label}</Label>
-            <Text style={[styles.statValue, styles.statBig]} testID="compare-revenue">
-              {formatTL(cur.totals.revenue)}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={styles.rowSub}>
-                {data.p.prevLabel} {formatTL(prev.totals.revenue)} ·{' '}
-              </Text>
-              <Delta value={percentChange(cur.totals.revenue, prev.totals.revenue)} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <StepButton label="‹" a11y="Önceki" onPress={() => setAnchor(step(grain, anchor, -1))} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text }} testID="report-period">
+            {p.title}
+          </Text>
+          {p.subtitle ? <Text style={styles.rowSub}>{p.subtitle}</Text> : null}
+        </View>
+        <StepButton label="›" a11y="Sonraki" disabled={!canNext} onPress={() => canNext && setAnchor(step(grain, anchor, 1))} />
+      </View>
+      {data && <Report p={p} today={today} cur={data.cur} prev={data.prev} catalog={data.catalog} go={go} />}
+      {grain === 'month' && <MonthList current={p.from} onPick={(m) => go('month', m)} />}
+    </Screen>
+  );
+}
+
+function StepButton({ label, a11y, onPress, disabled }: { label: string; a11y: string; onPress(): void; disabled?: boolean }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      disabled={disabled}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.panel,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** "1.235 ₺ az · %10" / "3 fazla", coloured; "—" without a previous value. */
+function Diff({ cur, prev, money, onDark }: { cur: number; prev: number; money?: boolean; onDark?: boolean }) {
+  const d = cur - prev;
+  const pct = percentChange(cur, prev);
+  const color = d === 0 ? (onDark ? colors.forestMuted : colors.muted) : d > 0 ? (onDark ? colors.upOnDark : colors.ok) : onDark ? colors.downOnDark : colors.danger;
+  const amount = money ? formatTL(Math.abs(d)) : String(Math.abs(d));
+  const text = d === 0 ? 'aynı' : `${amount} ${d > 0 ? 'fazla' : 'az'}${pct !== null && money ? ` · %${Math.abs(pct)}` : ''}`;
+  return <Text style={{ color, fontWeight: '800', fontSize: onDark ? 15 : 12 }}>{text}</Text>;
+}
+
+function Box({ title, note, children, testID }: { title: string; note?: string; children: ReactNode; testID?: string }) {
+  return (
+    <Card>
+      <View testID={testID}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text }}>{title}</Text>
+        {note ? <Text style={[styles.rowSub, { marginTop: 2 }]}>{note}</Text> : null}
+        <View style={{ marginTop: 10 }}>{children}</View>
+      </View>
+    </Card>
+  );
+}
+
+function Line({ left, sub, right, tone }: { left: string; sub?: string; right: string; tone?: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line, gap: 8 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: tone ?? colors.text }}>{left}</Text>
+        {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+      </View>
+      <Text style={{ fontSize: 14, fontWeight: '800', color: tone ?? colors.text }}>{right}</Text>
+    </View>
+  );
+}
+
+function Report({
+  p,
+  today,
+  cur,
+  prev,
+  catalog,
+  go,
+}: {
+  p: Period;
+  today: Day;
+  cur: ReportData;
+  prev: ReportData;
+  catalog: Catalog;
+  go(g: Grain, day: Day): void;
+}) {
+  const [allProducts, setAllProducts] = useState(false);
+  if (cur.shifts.length === 0) {
+    return <Empty text={p.grain === 'day' ? 'Bu gün kasa açılmadı.' : 'Bu dönemde kasa açılmadı.'} />;
+  }
+  const totals = periodTotals(cur);
+  const hasPrev = prev.shifts.length > 0;
+  const before = periodSales(prev, cutoffFor(p, today));
+  const avg = totals.salesCount ? Math.round(totals.revenue / totals.salesCount) : 0;
+  const prevAvg = before.sales ? Math.round(before.revenue / before.sales) : 0;
+  const openDays = new Set(cur.shifts.map((s) => istanbulDay(s.opened_at))).size;
+
+  const products = productReport(cur, catalog.products, catalog.categories);
+  const prevQty = new Map(productReport(prev, catalog.products, catalog.categories).products.map((r) => [r.productId, r.quantity]));
+  const shown = allProducts ? products.products : products.products.slice(0, 5);
+  const catTotal = Math.max(1, products.categories.reduce((a, c) => a + c.revenue, 0));
+  const shades = ['#1E3A2B', '#2E6B47', '#4F8C64', '#86B596', '#B9D3C2', '#DCE8E0', '#C9CEC6', '#A9B0A8'];
+
+  return (
+    <>
+      <View style={{ backgroundColor: colors.forest, borderRadius: 18, padding: 18 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.forestMuted }}>
+          {p.grain === 'day' ? 'Ciro' : p.grain === 'week' ? 'Haftanın cirosu' : 'Ayın cirosu'}
+        </Text>
+        <Text style={{ fontSize: 38, fontWeight: '800', color: '#fff', marginTop: 2 }} testID="reports-revenue" numberOfLines={1} adjustsFontSizeToFit>
+          {formatTL(totals.revenue)}
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.forestMuted, marginTop: 4 }}>
+          {p.grain === 'day'
+            ? 'Bu gün alınan her şey. Henüz ödenmemiş açık hesaplar dahil.'
+            : `Günlük ortalama ${formatTL(Math.round(totals.revenue / Math.max(1, openDays)))} · ${openDays} gün açık`}
+        </Text>
+        <View style={{ marginTop: 14, backgroundColor: colors.forestChip, borderRadius: 12, padding: 12 }} testID="reports-compare">
+          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.forestMuted }}>{p.prevLabel}</Text>
+          {hasPrev ? (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 4, gap: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>{formatTL(before.revenue)}</Text>
+              <Diff cur={totals.revenue} prev={before.revenue} money onDark />
             </View>
-            {chart && (
-              <View style={{ marginTop: 12 }}>
-                <Columns values={chart.values} compare={chart.compare} mode="bar" labels={chart.labels} />
-                <View style={{ flexDirection: 'row', gap: 14, marginTop: 8 }}>
-                  <Text style={[styles.axis, { color: colors.muted }]}>
-                    <Text style={{ color: colors.apply }}>■</Text> Önceki
-                  </Text>
-                  <Text style={[styles.axis, { color: colors.muted }]}>
-                    <Text style={{ color: colors.accent }}>■</Text> Bu dönem
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Card>
-          <View style={styles.grid}>
-            <Kpi label="Satış" value={String(cur.kpis.sales)} change={percentChange(cur.kpis.sales, prev.kpis.sales)} />
-            <Kpi label="Ort. sepet" value={formatTL(cur.kpis.avgBasket)} change={percentChange(cur.kpis.avgBasket, prev.kpis.avgBasket)} />
-            <Kpi
-              label="İndirim oranı"
-              value={`%${(cur.kpis.discountPermille / 10).toLocaleString('tr-TR')}`}
-              note={`önce %${(prev.kpis.discountPermille / 10).toLocaleString('tr-TR')}`}
+          ) : (
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff', marginTop: 4 }}>O dönemde kasa açılmamış, karşılaştıracak veri yok.</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.grid}>
+        <Card style={styles.stat}>
+          <Text style={styles.label}>Satış</Text>
+          <Text style={styles.statValue}>{totals.salesCount} hesap</Text>
+          {hasPrev && (
+            <Text style={styles.rowSub}>
+              {p.prevShort} {before.sales} · <Diff cur={totals.salesCount} prev={before.sales} />
+            </Text>
+          )}
+        </Card>
+        <Card style={styles.stat}>
+          <Text style={styles.label}>Hesap başı ortalama</Text>
+          <Text style={styles.statValue}>{formatTL(avg)}</Text>
+          {hasPrev && before.sales > 0 && (
+            <Text style={styles.rowSub}>
+              {p.prevShort} {formatTL(prevAvg)} · <Diff cur={avg} prev={prevAvg} money />
+            </Text>
+          )}
+        </Card>
+      </View>
+
+      <Box title="Kasaya giren para" note="Bu dönemde alınan ödemeler. Eski bir hesabın parası da ödendiği güne yazılır.">
+        <Line left="Kart" right={formatTL(totals.card)} />
+        <Line left="Nakit" right={formatTL(totals.cash)} />
+        {totals.open > 0 && <Line left="Açık hesapta bekleyen" sub="Alındı, henüz ödenmedi" right={formatTL(totals.open)} tone={colors.info} />}
+      </Box>
+
+      {p.grain === 'day' && <HourChart p={p} cur={cur} prev={prev} hasPrev={hasPrev} />}
+      {p.grain === 'week' && <WeekChart p={p} cur={cur} prev={prev} go={go} />}
+      {p.grain === 'month' && <MonthChart p={p} cur={cur} go={go} />}
+      {p.grain !== 'day' && <BusyHours p={p} cur={cur} />}
+
+      <Box title="En çok satanlar" note={hasPrev ? `Adet · ciro · ${p.prevShort} kaç adet` : 'Adet · ciro'} testID="top-products">
+        {products.products.length === 0 && <Empty text="Bu dönemde satış yok." />}
+        {shown.map((r) => {
+          const before = prevQty.get(r.productId);
+          return (
+            <Line
+              key={r.productId}
+              left={r.name}
+              sub={hasPrev ? (before === undefined ? `${p.prevShort} yoktu` : `${p.prevShort} ${before} adet`) : undefined}
+              right={`${r.quantity} · ${formatTL(r.revenue)}`}
             />
-            <Kpi label="İptal" value={formatTL(cur.kpis.void)} change={percentChange(cur.kpis.void, prev.kpis.void)} invert />
+          );
+        })}
+        {products.products.length > 5 && (
+          <Pressable onPress={() => setAllProducts(!allProducts)} accessibilityRole="button" style={{ paddingTop: 10 }}>
+            <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 13 }}>
+              {allProducts ? 'Daha az göster' : `Tümünü göster (${products.products.length})`}
+            </Text>
+          </Pressable>
+        )}
+      </Box>
+
+      {products.categories.length > 0 && (
+        <Box title="Kategoriler" note="Cironun kategorilere dağılımı (sepet indirimi düşülmeden)">
+          <View style={{ flexDirection: 'row', height: 14, borderRadius: 8, overflow: 'hidden', gap: 2 }}>
+            {products.categories.map((c, i) => (
+              <View key={c.name} style={{ flex: Math.max(c.revenue, 1) / catTotal, backgroundColor: shades[i % shades.length] }} />
+            ))}
           </View>
-        </>
+          {products.categories.map((c, i) => (
+            <View key={c.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line }}>
+              <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: shades[i % shades.length] }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{c.name}</Text>
+                <Text style={styles.rowSub}>
+                  {c.quantity} adet · %{Math.round((c.revenue / catTotal) * 100)}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{formatTL(c.revenue)}</Text>
+            </View>
+          ))}
+        </Box>
       )}
+
+      <Box title="Cirodan düşenler">
+        <Line left="İndirim" sub="%10, %15 ve elle yazılan sepet indirimleri" right={formatTL(totals.discount)} />
+        <Line left="İptal" sub="Masadan çıkarılan ürün ve iptal edilen hesap" right={formatTL(totals.void)} />
+        <Line left="İade" sub="Ödendikten sonra geri verilen para" right={formatTL(totals.refunds)} />
+        <Line left="Fiyatı değiştirilen" sub="Kasada menü fiyatının altında satılan" right={formatTL(totals.priceChange)} />
+        {totals.comp > 0 && <Line left="İkram" sub="Eski kayıtlar" right={formatTL(totals.comp)} />}
+      </Box>
     </>
   );
 }
 
-function Kpi({ label, value, change, note, invert }: { label: string; value: string; change?: number | null; note?: string; invert?: boolean }) {
+function HourChart({ p, cur, prev, hasPrev }: { p: Period; cur: ReportData; prev: ReportData; hasPrev: boolean }) {
+  const hours = hourlyRevenue(cur, p.from);
+  const before = hourlyRevenue(prev, p.prev.from);
+  const used = [...hours.keys()].filter((h) => hours[h]! > 0 || (hasPrev && before[h]! > 0));
+  if (used.length === 0) return null;
+  const from = Math.min(...used);
+  const to = Math.max(...used, from + 5);
+  const range = Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const peak = range.reduce((best, h) => (hours[h]! > hours[best]! ? h : best), range[0]!);
   return (
-    <Stat
-      label={label}
-      value={value}
-      sub={
-        note ? (
-          <Text style={styles.rowSub}>{note}</Text>
-        ) : change === undefined ? undefined : invert && change !== null ? (
-          <Text style={[styles.delta, { color: change > 0 ? colors.danger : colors.ok }]}>{`${change >= 0 ? '▲' : '▼'} %${Math.abs(change)}`}</Text>
-        ) : (
-          <Delta value={change ?? null} />
-        )
+    <Box title="Saat saat ciro" note={hasPrev ? `Çubuk bu gün, kesikli çizgi ${p.prevLabel.split(',')[0]!.toLocaleLowerCase('tr')}.` : 'Her saatte ne kadar satıldı.'}>
+      <Columns
+        values={range.map((h) => hours[h]!)}
+        compare={hasPrev ? range.map((h) => before[h]!) : undefined}
+        labels={range.map((h, i) => (i % 2 === 0 ? hh(h) : ''))}
+        highlight={range.indexOf(peak)}
+        height={130}
+      />
+      {hours[peak]! > 0 && (
+        <View style={{ marginTop: 12, backgroundColor: colors.accentSoft, borderRadius: 10, padding: 10 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.forest }}>
+            En yoğun saat {hh(peak)}:00–{hh(peak + 1)}:00 · {formatTL(hours[peak]!)}
+          </Text>
+        </View>
+      )}
+    </Box>
+  );
+}
+
+function dayRevenue(data: ReportData): Map<Day, Kurus> {
+  return new Map(revenueSeries(data, 'day').map((pt) => [pt.key, pt.totals.revenue]));
+}
+
+function BestWorst({ best, worst }: { best: string; worst: string }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+      <View style={{ flex: 1, backgroundColor: colors.accentSoft, borderRadius: 10, padding: 10 }}>
+        <Text style={styles.label}>En iyi gün</Text>
+        <Text style={{ fontSize: 13, fontWeight: '800', color: colors.forest }}>{best}</Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.greySoft, borderRadius: 10, padding: 10 }}>
+        <Text style={styles.label}>En sakin gün</Text>
+        <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{worst}</Text>
+      </View>
+    </View>
+  );
+}
+
+function bestWorst(days: [Day, Kurus][], label: (d: Day) => string) {
+  const open = days.filter(([, v]) => v > 0);
+  if (open.length < 2) return null;
+  const sorted = [...open].sort((a, b) => b[1] - a[1]);
+  const [b, w] = [sorted[0]!, sorted.at(-1)!];
+  return { best: `${label(b[0])} · ${formatTL(b[1])}`, worst: `${label(w[0])} · ${formatTL(w[1])}` };
+}
+
+function WeekChart({ p, cur, prev, go }: { p: Period; cur: ReportData; prev: ReportData; go(g: Grain, d: Day): void }) {
+  const now = dayRevenue(cur);
+  const before = dayRevenue(prev);
+  const days = daysBetween(p.from, p.end);
+  const bw = bestWorst(
+    days.map((d) => [d, now.get(d) ?? 0]),
+    (d) => WEEKDAYS[weekdayIndex(d)]!,
+  );
+  return (
+    <Box title="Gün gün" note="Koyu bu hafta, açık geçen hafta. Bir güne dokun, o günün raporu açılır.">
+      <Columns
+        mode="bar"
+        values={days.map((d) => now.get(d) ?? 0)}
+        compare={days.map((d) => before.get(addDays(d, -7)) ?? 0)}
+        labels={[...WEEKDAYS_SHORT]}
+        height={130}
+      />
+      {bw && <BestWorst {...bw} />}
+      <View style={{ marginTop: 8 }}>
+        {days
+          .filter((d) => d <= p.to)
+          .map((d) => (
+            <Row
+              key={d}
+              left={`${WEEKDAYS[weekdayIndex(d)]} · ${shortDate(d)}`}
+              right={now.has(d) ? formatTL(now.get(d)!) : 'kapalı'}
+              onPress={() => go('day', d)}
+              testID="week-day-row"
+            />
+          ))}
+      </View>
+    </Box>
+  );
+}
+
+function MonthChart({ p, cur, go }: { p: Period; cur: ReportData; go(g: Grain, d: Day): void }) {
+  const now = dayRevenue(cur);
+  const days = daysBetween(p.from, p.end);
+  const bw = bestWorst(
+    days.map((d) => [d, now.get(d) ?? 0]),
+    (d) => `${shortDate(d)} ${WEEKDAYS_SHORT[weekdayIndex(d)]}`,
+  );
+  // Weeks (Monday–Sunday) that touch this month, only the days inside it.
+  const weeks: { start: Day; from: Day; to: Day; revenue: Kurus; open: number }[] = [];
+  for (let w = weekStart(p.from); w <= p.to; w = addDays(w, 7)) {
+    const from = w < p.from ? p.from : w;
+    const to = minDay(addDays(w, 6), p.to);
+    const inWeek = daysBetween(from, to).filter((d) => now.has(d));
+    weeks.push({ start: w, from, to, revenue: inWeek.reduce((a, d) => a + now.get(d)!, 0), open: inWeek.length });
+  }
+  const maxWeek = Math.max(1, ...weeks.map((w) => w.revenue));
+  return (
+    <>
+      <Box title="Hafta hafta" note="Bir haftaya dokun, o haftanın raporu açılır.">
+        {weeks.map((w, i) => (
+          <Pressable key={w.start} onPress={() => go('week', w.start)} accessibilityRole="button" testID="month-week-row">
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderTopWidth: i ? 1 : 0, borderTopColor: colors.line, gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{rangeText(w.from, w.to)}</Text>
+                <Text style={styles.rowSub}>
+                  {w.open} gün açık
+                  {i > 0 && weeks[i - 1]!.revenue > 0 && w.revenue > 0 ? ` · önceki haftaya göre ` : ''}
+                  {i > 0 && weeks[i - 1]!.revenue > 0 && w.revenue > 0 ? <Diff cur={w.revenue} prev={weeks[i - 1]!.revenue} money /> : null}
+                </Text>
+              </View>
+              <View style={{ width: 70, height: 8, backgroundColor: colors.line, borderRadius: 4 }}>
+                <View style={{ width: `${(w.revenue / maxWeek) * 100}%`, height: 8, backgroundColor: colors.accent, borderRadius: 4 }} />
+              </View>
+              <Text style={{ width: 84, textAlign: 'right', fontSize: 14, fontWeight: '800', color: colors.text }}>{formatTL(w.revenue)}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </Box>
+      <Box title="Gün gün" note="Her çubuk bir gün, boşluk kapalı gün.">
+        <Columns
+          mode="line"
+          values={days.map((d) => now.get(d) ?? 0)}
+          labels={days.map((d, i) => (i % 7 === 0 ? String(dayNum(d)) : ''))}
+          height={110}
+        />
+        {bw && <BestWorst {...bw} />}
+      </Box>
+    </>
+  );
+}
+
+function BusyHours({ p, cur }: { p: Period; cur: ReportData }) {
+  const map = heatmap(cur, cur.shifts, p.from, p.to, new Date().toISOString());
+  const hours = Array.from({ length: map.toHour - map.fromHour + 1 }, (_, i) => map.fromHour + i);
+  const max = Math.max(1, ...map.cells.flat().map((c) => c?.revenue ?? 0));
+  if (!map.cells.some((row) => row.some(Boolean))) return null;
+  const slot = (s: NonNullable<typeof map.busiest>) => `${WEEKDAYS[s.weekday]} ${hh(s.hour)}:00–${hh(s.hour + 2)}:00`;
+  return (
+    <Box
+      title="Ne zaman yoğunuz?"
+      note={
+        p.grain === 'week'
+          ? 'Her saatte ne kadar satıldı. Koyu çok, açık az, boş kutu o saatte kapalıydı.'
+          : 'Her hafta günü ve saatte ortalama ne kadar satıldı. Koyu çok, açık az, boş kutu kapalı.'
       }
-    />
+      testID="busy-hours"
+    >
+      <HeatGrid rowLabels={[...WEEKDAYS_SHORT]} hours={hours} rows={map.cells.map((row) => hours.map((h) => (row[h] ? row[h]!.revenue / max : null)))} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        <Text style={styles.axis}>Az</Text>
+        <View style={{ flexDirection: 'row', gap: 2 }}>
+          {heat.map((c) => (
+            <View key={c} style={{ width: 14, height: 10, borderRadius: 3, backgroundColor: c }} />
+          ))}
+        </View>
+        <Text style={styles.axis}>Çok</Text>
+      </View>
+      {map.busiest && map.quietest && (
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+          <View style={{ flex: 1, backgroundColor: colors.accentSoft, borderRadius: 10, padding: 10 }}>
+            <Text style={styles.label}>En yoğun iki saat</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.forest }}>{slot(map.busiest)}</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: colors.greySoft, borderRadius: 10, padding: 10 }}>
+            <Text style={styles.label}>En sakin iki saat</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{slot(map.quietest)}</Text>
+          </View>
+        </View>
+      )}
+    </Box>
+  );
+}
+
+/** Ay görünümünde aylar listesi (eski "Ay ay satışlar"): the last 12 months, newest first. */
+function MonthList({ current, onPick }: { current: Day; onPick(m: Day): void }) {
+  const { data } = useLive(async () => {
+    const today = todayIstanbul();
+    return loadReportData(monthStart(addDays(monthStart(today), -335)), today);
+  });
+  if (!data) return null;
+  const months = revenueSeries(data, 'month');
+  if (months.length === 0) return null;
+  return (
+    <Section title="Aylar">
+      <Label>Bir aya dokun, o ayın raporu açılır.</Label>
+      {[...months].reverse().map((m) => {
+        const i = months.indexOf(m);
+        const prev = i > 0 ? months[i - 1]!.totals.revenue : null;
+        return (
+          <Pressable key={m.key} onPress={() => onPick(m.key)} accessibilityRole="button" testID="month-row">
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+                backgroundColor: m.key === current ? colors.accentSoft : colors.panel,
+                marginTop: 6,
+              }}
+            >
+              <View>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{monthTitle(m.key)}</Text>
+                <Text style={styles.rowSub}>
+                  {m.totals.salesCount} satış
+                  {prev !== null && prev > 0 ? ' · önceki aya göre ' : ''}
+                  {prev !== null && prev > 0 ? <Diff cur={m.totals.revenue} prev={prev} money /> : null}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text }}>{formatTL(m.totals.revenue)}</Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </Section>
   );
 }
