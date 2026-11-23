@@ -33,8 +33,14 @@ const item = (tab: Tab, productId: string, qty: number, price: number): TabItem 
   unit_price: price, quantity: qty, discount_percent: null, is_comp: false, note: null, voided_at: null, void_reason: null,
 });
 
-/** Each tab with one line worth its total, taken at the tab's time. */
-const asData = (tabs: Tab[]) => ({ tabs, items: tabs.map((t) => item(t, 'p', 1, t.total ?? 0)) });
+/** Each tab with one line worth its total; a paid tab is paid in full at its closing time. */
+const asData = (tabs: Tab[]) => ({
+  tabs,
+  items: tabs.map((t) => item(t, 'p', 1, t.total ?? 0)),
+  payments: tabs
+    .filter((t) => t.status === 'paid')
+    .map((t) => ({ ...base, id: `p-${t.id}`, tab_id: t.id, shift_id: 's', method: 'card' as const, amount: t.total ?? 0, paid_at: t.closed_at! })),
+});
 
 describe('analytics basics', () => {
   it('weeks start on Monday and minutes are Istanbul time', () => {
@@ -64,13 +70,13 @@ describe('Bugün: so far vs yesterday and last week', () => {
     expect(hourlyRevenue(asData(tabs), '2026-11-04')[9]).toBe(10000);
   });
 
-  it('counts an open table tab at once, at the time each line was taken', () => {
+  it('an open tab counts when it is paid, not before (2026-11-23)', () => {
     const open = sale('2026-11-04', '10:00', 0, { kind: 'table', status: 'open', closed_shift_id: null, closed_at: null, total: null });
-    const later = { ...item(open, 'tost', 1, 25000), created_at: at('2026-11-04', '13:10') };
-    const data = { tabs: [open], items: [item(open, 'latte', 1, 21500), later] };
-    const c = compareSoFar(data, at('2026-11-04', '12:00'));
-    expect(c.today).toEqual({ revenue: 21500, sales: 1 });
-    expect(hourlyRevenue(data, '2026-11-04')[13]).toBe(25000);
+    const data = { tabs: [open], items: [item(open, 'latte', 1, 21500)], payments: [] };
+    expect(compareSoFar(data, at('2026-11-04', '12:00')).today).toEqual({ revenue: 0, sales: 0 });
+    const paid = { ...data, payments: [{ ...base, id: 'p', tab_id: open.id, shift_id: 's', method: 'cash' as const, amount: 21500, paid_at: at('2026-11-04', '13:10') }] };
+    expect(compareSoFar(paid, at('2026-11-04', '14:00')).today).toEqual({ revenue: 21500, sales: 1 });
+    expect(hourlyRevenue(paid, '2026-11-04')[13]).toBe(21500);
   });
 });
 
@@ -103,15 +109,16 @@ describe('Kıyas and Ürünler', () => {
       sale('2026-11-02', '13:00', 10000, { kind: 'table', opened_at: at('2026-11-02', '12:20') }),
     ];
     const shifts = [shift('2026-11-02', '08:00', '22:00')];
-    expect(periodKpis({ ...asData(tabs), shifts }, { discount: 1000, void: 500, salesCount: 2 })).toEqual({
+    void shifts;
+    expect(periodKpis({ revenue: 30000, discount: 1000, void: 500, salesCount: 2 })).toEqual({
       revenue: 30000, sales: 2, avgBasket: 15000, discountPermille: 32, void: 500,
     });
   });
 
   it('shows product change vs the previous period and daypart best sellers', () => {
-    const now1 = sale('2026-11-09', '09:00', 0);
-    const now2 = sale('2026-11-09', '19:00', 0);
-    const old = sale('2026-11-02', '09:00', 0);
+    const now1 = sale('2026-11-09', '09:00', 0, { closed_shift_id: 's-2026-11-09' });
+    const now2 = sale('2026-11-09', '19:00', 0, { closed_shift_id: 's-2026-11-09' });
+    const old = sale('2026-11-02', '09:00', 0, { closed_shift_id: 's-2026-11-02' });
     const catalog = {
       products: [
         { id: 'latte', name: 'Cafe Latte', category_id: 'c' },

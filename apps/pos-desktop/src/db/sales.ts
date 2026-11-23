@@ -12,8 +12,6 @@ import {
   type Shift,
   type ShiftSummary,
   shiftSummary,
-  linesInShift,
-  soldLines,
   sumKurus,
   type Tab,
   type TabItem,
@@ -101,21 +99,7 @@ export function getShiftSummary(ctx: Context, shiftId: string): ShiftSummary {
   const closedTabs = (
     ctx.db.prepare("select * from tabs where closed_shift_id = ? and status <> 'open'").all(shiftId) as Tab[]
   ).map((tab) => ({ ...tab, items: listItems(ctx, tab.id) }));
-  // Ciro (2026-11-21): lines added in this shift, on tabs paid or still open,
-  // whenever they are paid. Their tabs come whole for the cart discount share.
-  const end = shift.closed_at ?? '9999';
-  const soldItems = ctx.db
-    .prepare(
-      `select * from tab_items where tab_id in
-         (select tab_id from tab_items where created_at >= ? and created_at < ?)`,
-    )
-    .all(shift.opened_at, end)
-    .map((row) => fromDb<TabItem>('tab_items', row));
-  const soldTabs = ctx.db
-    .prepare('select * from tabs where id in (select value from json_each(?))')
-    .all(JSON.stringify([...new Set(soldItems.map((i) => i.tab_id))])) as Tab[];
-  const sold = linesInShift(soldLines(soldTabs, soldItems), shift);
-  return shiftSummary({ openingCash: shift.opening_cash, countedCash: shift.counted_cash, payments, refunds, closedTabs, sold });
+  return shiftSummary({ openingCash: shift.opening_cash, countedCash: shift.counted_cash, payments, refunds, closedTabs });
 }
 
 export interface CloseShiftResult {

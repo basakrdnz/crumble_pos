@@ -32,9 +32,7 @@ describe('shiftSummary', () => {
       ],
     });
     expect(summary).toEqual({
-      revenue: 21500 + (46000 - 4600) + 13000, // no sold lines given: the paid tabs
-      openRevenue: 0,
-      revenueTabCount: 3,
+      revenue: 24500 + 56000 - 1000, // money taken − refunds (2026-11-23)
       openingCash: 50000,
       cashSales: 24500,
       cardSales: 56000,
@@ -69,19 +67,14 @@ describe('shiftSummary', () => {
     expect(summary.salesCount).toBe(2);
   });
 
-  it('ciro comes from the lines sold in the shift, paid or open (2026-11-21)', () => {
+  it('ciro is the money taken in the shift, whenever the tab was opened (2026-11-23)', () => {
     const summary = shiftSummary({
       openingCash: 0,
-      payments: [{ method: 'card', amount: 9000 }], // an older tab paid today: money, not ciro
+      payments: [{ method: 'card', amount: 80000 }], // a tab from yesterday (400) and today (400), paid today
       refunds: [],
-      closedTabs: [],
-      sold: [
-        { tabId: 'a', amount: 3000, open: false },
-        { tabId: 'b', amount: 2000, open: true },
-        { tabId: 'b', amount: 500, open: true },
-      ],
+      closedTabs: [{ status: 'paid', kind: 'named', discount_percent: null, items: [item(40000), item(40000)] }],
     });
-    expect(summary).toMatchObject({ revenue: 5500, openRevenue: 2500, revenueTabCount: 2, cardSales: 9000 });
+    expect(summary).toMatchObject({ revenue: 80000, salesCount: 1, cardSales: 80000 });
   });
 
   it('has no difference before the drawer is counted', () => {

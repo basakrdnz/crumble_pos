@@ -102,11 +102,6 @@ export default function Today() {
       <Text style={[s.heroBig, narrow && { fontSize: 34 }]} testID="today-revenue" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15}>
         {formatTL(totals.revenue)}
       </Text>
-      {totals.open > 0 && (
-        <Text style={s.heroOpen} testID="today-open">
-          Açık hesapta bekleyen: {formatTL(totals.open)}
-        </Text>
-      )}
       <View style={s.compare}>
         <View style={s.compareRow}>
           <Text style={s.compareLabel}>Dün bu saatte</Text>
@@ -195,7 +190,6 @@ const s = StyleSheet.create({
   brand: { fontFamily: fonts.brand, color: '#fff', fontSize: 14, letterSpacing: 2.5 },
   heroLabel: { marginTop: 16, fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted },
   heroBig: { fontSize: 42, fontFamily: fonts.heavy, color: '#fff', marginTop: 2 },
-  heroOpen: { fontSize: 13, fontFamily: fonts.bold, color: colors.forestMuted, marginTop: 2 },
   // Tasarım D (2026-11-04): the comparisons as a two-row list, larger than the old pills.
   compare: { marginTop: 10, backgroundColor: colors.forestChip, borderRadius: 14, overflow: 'hidden' },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8 },

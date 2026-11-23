@@ -1,15 +1,15 @@
 // Analysis for the manager app (Raporlar · Saatler / Ürünler / Kıyas and the
-// Bugün comparisons, 2026-10-30). Hour-based views use the time things were
-// taken (2026-11-21, sold.ts): a "sale" is what one tab took in one hour of
-// one day, open tabs included, in Istanbul time.
+// Bugün comparisons, 2026-10-30). Hour-based views follow the money (kullanıcı
+// 2026-11-23: ciro is what was paid): a "sale" is what one tab paid in one
+// hour of one day, in Istanbul time.
 // Opening hours change from day to day, so the hours that count as "open"
 // come from the shifts themselves (vardiya açılışı → gün sonu).
 import { sumKurus, type Kurus } from '../money';
 import type { Category, Product, Shift } from '../types';
 import { addDays, type Day, daysBetween, istanbulDay, istanbulHour } from './dates';
-import { periodLines, productReport, type ReportData, reportLines } from './reports';
+import { periodLines, productReport, type ReportData } from './reports';
 
-type SalesData = Pick<ReportData, 'tabs' | 'items'>;
+type SalesData = Pick<ReportData, 'payments'>;
 
 const OFFSET_MS = 3 * 60 * 60 * 1000;
 
@@ -34,21 +34,21 @@ interface SaleEvent {
 }
 const eventCache = new WeakMap<object, SaleEvent[]>();
 
-/** What each tab took per Istanbul day and hour, at the first line's minute. */
+/** What each tab paid per Istanbul day and hour, at the first payment's minute. */
 function salesEvents(data: SalesData): SaleEvent[] {
   const cached = eventCache.get(data);
   if (cached) return cached;
   const map = new Map<string, SaleEvent>();
-  for (const line of reportLines(data)) {
-    const day = istanbulDay(line.at);
-    const hour = istanbulHour(line.at);
-    const minute = istanbulMinute(line.at);
-    const key = `${line.tabId}|${day}|${hour}`;
+  for (const p of data.payments) {
+    const day = istanbulDay(p.paid_at);
+    const hour = istanbulHour(p.paid_at);
+    const minute = istanbulMinute(p.paid_at);
+    const key = `${p.tab_id}|${day}|${hour}`;
     const event = map.get(key);
     if (event) {
-      event.total += line.amount;
+      event.total += p.amount;
       event.minute = Math.min(event.minute, minute);
-    } else map.set(key, { day, hour, minute, total: line.amount });
+    } else map.set(key, { day, hour, minute, total: p.amount });
   }
   const events = [...map.values()];
   eventCache.set(data, events);
@@ -60,10 +60,10 @@ export interface SoFar {
   sales: number;
 }
 
-/** What was taken on `day` up to `minute` (exclusive) in Istanbul time. */
+/** What was paid on `day` up to `minute` (exclusive) in Istanbul time. */
 export function salesSoFar(data: SalesData, day: Day, minute: number): SoFar {
-  const lines = reportLines(data).filter((l) => istanbulDay(l.at) === day && istanbulMinute(l.at) < minute);
-  return { revenue: sumKurus(lines.map((l) => l.amount)), sales: new Set(lines.map((l) => l.tabId)).size };
+  const paid = data.payments.filter((p) => istanbulDay(p.paid_at) === day && istanbulMinute(p.paid_at) < minute);
+  return { revenue: sumKurus(paid.map((p) => p.amount)), sales: new Set(paid.map((p) => p.tab_id)).size };
 }
 
 /** Whole-number percent change, null when there is nothing to compare with. */
@@ -219,11 +219,8 @@ export interface Kpis {
 }
 
 /** Raporlar · Kıyas indicators for one period (ciro by the time things were taken). */
-export function periodKpis(
-  data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>,
-  totals: { discount: Kurus; void: Kurus; salesCount: number },
-): Kpis {
-  const revenue = sumKurus(periodLines(data).map((l) => l.amount));
+export function periodKpis(totals: { revenue: Kurus; discount: Kurus; void: Kurus; salesCount: number }): Kpis {
+  const revenue = totals.revenue;
   const sales = totals.salesCount;
   return {
     revenue,

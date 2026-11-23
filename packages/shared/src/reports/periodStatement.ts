@@ -88,9 +88,7 @@ tr.total td { font-weight:bold; border-top:2px solid #1C2420; border-bottom:0; }
 <div class="box"><div class="l">Hesap başı</div><div class="v">${formatTL(avg)}</div></div>
 </div>
 ${compare}
-<div class="keep"><h2>Kasaya giren para</h2><table><tbody>${row(['Kart', t.card])}${row(['Nakit', t.cash])}${
-    t.open > 0 ? row(['Açık hesapta bekleyen (henüz ödenmedi)', t.open]) : ''
-  }</tbody></table></div>
+<div class="keep"><h2>Kasaya giren para</h2><table><tbody>${row(['Kart', t.card])}${row(['Nakit', t.cash])}</tbody></table></div>
 ${
   days.length > 1
     ? `<div class="keep"><h2>Gün gün</h2><table><thead><tr><th>Gün</th><th class="n">Satış</th><th class="n">Ciro</th><th class="n">Nakit</th><th class="n">Kart</th></tr></thead><tbody>${dayRows}${row(
@@ -109,7 +107,7 @@ ${
     'İade',
     t.refunds,
   ])}${row(['Fiyatı değiştirilen (menü fiyatının altında)', t.priceChange])}${t.comp > 0 ? row(['İkram', t.comp]) : ''}</tbody></table></div>
-<div class="note">Ciro, ürünün alındığı güne yazılır; henüz ödenmemiş açık hesaplar dahildir, iadeler düşülür. Nakit ve kart, ödemenin alındığı güne yazılır.</div>
+<div class="note">Ciro, ödemenin alındığı güne yazılır: bir hesap ödendiği günün cirosuna girer, ödenmemiş açık hesaplar henüz ciroda yoktur. İadeler düşülür.</div>
 </body></html>`;
   const fileName = input.from === input.to ? `Crumble-rapor-${input.from}` : `Crumble-rapor-${input.from}_${input.to}`;
   return { html, fileName };
