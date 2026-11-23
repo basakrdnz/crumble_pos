@@ -34,8 +34,7 @@
         {
           "mode": "production"
         }
-      ],
-      "expo-sharing"
+      ]
     ],
     "scheme": "crumble-manager",
     "backgroundColor": "#F3F4F1",
