@@ -2,7 +2,6 @@ import type { Kurus } from '../money';
 import { sumKurus } from '../money';
 import type { PaymentMethod, TabKind, TabStatus } from '../types';
 import { cashDifference, expectedCash } from './shift';
-import type { SoldLine } from './sold';
 import { type CalcItem, tabTotals } from './tab';
 
 export interface SummaryTab {
@@ -22,12 +21,6 @@ export interface ShiftSummaryInput {
   refunds: readonly { method: PaymentMethod; amount: Kurus }[];
   /** Tabs closed (paid or void) in this shift (tabs.closed_shift_id). */
   closedTabs: readonly SummaryTab[];
-  /**
-   * Lines added in this shift on tabs that count as sold (open or paid), see
-   * sold.ts. Ciro comes from these; left out, ciro falls back to the tabs
-   * paid in the shift.
-   */
-  sold?: readonly Pick<SoldLine, 'tabId' | 'amount' | 'open'>[];
 }
 
 export interface ShiftSummary {
@@ -40,14 +33,12 @@ export interface ShiftSummary {
   countedCash: Kurus | null;
   cashDifference: Kurus | null;
   /**
-   * Ciro (2026-11-21): everything taken in this shift, whether paid yet or
-   * not, before refunds. A tab spanning days counts on each day for its lines.
+   * Ciro (kullanıcı 2026-11-23, replacing the 2026-11-21 rule): the money
+   * taken in this shift, nakit + kart − refunds. A tab counts on the day it
+   * is paid, all of it, whenever its items were taken; an unpaid open tab is
+   * in no day's ciro yet; a part payment counts on its own day.
    */
   revenue: Kurus;
-  /** The part of `revenue` still on open tabs. */
-  openRevenue: Kurus;
-  /** Tabs with lines in `revenue`. */
-  revenueTabCount: number;
   /** Number and value of tabs paid (closed) in this shift. */
   salesCount: number;
   salesTotal: Kurus;
@@ -94,11 +85,8 @@ export function shiftSummary(input: ShiftSummaryInput): ShiftSummary {
   }
   const expected = expectedCash(input.openingCash, input.payments, input.refunds);
   const counted = input.countedCash ?? null;
-  const sold = input.sold;
   return {
-    revenue: sold ? sumKurus(sold.map((l) => l.amount)) : salesTotal,
-    openRevenue: sold ? sumKurus(sold.filter((l) => l.open).map((l) => l.amount)) : 0,
-    revenueTabCount: sold ? new Set(sold.map((l) => l.tabId)).size : salesCount,
+    revenue: sumKurus(input.payments.map((p) => p.amount)) - sumKurus(input.refunds.map((r) => r.amount)),
     openingCash: input.openingCash,
     cashSales: byMethod(input.payments, 'cash'),
     cardSales: byMethod(input.payments, 'card'),

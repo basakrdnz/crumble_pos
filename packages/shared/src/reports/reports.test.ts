@@ -62,7 +62,7 @@ function data() {
   const payments = [
     payment('p1', 't1', 's1', 'cash', 43000),
     payment('p2', 't2', 's1', 'card', 19350),
-    payment('p3', 't3', 's2', 'card', 30600),
+    { ...payment('p3', 't3', 's2', 'card', 30600), paid_at: '2026-11-03T09:05:00.000Z' },
   ];
   const refunds: Refund[] = [{ ...base, created_at: '2026-11-03T10:00:00.000Z', id: 'r1', tab_id: 't1', tab_item_id: null, shift_id: 's2', amount: 1000, method: 'cash', reason: null }];
   return { shifts: [s1, s2], tabs, items, payments, refunds };
@@ -74,10 +74,9 @@ describe('reports', () => {
     expect(summarizeShift(d.shifts[1]!, d)).toMatchObject({ cardSales: 30600, cashRefunds: 1000, salesCount: 1, voidTotal: 6500 + 21500 });
   });
 
-  it('totals a period (ciro = what was taken − refunds)', () => {
+  it('totals a period (ciro = money taken − refunds)', () => {
     expect(periodTotals(data())).toEqual({
       revenue: 43000 + 19350 + 30600 - 1000,
-      open: 0,
       collected: 43000 + 19350 + 30600 - 1000,
       cash: 42000,
       card: 49950,
@@ -100,30 +99,29 @@ describe('reports', () => {
     expect(revenueSeries(data(), 'month')[0]!.key).toBe('2026-11-01');
   });
 
-  it('a week-long tab counts on the days things were taken, money on the day it was paid (2026-11-21)', () => {
+  it('a week-long tab counts on the day it is paid, all of it; unpaid it is in no day (2026-11-23)', () => {
     const days = ['2026-11-16', '2026-11-17', '2026-11-20'].map((d, i) =>
       shift(`w${i}`, `${d}T06:00:00.000Z`, { closed_at: `${d}T20:00:00.000Z` }),
     );
     // Masa 1: latte on Monday, tost on Tuesday, %10 off, paid by card on Friday.
-    const t = tab('w', 'w0', { kind: 'table', closed_shift_id: 'w2', total: 41850, discount_percent: 10 });
+    const t = tab('w', 'w0', { kind: 'table', closed_shift_id: 'w2', total: 41850, discount_percent: 10, closed_at: '2026-11-20T15:00:00.000Z' });
     const items = [
       item('a', 'w', 'latte', 21500, { created_at: '2026-11-16T07:00:00.000Z' }),
       item('b', 'w', 'tost', 25000, { created_at: '2026-11-17T08:00:00.000Z' }),
     ];
-    const pay = payment('wp', 'w', 'w2', 'card', 41850);
+    const pay = { ...payment('wp', 'w', 'w2', 'card', 41850), paid_at: '2026-11-20T15:00:00.000Z' };
     const d = { shifts: days, tabs: [t], items, payments: [pay], refunds: [] };
-    const series = revenueSeries(d, 'day').map((p) => [p.key, p.totals.revenue, p.totals.collected]);
-    // Discount so far: floor(21500 × 10%) = 2150, then floor(46500 × 10%) = 4650 → 2500 on Tuesday.
-    expect(series).toEqual([
-      ['2026-11-16', 21500 - 2150, 0],
-      ['2026-11-17', 25000 - 2500, 0],
-      ['2026-11-20', 0, 41850],
+    expect(revenueSeries(d, 'day').map((p) => [p.key, p.totals.revenue, p.totals.salesCount])).toEqual([
+      ['2026-11-16', 0, 0],
+      ['2026-11-17', 0, 0],
+      ['2026-11-20', 41850, 1],
     ]);
-    // Before it is paid, the same lines already count, marked as open.
+    // Its products count on Friday too.
+    const friday = { ...d, shifts: [days[2]!] };
+    expect(productReport(friday, [], []).totalRevenue).toBe(41850);
+    // Before it is paid, nothing counts yet.
     const open = { ...d, tabs: [{ ...t, status: 'open' as const, closed_shift_id: null, total: null, closed_at: null }], payments: [] };
-    expect(periodTotals(open)).toMatchObject({ revenue: 41850, open: 41850, collected: 0, salesCount: 2 });
-    // An open quick sale (a cart being filled) is not ciro yet; a cancelled tab never is.
-    expect(periodTotals({ ...open, tabs: [{ ...open.tabs[0]!, kind: 'quick' as const }] }).revenue).toBe(0);
+    expect(periodTotals(open)).toMatchObject({ revenue: 0, salesCount: 0 });
   });
 
   it('periodSales: the whole period equals periodTotals; a cutoff keeps only what came before it', () => {

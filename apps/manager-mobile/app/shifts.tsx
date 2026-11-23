@@ -21,8 +21,7 @@ export default function Shifts() {
       {data?.map(({ shift, summary }) => (
         <Section key={shift.id} title={`${formatDateTime(shift.opened_at)}${shift.closed_at ? ` → ${formatTime(shift.closed_at)}` : ' · açık'}`}>
           <Text style={styles.rowLeft}>
-            Ciro {formatTL(summary.revenue)} · {summary.revenueTabCount} satış
-            {summary.openRevenue > 0 ? ` · ${formatTL(summary.openRevenue)} açık hesapta` : ''}
+            Ciro {formatTL(summary.revenue)} · {summary.salesCount} satış
           </Text>
           <Text style={styles.rowSub}>
             Tahsilat: Nakit {formatTL(summary.cashSales)} · Kart {formatTL(summary.cardSales)}

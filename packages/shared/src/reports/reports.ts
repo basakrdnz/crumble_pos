@@ -1,9 +1,10 @@
 // Reports for the manager app (plan §6), computed from synced rows. A "day"
-// is the opening day of a shift (plan §4). Ciro counts each line in the shift
-// it was added in, paid or not (2026-11-21, sold.ts); money taken (nakit/kart)
-// and refunds count in the shift they happened in (payments.shift_id / refunds.shift_id).
+// is the opening day of a shift (plan §4). Ciro is the money taken in the
+// shift (payments − refunds, by payments.shift_id / refunds.shift_id): a tab
+// counts on the day it is paid, an unpaid open tab in no day yet (kullanıcı
+// 2026-11-23). Products count with their tab, in the shift it was paid.
 import { shiftSummary, type ShiftSummary } from '../calc/shiftSummary';
-import { linesInShift, type SoldLine, soldLines } from '../calc/sold';
+import { type SoldLine, soldLines } from '../calc/sold';
 import { sumKurus, type Kurus } from '../money';
 import type { Category, Payment, Product, Refund, Shift, Tab, TabItem } from '../types';
 import { type Day, istanbulDay, istanbulHour, monthStart, weekStart } from './dates';
@@ -40,10 +41,11 @@ export function reportLines(data: Pick<ReportData, 'tabs' | 'items'>): SoldLine[
   return lines;
 }
 
-/** Sold lines added in the data's shifts. */
+/** Lines of the tabs paid (closed) in the data's shifts, whenever they were taken. */
 export function periodLines(data: Pick<ReportData, 'tabs' | 'items' | 'shifts'>): SoldLine[] {
-  const lines = reportLines(data);
-  return data.shifts.flatMap((shift) => linesInShift(lines, shift));
+  const ids = new Set(data.shifts.map((s) => s.id));
+  const paid = new Set(data.tabs.filter((t) => t.status === 'paid' && t.closed_shift_id && ids.has(t.closed_shift_id)).map((t) => t.id));
+  return reportLines(data).filter((l) => paid.has(l.tabId));
 }
 
 /** One shift's summary from the synced rows (same rules as the POS close screen). */
@@ -57,21 +59,18 @@ export function summarizeShift(shift: Shift, data: ReportData): ShiftSummary {
     closedTabs: data.tabs
       .filter((t) => t.closed_shift_id === shift.id && t.status !== 'open')
       .map((t) => ({ status: t.status, kind: t.kind, discount_percent: t.discount_percent, items: byTab.get(t.id) ?? [] })),
-    sold: linesInShift(reportLines(data), shift),
   });
 }
 
 export interface PeriodTotals {
-  /** Ciro: what was taken in the period (paid or still on open tabs) − refunds. */
+  /** Ciro: money taken in the period (nakit + kart) − refunds. */
   revenue: Kurus;
-  /** The part of the ciro still on open tabs. */
-  open: Kurus;
-  /** Money taken in the period, net of refunds (cash + card). */
+  /** Same as revenue (kept for the screens that name it so). */
   collected: Kurus;
   cash: Kurus;
   card: Kurus;
   refunds: Kurus;
-  /** Tabs with something taken in the period (counted per day). */
+  /** Tabs paid (closed) in the period. */
   salesCount: number;
   discount: Kurus;
   comp: Kurus;
@@ -80,19 +79,18 @@ export interface PeriodTotals {
 }
 
 export function emptyTotals(): PeriodTotals {
-  return { revenue: 0, open: 0, collected: 0, cash: 0, card: 0, refunds: 0, salesCount: 0, discount: 0, comp: 0, void: 0, priceChange: 0 };
+  return { revenue: 0, collected: 0, cash: 0, card: 0, refunds: 0, salesCount: 0, discount: 0, comp: 0, void: 0, priceChange: 0 };
 }
 
 function addSummary(total: PeriodTotals, s: ShiftSummary): PeriodTotals {
   const refunds = s.cashRefunds + s.cardRefunds;
   return {
-    revenue: total.revenue + s.revenue - refunds,
-    open: total.open + s.openRevenue,
+    revenue: total.revenue + s.revenue,
     collected: total.collected + s.cashSales + s.cardSales - refunds,
     cash: total.cash + s.cashSales - s.cashRefunds,
     card: total.card + s.cardSales - s.cardRefunds,
     refunds: total.refunds + refunds,
-    salesCount: total.salesCount + s.revenueTabCount,
+    salesCount: total.salesCount + s.salesCount,
     discount: total.discount + s.discountTotal,
     comp: total.comp + s.compTotal,
     void: total.void + s.voidTotal,
@@ -106,9 +104,9 @@ export function periodTotals(data: ReportData): PeriodTotals {
 }
 
 export interface PeriodSales {
-  /** Ciro − refunds, as in periodTotals. */
+  /** Ciro (payments − refunds), as in periodTotals. */
   revenue: Kurus;
-  /** Tabs with something taken, counted per shift (as periodTotals.salesCount). */
+  /** Tabs paid, as periodTotals.salesCount. */
   sales: number;
 }
 
@@ -120,16 +118,12 @@ export interface PeriodSales {
  */
 export function periodSales(data: ReportData, cutoff?: string): PeriodSales {
   const end = cutoff ? Date.parse(cutoff) : Infinity;
-  const lines = reportLines(data);
-  let revenue = 0;
-  let sales = 0;
-  for (const shift of data.shifts) {
-    const inShift = linesInShift(lines, shift).filter((l) => Date.parse(l.at) < end);
-    revenue += sumKurus(inShift.map((l) => l.amount));
-    sales += new Set(inShift.map((l) => l.tabId)).size;
-  }
   const ids = new Set(data.shifts.map((s) => s.id));
-  revenue -= sumKurus(data.refunds.filter((r) => ids.has(r.shift_id) && Date.parse(r.created_at) < end).map((r) => r.amount));
+  const before = (iso: string | null) => iso !== null && Date.parse(iso) < end;
+  const revenue =
+    sumKurus(data.payments.filter((p) => ids.has(p.shift_id) && before(p.paid_at)).map((p) => p.amount)) -
+    sumKurus(data.refunds.filter((r) => ids.has(r.shift_id) && before(r.created_at)).map((r) => r.amount));
+  const sales = data.tabs.filter((t) => t.status === 'paid' && t.closed_shift_id && ids.has(t.closed_shift_id) && before(t.closed_at)).length;
   return { revenue, sales };
 }
 

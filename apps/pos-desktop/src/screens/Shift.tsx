@@ -68,13 +68,9 @@ export function OpenShiftPanel({ onOpened }: { onOpened(): void }) {
 function Stats({ summary }: { summary: ShiftSummary }) {
   const refunds = summary.cashRefunds + summary.cardRefunds;
   const stats: [string, string, string][] = [
-    // Ciro = what was taken today, paid or still on an open tab (2026-11-21);
-    // Nakit/Kart = money taken today, also for tabs opened on earlier days.
-    [
-      'Ciro',
-      formatTL(summary.revenue),
-      summary.openRevenue > 0 ? `${formatTL(summary.openRevenue)} açık hesapta` : `${summary.revenueTabCount} satış`,
-    ],
+    // Ciro = money taken today, nakit + kart − iade (2026-11-23): an open tab
+    // counts on the day it is paid, all of it.
+    ['Ciro', formatTL(summary.revenue), `${summary.salesCount} satış`],
     ['Nakit', formatTL(summary.cashSales), summary.cashRefunds ? `iade −${formatTL(summary.cashRefunds)}` : 'bugün alınan nakit'],
     ['Kart', formatTL(summary.cardSales), summary.cardRefunds ? `iade −${formatTL(summary.cardRefunds)}` : 'bugün alınan kart'],
     ['İndirim', formatTL(summary.discountTotal), 'sepet indirimleri'],
@@ -101,8 +97,7 @@ function SummaryTable({ summary, shift }: { summary: ShiftSummary; shift: ShiftR
     ['Açılış', formatDateTime(shift.opened_at)],
     ['Kapanış', shift.closed_at ? formatDateTime(shift.closed_at) : 'Açık'],
     ['Ciro', formatTL(summary.revenue), 'strong'],
-    ...(summary.openRevenue > 0 ? ([['Açık hesapta (ödenmedi)', formatTL(summary.openRevenue)]] as [string, string][]) : []),
-    ['Satış adedi', String(summary.revenueTabCount)],
+    ['Satış adedi', String(summary.salesCount)],
     ['Nakit tahsilat', formatTL(summary.cashSales)],
     ['Kart tahsilat', formatTL(summary.cardSales)],
     ['Nakit iadeler', formatTL(summary.cashRefunds)],

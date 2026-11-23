@@ -337,8 +337,8 @@ begin
 end;
 $$;
 
--- Today: open at 11:00; Ali's tab takes 50 + 60 + 10 TL (counted as they are
--- taken, before any payment), paid 50 cash + 60 card + 10 cash, close at 11:55.
+-- Today: open at 11:00; Ali's tab takes 50 + 60 + 10 TL, paid 50 cash + 60 card
+-- + 10 cash, close at 11:55. Ciro is the money taken (migration 0016).
 insert into public.shifts (id, opened_at, opening_cash)
   values ('30000000-0000-0000-0000-0000000000f1', '2030-06-20 11:00:00+03', 0);
 insert into public.tabs (id, opened_shift_id, kind, customer_name, opened_at)
@@ -358,14 +358,20 @@ insert into public.tab_items (id, tab_id, product_id, name_snapshot, list_price,
   values ('50000000-0000-0000-0000-0000000000f3', '40000000-0000-0000-0000-0000000000f1',
           '20000000-0000-0000-0000-000000000001', 'Latte', 1000, 1000, 1, '2030-06-20 11:30:00+03');
 reset role;
+select pg_temp.expect_count($$select count(*) from net.calls$$, 1, 'nothing for lines on an unpaid tab');
+set local role authenticated;
+-- One payment per statement: an after-insert trigger sees its whole statement.
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at) values
+  ('60000000-0000-0000-0000-0000000000f1', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'cash', 5000, '2030-06-20 11:40:00+03');
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at) values
+  ('60000000-0000-0000-0000-0000000000f2', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'card', 6000, '2030-06-20 11:41:00+03');
+insert into public.payments (id, tab_id, shift_id, method, amount, paid_at) values
+  ('60000000-0000-0000-0000-0000000000f3', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'cash', 1000, '2030-06-20 11:42:00+03');
+reset role;
 select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Bu ayın rekoru'
-  and body->0->>'body' like '%110,00 ₺%önceki en iyi 100,00 ₺%'$$, 1, 'month record sent once, before any payment');
+  and body->0->>'body' like '%110,00 ₺%önceki en iyi 100,00 ₺%'$$, 1, 'month record sent once, when the money came in');
 select pg_temp.expect_count($$select count(*) from net.calls$$, 2, 'no separate above-average push after the record');
 set local role authenticated;
-insert into public.payments (id, tab_id, shift_id, method, amount, paid_at) values
-  ('60000000-0000-0000-0000-0000000000f1', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'cash', 5000, '2030-06-20 11:40:00+03'),
-  ('60000000-0000-0000-0000-0000000000f2', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'card', 6000, '2030-06-20 11:41:00+03'),
-  ('60000000-0000-0000-0000-0000000000f3', '40000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-0000000000f1', 'cash', 1000, '2030-06-20 11:42:00+03');
 update public.tabs set status = 'paid', closed_shift_id = '30000000-0000-0000-0000-0000000000f1', total = 12000,
   closed_at = '2030-06-20 11:50:00+03' where id = '40000000-0000-0000-0000-0000000000f1';
 update public.shifts set closed_at = '2030-06-20 11:55:00+03', expected_cash = 6000
@@ -401,9 +407,7 @@ reset role;
 select pg_temp.expect_count($$select count(*) from net.calls where body->0->>'title' = 'Gün sonu'
   and body->0->>'body' = 'Ciro 140,00 ₺ · 2 satış · kasada nakit 80,00 ₺.'$$, 1, 'changed day end sent again');
 
--- Ciro by the day things were taken (migration 0015): a tab opened on the 19th
--- with a 10% cart discount, a line on the 19th and one today, still open.
--- Discount so far: floor(150 × 10%) = 15 TL, then floor(250 × 10%) = 25 TL → 10 TL today.
+-- An unpaid tab with lines on the 19th and today is in no day's ciro yet (migration 0016).
 set local role authenticated;
 insert into public.tabs (id, opened_shift_id, kind, customer_name, discount_percent, opened_at)
   values ('40000000-0000-0000-0000-0000000000f3', md5('push-shift19')::uuid, 'named', 'Veli', 10, '2030-06-19 12:00:00+03');
@@ -411,8 +415,8 @@ insert into public.tab_items (id, tab_id, product_id, name_snapshot, list_price,
   ('50000000-0000-0000-0000-0000000000f5', '40000000-0000-0000-0000-0000000000f3', '20000000-0000-0000-0000-000000000001', 'Latte', 15000, 15000, 1, '2030-06-19 12:00:00+03'),
   ('50000000-0000-0000-0000-0000000000f6', '40000000-0000-0000-0000-0000000000f3', '20000000-0000-0000-0000-000000000001', 'Latte', 10000, 10000, 1, '2030-06-20 11:30:00+03');
 reset role;
-select pg_temp.expect_count($$select private.day_revenue('2030-06-19')$$, 10000 + 13500, 'an earlier day keeps its own lines, open tab included');
-select pg_temp.expect_count($$select private.day_revenue('2030-06-20')$$, 14000 + 9000, 'today gets only today''s line, less its discount share');
+select pg_temp.expect_count($$select private.day_revenue('2030-06-19')$$, 10000, 'an unpaid open tab adds nothing to the 19th');
+select pg_temp.expect_count($$select private.day_revenue('2030-06-20')$$, 14000, 'nor to today: ciro is the money taken');
 
 -- A broken push never blocks the POS write.
 create or replace function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',

@@ -344,7 +344,7 @@ function Report({
         </Text>
         <Text style={{ fontSize: 12, fontWeight: '600', color: colors.forestMuted, marginTop: 4 }}>
           {p.grain === 'day' || (p.grain === 'range' && span === 1)
-            ? 'Bu gün alınan her şey. Henüz ödenmemiş açık hesaplar dahil.'
+            ? 'Bu gün alınan ödemeler. Açık hesap, ödendiği günün cirosuna girer.'
             : `Günlük ortalama ${formatTL(Math.round(totals.revenue / Math.max(1, openDays)))} · ${openDays} gün açık`}
         </Text>
         <View style={{ marginTop: 14, backgroundColor: colors.forestChip, borderRadius: 12, padding: 12 }} testID="reports-compare">
@@ -381,10 +381,9 @@ function Report({
         </Card>
       </View>
 
-      <Box title="Kasaya giren para" note="Bu dönemde alınan ödemeler. Eski bir hesabın parası da ödendiği güne yazılır.">
+      <Box title="Kasaya giren para" note="Cironun nakit ve kart dağılımı (iadeler düşülmüş).">
         <Line left="Kart" right={formatTL(totals.card)} />
         <Line left="Nakit" right={formatTL(totals.cash)} />
-        {totals.open > 0 && <Line left="Açık hesapta bekleyen" sub="Alındı, henüz ödenmedi" right={formatTL(totals.open)} tone={colors.info} />}
       </Box>
 
       {p.grain === 'day' && <HourChart p={p} cur={cur} prev={prev} hasPrev={hasPrev} />}

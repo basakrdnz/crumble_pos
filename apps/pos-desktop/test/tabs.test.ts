@@ -194,23 +194,19 @@ describe('tabs (hesap)', () => {
     expect(getShiftSummary(ctx, s2.id)).toMatchObject({ cashSales: 20000, salesCount: 1, salesTotal: 21500 });
   });
 
-  it('ciro counts on the day things were taken, open at once; the money on the day it is paid (2026-11-21)', () => {
+  it('ciro: a tab counts on the day it is paid, all of it; unpaid it is in no day (2026-11-23)', () => {
     const ctx = testContext();
     const { t1, latte, cay } = setup(ctx);
     const s1 = openShift(ctx, 0);
     const tab = openTab(ctx, { kind: 'table', table_id: t1.id });
     addProduct(ctx, tab.id, latte.id);
-    // A quick sale still in the cart is not ciro yet.
-    const quick = openTab(ctx, { kind: 'quick' });
-    addProduct(ctx, quick.id, cay.id);
-    expect(getShiftSummary(ctx, s1.id)).toMatchObject({ revenue: 21500, openRevenue: 21500, revenueTabCount: 1 });
-    voidTab(ctx, quick.id);
+    expect(getShiftSummary(ctx, s1.id)).toMatchObject({ revenue: 0, salesCount: 0 });
     closeShift(ctx, { carryOverTabIds: [tab.id] });
     nextDay(ctx);
     const s2 = openShift(ctx, 0);
     addProduct(ctx, tab.id, cay.id);
     pay(ctx, tab.id, [{ method: 'card', amount: 28000 }]);
-    expect(getShiftSummary(ctx, s1.id)).toMatchObject({ revenue: 21500, openRevenue: 0, cardSales: 0 });
-    expect(getShiftSummary(ctx, s2.id)).toMatchObject({ revenue: 6500, openRevenue: 0, cardSales: 28000, revenueTabCount: 1 });
+    expect(getShiftSummary(ctx, s1.id)).toMatchObject({ revenue: 0, cardSales: 0 });
+    expect(getShiftSummary(ctx, s2.id)).toMatchObject({ revenue: 28000, cardSales: 28000, salesCount: 1 });
   });
 });
