@@ -148,6 +148,16 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await snap(phone, 'faz6-reports-week');
     await phone.getByTestId('week-day-row').filter({ hasText: '465,00 ₺' }).click();
     await expect.poll(() => phone.getByTestId('report-period').textContent()).toMatch(/^\d+ \S+ \S+$/);
+    // Aralık: any start and end day on a calendar (2026-11-23). Today only → the same 465 TL.
+    await phone.getByRole('tab', { name: 'Aralık', exact: true }).click();
+    const today = new Date(Date.now() + 3 * 3_600_000).toISOString().slice(0, 10);
+    await phone.getByTestId(`range-day-${today}`).click();
+    await phone.getByTestId(`range-day-${today}`).click();
+    await snap(phone, 'faz6-range-sheet');
+    await phone.getByTestId('range-apply').click();
+    await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
+    expect(await phone.getByTestId('reports-compare').textContent()).toContain('Önceki 1 gün');
+    await snap(phone, 'faz6-reports-range');
     // Ay: the month list.
     await phone.getByRole('tab', { name: 'Ay', exact: true }).click();
     await expect.poll(() => phone.getByTestId('month-row').first().textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
@@ -231,6 +241,14 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await row.click();
     // The Raporlar tab stays mounted behind and lists the product too.
     await phone.getByText('Kaşarlı Tost').filter({ visible: true }).waitFor();
+    // Hesap dökümü (2026-11-23): on the web the statement opens in a new tab.
+    const [statement] = await Promise.all([phone.context().waitForEvent('page'), phone.getByTestId('tab-export').click()]);
+    await statement.waitForLoadState();
+    const text = await statement.textContent('body');
+    expect(text).toContain('Hesap dökümü · Ayşe');
+    expect(text).toContain('Kaşarlı Tost');
+    expect(text).toContain('250,00 ₺');
+    await statement.close();
     await phone.getByRole('button', { name: 'Ödeme al', exact: true }).click();
     await phone.getByLabel('Alınan tutar').fill('100');
     await phone.getByRole('button', { name: 'Nakit aldım' }).click();

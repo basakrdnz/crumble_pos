@@ -30,10 +30,11 @@ import { type ReactNode, useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { colors, heat } from '../../components/theme';
 import { Card, Columns, Empty, HeatGrid, Label, Row, Screen, Section, Segmented, styles } from '../../components/ui';
-import { type Catalog, loadCatalog, loadReportData } from '../../lib/data';
+import { type DayRange, presetRanges, RangeSheet } from '../../components/RangePicker';
+import { type Catalog, loadCatalog, loadReportData, loadShifts } from '../../lib/data';
 import { useLive } from '../../lib/useLive';
 
-type Grain = 'day' | 'week' | 'month';
+type Grain = 'day' | 'week' | 'month' | 'range';
 
 const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 const WEEKDAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
@@ -67,7 +68,24 @@ interface Period {
   prevShort: string;
 }
 
-function periodOf(grain: Grain, anchor: Day, today: Day): Period {
+function periodOf(grain: Grain, anchor: Day, today: Day, range: DayRange): Period {
+  if (grain === 'range') {
+    const n = daysBetween(range.from, range.to).length;
+    const prev = { from: addDays(range.from, -n), to: addDays(range.from, -1) };
+    const ongoing = range.to === today;
+    return {
+      grain,
+      from: range.from,
+      to: range.to,
+      end: range.to,
+      prev,
+      ongoing,
+      title: rangeText(range.from, range.to),
+      subtitle: `${n} gün · değiştirmek için dokun`,
+      prevLabel: `Önceki ${n} gün (${rangeText(prev.from, prev.to)})${ongoing ? ', aynı saate kadar' : ''}`,
+      prevShort: `önceki ${n} gün`,
+    };
+  }
   if (grain === 'day') {
     const prev = addDays(anchor, -7);
     const w = weekdayIndex(anchor);
@@ -140,9 +158,17 @@ function cutoffFor(p: Period, today: Day): string | undefined {
   return new Date(Date.parse(dayBounds(p.prev.to).start) + sinceMidnight).toISOString();
 }
 
+function shiftRange(r: DayRange, dir: -1 | 1): DayRange {
+  const n = daysBetween(r.from, r.to).length;
+  return { from: addDays(r.from, n * dir), to: addDays(r.to, n * dir) };
+}
+
 export default function Reports() {
   const [grain, setGrain] = useState<Grain>('day');
   const [anchor, setAnchor] = useState<Day>(todayIstanbul());
+  const [range, setRange] = useState<DayRange>(() => presetRanges(todayIstanbul())[0]![1]);
+  const [picking, setPicking] = useState(false);
+  const { data: shiftDays } = useLive(async () => new Set((await loadShifts(400)).map((sh) => istanbulDay(sh.opened_at))));
   // Raporlar always opens on today (kullanıcı 2026-11-21).
   useFocusEffect(
     useCallback(() => {
@@ -151,16 +177,17 @@ export default function Reports() {
     }, []),
   );
   const today = todayIstanbul();
-  const p = periodOf(grain, anchor, today);
+  const p = periodOf(grain, anchor, today, range);
   const { data, error, refreshing, reload } = useLive(async () => {
     const [cur, prev, catalog] = await Promise.all([loadReportData(p.from, p.to), loadReportData(p.prev.from, p.prev.to), loadCatalog()]);
     return { cur, prev, catalog };
-  }, [grain, anchor]);
+  }, [grain, anchor, range.from, range.to]);
   const go = (g: Grain, day: Day) => {
     setGrain(g);
     setAnchor(day);
   };
-  const canNext = step(grain, anchor, 1) <= today;
+  const canNext = grain === 'range' ? shiftRange(range, 1).to <= today : step(grain, anchor, 1) <= today;
+  const move = (dir: -1 | 1) => (grain === 'range' ? setRange(shiftRange(range, dir)) : setAnchor(step(grain, anchor, dir)));
 
   return (
     <Screen title="Raporlar" refreshing={refreshing} onRefresh={() => void reload()} error={error}>
@@ -170,21 +197,44 @@ export default function Reports() {
           ['day', 'Gün'],
           ['week', 'Hafta'],
           ['month', 'Ay'],
+          ['range', 'Aralık'],
         ]}
-        onChange={(g) => go(g, grain === 'day' && anchor !== today ? anchor : today)}
+        onChange={(g) => {
+          if (g === 'range') {
+            setGrain('range');
+            setPicking(true);
+          } else go(g, grain === 'day' && anchor !== today ? anchor : today);
+        }}
       />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <StepButton label="‹" a11y="Önceki" onPress={() => setAnchor(step(grain, anchor, -1))} />
-        <View style={{ flex: 1, alignItems: 'center' }}>
+        <StepButton label="‹" a11y="Önceki" onPress={() => move(-1)} />
+        <Pressable
+          style={{ flex: 1, alignItems: 'center' }}
+          onPress={() => grain === 'range' && setPicking(true)}
+          disabled={grain !== 'range'}
+          accessibilityRole={grain === 'range' ? 'button' : undefined}
+          testID="report-period-button"
+        >
           <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text }} testID="report-period">
             {p.title}
           </Text>
           {p.subtitle ? <Text style={styles.rowSub}>{p.subtitle}</Text> : null}
-        </View>
-        <StepButton label="›" a11y="Sonraki" disabled={!canNext} onPress={() => canNext && setAnchor(step(grain, anchor, 1))} />
+        </Pressable>
+        <StepButton label="›" a11y="Sonraki" disabled={!canNext} onPress={() => canNext && move(1)} />
       </View>
       {data && <Report p={p} today={today} cur={data.cur} prev={data.prev} catalog={data.catalog} go={go} />}
       {grain === 'month' && <MonthList current={p.from} onPick={(m) => go('month', m)} />}
+      {picking && (
+        <RangeSheet
+          value={range}
+          openDays={shiftDays ?? new Set()}
+          onClose={() => setPicking(false)}
+          onPick={(r) => {
+            setRange(r);
+            setPicking(false);
+          }}
+        />
+      )}
     </Screen>
   );
 }
@@ -272,6 +322,7 @@ function Report({
   const avg = totals.salesCount ? Math.round(totals.revenue / totals.salesCount) : 0;
   const prevAvg = before.sales ? Math.round(before.revenue / before.sales) : 0;
   const openDays = new Set(cur.shifts.map((s) => istanbulDay(s.opened_at))).size;
+  const span = daysBetween(p.from, p.to).length;
 
   const products = productReport(cur, catalog.products, catalog.categories);
   const prevQty = new Map(productReport(prev, catalog.products, catalog.categories).products.map((r) => [r.productId, r.quantity]));
@@ -283,13 +334,13 @@ function Report({
     <>
       <View style={{ backgroundColor: colors.forest, borderRadius: 18, padding: 18 }}>
         <Text style={{ fontSize: 13, fontWeight: '700', color: colors.forestMuted }}>
-          {p.grain === 'day' ? 'Ciro' : p.grain === 'week' ? 'Haftanın cirosu' : 'Ayın cirosu'}
+          {p.grain === 'day' ? 'Ciro' : p.grain === 'week' ? 'Haftanın cirosu' : p.grain === 'month' ? 'Ayın cirosu' : 'Aralığın cirosu'}
         </Text>
         <Text style={{ fontSize: 38, fontWeight: '800', color: '#fff', marginTop: 2 }} testID="reports-revenue" numberOfLines={1} adjustsFontSizeToFit>
           {formatTL(totals.revenue)}
         </Text>
         <Text style={{ fontSize: 12, fontWeight: '600', color: colors.forestMuted, marginTop: 4 }}>
-          {p.grain === 'day'
+          {p.grain === 'day' || span === 1
             ? 'Bu gün alınan her şey. Henüz ödenmemiş açık hesaplar dahil.'
             : `Günlük ortalama ${formatTL(Math.round(totals.revenue / Math.max(1, openDays)))} · ${openDays} gün açık`}
         </Text>
@@ -336,7 +387,8 @@ function Report({
       {p.grain === 'day' && <HourChart p={p} cur={cur} prev={prev} hasPrev={hasPrev} />}
       {p.grain === 'week' && <WeekChart p={p} cur={cur} prev={prev} go={go} />}
       {p.grain === 'month' && <MonthChart p={p} cur={cur} go={go} />}
-      {p.grain !== 'day' && <BusyHours p={p} cur={cur} />}
+      {p.grain === 'range' && (span === 1 ? <HourChart p={p} cur={cur} prev={prev} hasPrev={hasPrev} /> : span <= 14 ? <RangeDays p={p} cur={cur} prev={prev} go={go} /> : <MonthChart p={p} cur={cur} go={go} />)}
+      {(p.grain === 'week' || p.grain === 'month' || (p.grain === 'range' && span > 1)) && <BusyHours p={p} cur={cur} />}
 
       <Box title="En çok satanlar" note={hasPrev ? `Adet · ciro · ${p.prevShort} kaç adet` : 'Adet · ciro'} testID="top-products">
         {products.products.length === 0 && <Empty text="Bu dönemde satış yok." />}
@@ -532,6 +584,40 @@ function MonthChart({ p, cur, go }: { p: Period; cur: ReportData; go(g: Grain, d
         {bw && <BestWorst {...bw} />}
       </Box>
     </>
+  );
+}
+
+function RangeDays({ p, cur, prev, go }: { p: Period; cur: ReportData; prev: ReportData; go(g: Grain, d: Day): void }) {
+  const now = dayRevenue(cur);
+  const before = dayRevenue(prev);
+  const days = daysBetween(p.from, p.to);
+  const prevDays = daysBetween(p.prev.from, p.prev.to);
+  const bw = bestWorst(
+    days.map((d) => [d, now.get(d) ?? 0]),
+    (d) => `${shortDate(d)} ${WEEKDAYS_SHORT[weekdayIndex(d)]}`,
+  );
+  return (
+    <Box title="Gün gün" note={`Koyu bu aralık, açık ${p.prevShort} (aynı sıradaki gün). Bir güne dokun, o günün raporu açılır.`}>
+      <Columns
+        mode="bar"
+        values={days.map((d) => now.get(d) ?? 0)}
+        compare={prevDays.map((d) => before.get(d) ?? 0)}
+        labels={days.map((d) => String(dayNum(d)))}
+        height={130}
+      />
+      {bw && <BestWorst {...bw} />}
+      <View style={{ marginTop: 8 }}>
+        {days.map((d) => (
+          <Row
+            key={d}
+            left={`${WEEKDAYS[weekdayIndex(d)]} · ${shortDate(d)}`}
+            right={now.has(d) ? formatTL(now.get(d)!) : 'kapalı'}
+            onPress={() => go('day', d)}
+            testID="range-day-row"
+          />
+        ))}
+      </View>
+    </Box>
   );
 }
 

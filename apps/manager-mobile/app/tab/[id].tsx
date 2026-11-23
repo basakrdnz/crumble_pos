@@ -1,4 +1,4 @@
-import { formatTL, istanbulDay, lineTotals, parseTL, sumKurus, tabTotals, type TabItem } from '@crumble/shared';
+import { formatTL, istanbulDay, lineTotals, parseTL, sumKurus, tabStatement, tabTotals, type TabItem } from '@crumble/shared';
 import { randomUUID } from 'expo-crypto';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { colors } from '../../components/theme';
 import { Badge, Card, Label, Row, Screen, Section, Stat, styles } from '../../components/ui';
 import { loadCatalog, loadOpenShift, loadTabDetail, requestTabPayment, requestTabRename, requestTabVoid, type TabRequest } from '../../lib/data';
 import { formatDateTime, formatDay, formatTime, openFor, tabLabel } from '../../lib/format';
+import { sharePdf } from '../../lib/share';
 import { useLive } from '../../lib/useLive';
 
 const METHOD = { cash: 'Nakit', card: 'Kart' } as const;
@@ -33,6 +34,7 @@ export default function TabDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, error, refreshing, reload } = useLive(async () => Promise.all([loadTabDetail(id), loadCatalog(), loadOpenShift()]), [id]);
   const [sheet, setSheet] = useState<'pay' | 'rename' | 'void' | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
   const detail = data?.[0];
   if (!data) return <Screen underHeader title="Hesap" error={error}>{null}</Screen>;
   if (!detail) return <Screen underHeader title="Hesap" error={error}><Text>Bulunamadı.</Text></Screen>;
@@ -93,6 +95,24 @@ export default function TabDetailScreen() {
           {paid > 0 && <Text style={[styles.rowSub, { marginTop: 8 }]}>Ödeme alınmış hesap telefondan iptal edilemez; önce kasada iade yapılır.</Text>}
         </Card>
       )}
+
+      <Pressable
+        style={[s.secondary, sharing === 'busy' && { opacity: 0.5 }]}
+        disabled={sharing === 'busy'}
+        onPress={() => {
+          const st = tabStatement({ title, openedAt: tab.opened_at, status: tab.status, discountPercent: tab.discount_percent, items, payments, now: new Date().toISOString() });
+          setSharing('busy');
+          sharePdf(st.html, st.fileName).then(
+            () => setSharing(null),
+            (e: unknown) => setSharing(e instanceof Error ? e.message : String(e)),
+          );
+        }}
+        accessibilityRole="button"
+        testID="tab-export"
+      >
+        <Text style={[s.secondaryText, { color: colors.text }]}>Hesap dökümünü paylaş (PDF)</Text>
+      </Pressable>
+      {sharing && sharing !== 'busy' && <Text style={styles.error}>Döküm hazırlanamadı: {sharing}</Text>}
 
       {requests.length > 0 && (
         <Section title="Telefondan istekler">
