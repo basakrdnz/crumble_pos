@@ -19,7 +19,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../../components/theme';
-import { Card, Columns, Delta, Fact, Label, LastSync, Screen, StatusCard } from '../../components/ui';
+import { Card, Columns, Delta, Fact, Label, LastSync, Screen, StatusCard, useNarrow } from '../../components/ui';
 import { loadCatalog, loadItemsSince, loadOpenShift, loadOpenTabTotals, loadReportData } from '../../lib/data';
 import { formatDay, formatTime, tabLabel } from '../../lib/format';
 import { useLive } from '../../lib/useLive';
@@ -49,6 +49,7 @@ export default function Today() {
       return () => setStatusBarStyle('dark');
     }, []),
   );
+  const narrow = useNarrow();
   const { data, error, refreshing, reload } = useLive(async () => {
     const today = todayIstanbul();
     const from = [addDays(today, -7), monthStart(today)].sort()[0]!;
@@ -98,7 +99,7 @@ export default function Today() {
       <Text style={s.heroLabel}>
         Bugün · {formatDay(today)} · {formatTime(now)}
       </Text>
-      <Text style={s.heroBig} testID="today-revenue">
+      <Text style={[s.heroBig, narrow && { fontSize: 34 }]} testID="today-revenue" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15}>
         {formatTL(totals.revenue)}
       </Text>
       {totals.open > 0 && (
@@ -126,19 +127,19 @@ export default function Today() {
       <View style={s.heroGrid}>
         <View style={s.heroCell}>
           <Text style={s.heroCellLabel}>Nakit</Text>
-          <Text style={s.heroCellValue} testID="today-cash">
+          <Text style={[s.heroCellValue, narrow && { fontSize: 13 }]} testID="today-cash" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15}>
             {formatTL(totals.cash)}
           </Text>
         </View>
         <View style={s.heroCell}>
           <Text style={s.heroCellLabel}>Kart</Text>
-          <Text style={s.heroCellValue} testID="today-card">
+          <Text style={[s.heroCellValue, narrow && { fontSize: 13 }]} testID="today-card" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15}>
             {formatTL(totals.card)}
           </Text>
         </View>
         <Pressable style={s.heroCell} onPress={() => router.navigate('/sales')} accessibilityRole="button" testID="today-sales-link">
           <Text style={s.heroCellLabel}>Satış</Text>
-          <Text style={s.heroCellValue} testID="today-count">
+          <Text style={[s.heroCellValue, narrow && { fontSize: 13 }]} testID="today-count" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15}>
             {totals.salesCount}
           </Text>
         </Pressable>

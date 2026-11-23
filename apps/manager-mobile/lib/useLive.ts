@@ -7,7 +7,8 @@
 // running waits for it instead of starting another (2026-11-04: the spinner
 // flashing on every poll made the screens jump and feel stuck).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from './supabase';
+import { AppState } from 'react-native';
+import { requireSession, supabase } from './supabase';
 
 const POLL_MS = Number(process.env.EXPO_PUBLIC_POLL_MS) || 15_000;
 const LIVE_TABLES = ['tabs', 'tab_items', 'payments', 'refunds', 'shifts', 'device_status', 'tab_requests'];
@@ -32,6 +33,9 @@ export function useLive<T>(load: () => Promise<T>, deps: unknown[] = []) {
       do {
         again.current = false;
         try {
+          // Never show an empty answer from a lapsed session as real data:
+          // keep the last data and say what is wrong instead (2026-11-23).
+          await requireSession();
           const next = await loadRef.current();
           if (alive.current) {
             setData(next);
@@ -76,7 +80,13 @@ export function useLive<T>(load: () => Promise<T>, deps: unknown[] = []) {
     }
     channel.subscribe();
     const poll = setInterval(() => void fetchNow(), POLL_MS);
+    // Back in front after sleeping: the poll and the socket were paused, so
+    // fetch at once instead of showing what was there hours ago.
+    const wake = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void fetchNow();
+    });
     return () => {
+      wake.remove();
       alive.current = false;
       if (timer) clearTimeout(timer);
       clearInterval(poll);

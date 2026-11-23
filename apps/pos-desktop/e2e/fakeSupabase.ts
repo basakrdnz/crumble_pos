@@ -113,7 +113,10 @@ export function fakeSupabase(pool: pg.Pool, port: number, users: { device: strin
         if (req.method === 'OPTIONS') return send(204);
 
         if (url.pathname === '/auth/v1/token') {
-          const { email } = JSON.parse(body) as { email: string };
+          const auth = JSON.parse(body) as { email?: string; refresh_token?: string };
+          // grant_type=refresh_token: the token names the user ("r-<id>").
+          const refreshed = auth.refresh_token?.startsWith("r-") ? auth.refresh_token.slice(2) : null;
+          const email = refreshed === DEVICE_USER ? users.device : refreshed === PARTNER_USER ? users.partner : auth.email;
           const id = email === users.device ? DEVICE_USER : email === users.partner ? PARTNER_USER : null;
           if (!id) return send(400, { error: 'invalid_grant', error_description: 'Invalid login credentials', code: 'invalid_credentials' });
           const app_metadata = id === DEVICE_USER ? { role: 'device' } : {};

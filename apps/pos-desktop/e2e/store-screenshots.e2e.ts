@@ -191,7 +191,10 @@ describe.skipIf(!OUT || !bin || !existsSync(CHROMIUM))('App Store ekran görünt
     });
     web = await serveStatic(join(MOBILE, 'dist-store'), webPort);
     browser = await chromium.launch({ executablePath: CHROMIUM });
-    phone = await browser.newPage({ viewport: process.env.CRUMBLE_STORE_65 ? { width: 428, height: 926 } : { width: 440, height: 956 }, deviceScaleFactor: 3, locale: 'tr-TR', timezoneId: 'Europe/Istanbul' });
+    // CRUMBLE_PHONE_WIDTH: check a narrow phone instead (2026-11-23: Galaxy Z Fold cover screen).
+    const narrow = Number(process.env.CRUMBLE_PHONE_WIDTH) || 0;
+    const viewport = narrow ? { width: narrow, height: 820 } : process.env.CRUMBLE_STORE_65 ? { width: 428, height: 926 } : { width: 440, height: 956 };
+    phone = await browser.newPage({ viewport, deviceScaleFactor: narrow ? 1 : 3, locale: 'tr-TR', timezoneId: 'Europe/Istanbul' });
     await phone.clock.setFixedTime(now);
     phone.on('pageerror', (e) => console.log('[telefon hata]', e.message));
   }, 240_000);
@@ -208,7 +211,7 @@ describe.skipIf(!OUT || !bin || !existsSync(CHROMIUM))('App Store ekran görünt
   const nav = (name: string) => phone.locator('a[role="tab"]').filter({ hasText: name }).click();
   const shot = async (name: string) => {
     await phone.waitForTimeout(800); // fonts and layout settle
-    await phone.screenshot({ path: join(OUT!, `${name}.png`) });
+    await phone.screenshot({ path: join(OUT!, `${name}.png`), fullPage: !!process.env.CRUMBLE_PHONE_WIDTH });
   };
 
   it('çeker', async () => {

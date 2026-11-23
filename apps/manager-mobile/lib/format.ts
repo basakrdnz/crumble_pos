@@ -9,22 +9,38 @@ export function tabLabel(tab: Pick<Tab, 'table_id' | 'customer_name' | 'kind'>, 
   return [place, tab.customer_name].filter(Boolean).join(' · ') || (tab.kind === 'quick' ? 'Hızlı satış' : 'Hesap');
 }
 
-const time = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' });
-const dateTime = new Intl.DateTimeFormat('tr-TR', {
-  timeZone: 'Europe/Istanbul',
-  day: '2-digit',
-  month: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-const longDay = new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', day: 'numeric', month: 'long', weekday: 'long' });
-const shortDay = new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+// Dates are formatted by hand with the fixed Istanbul offset (UTC+3, no DST
+// since 2016), not Intl: Android's engine may ignore the time zone or the
+// Turkish names, and the phone's own zone must not matter (2026-11-23).
+const OFFSET = 3 * 3_600_000;
+const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const WEEKDAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const two = (n: number) => String(n).padStart(2, '0');
+const ist = (iso: string) => new Date(Date.parse(iso) + OFFSET);
 
-export const formatTime = (iso: string) => time.format(new Date(iso));
-export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
+/** "14:05" in Istanbul. */
+export const formatTime = (iso: string) => {
+  const d = ist(iso);
+  return `${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`;
+};
+/** "03.11 18:05" in Istanbul. */
+export const formatDateTime = (iso: string) => {
+  const d = ist(iso);
+  return `${two(d.getUTCDate())}.${two(d.getUTCMonth() + 1)} ${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`;
+};
 /** "YYYY-MM-DD" (already an Istanbul day) -> "2 Kasım Pazartesi". */
-export const formatDay = (day: string) => longDay.format(new Date(`${day}T12:00:00Z`));
-export const formatShortDay = (day: string) => shortDay.format(new Date(`${day}T12:00:00Z`));
+export const formatDay = (day: string) => {
+  const d = new Date(`${day}T12:00:00Z`);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${WEEKDAYS[d.getUTCDay()]}`;
+};
+/** "YYYY-MM-DD" -> "2 Kas". */
+export const formatShortDay = (day: string) => {
+  const d = new Date(`${day}T12:00:00Z`);
+  return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
+};
+/** Istanbul hour 0–23 now. */
+export const istanbulHourNow = () => ist(new Date().toISOString()).getUTCHours();
 
 /** "bugün açıldı" / "dünden beri açık" / "5 gündür açık" (Istanbul days). */
 export function openFor(openedAt: string): string {

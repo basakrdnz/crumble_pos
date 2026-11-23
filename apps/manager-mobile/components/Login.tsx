@@ -14,13 +14,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
+import { istanbulHourNow } from '../lib/format';
 import { isConfigured } from '../lib/supabase';
 import { colors, fonts } from './theme';
 
-const hourFormat = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', hour: 'numeric', hourCycle: 'h23' });
-
 function greeting(): string {
-  const hour = Number(hourFormat.format(new Date()));
+  const hour = istanbulHourNow();
   if (hour >= 5 && hour < 12) return 'Günaydın.';
   if (hour >= 12 && hour < 18) return 'İyi günler.';
   return 'İyi akşamlar.';

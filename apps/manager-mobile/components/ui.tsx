@@ -1,6 +1,6 @@
 import { type Busyness, formatTL } from '@crumble/shared';
 import { type ReactNode, useEffect, useRef } from 'react';
-import { Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { loadDeviceStatus } from '../lib/data';
@@ -116,6 +116,15 @@ export function Delta({ value, suffix = '', onDark = false, size }: { value: num
   return <Text style={[styles.delta, size ? { fontSize: size } : null, { color }]}>{`${up ? '▲' : '▼'} %${Math.abs(value)}${suffix}`}</Text>;
 }
 
+/**
+ * Narrow phones (2026-11-23: Galaxy Z Fold cover screen, Android's larger
+ * display size): numbers in boxes get smaller instead of wrapping "₺" onto a
+ * second line or being cut off.
+ */
+export function useNarrow(): boolean {
+  return useWindowDimensions().width < 380;
+}
+
 export function Stat({
   label,
   value,
@@ -132,10 +141,17 @@ export function Stat({
   /** Three in a row on a phone (açık hesap detayı). */
   compact?: boolean;
 }) {
+  const narrow = useNarrow();
   return (
-    <Card style={compact ? [styles.stat, styles.statCompact] : styles.stat}>
+    <Card style={compact ? [styles.stat, styles.statCompact, narrow && { padding: 9 }] : styles.stat}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.statValue, big && styles.statBig, compact && styles.statValueCompact]} testID={testID} numberOfLines={1} adjustsFontSizeToFit>
+      <Text
+        style={[styles.statValue, big && styles.statBig, compact && styles.statValueCompact, narrow && { fontSize: compact ? 13 : 17 }]}
+        testID={testID}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        maxFontSizeMultiplier={1.15}
+      >
         {value}
       </Text>
       {sub ? typeof sub === 'string' ? <Text style={styles.rowSub}>{sub}</Text> : sub : null}

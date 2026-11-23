@@ -16,6 +16,7 @@ import {
   monthStart,
   percentChange,
   periodSales,
+  periodStatement,
   periodTotals,
   productReport,
   type ReportData,
@@ -32,6 +33,7 @@ import { colors, heat } from '../../components/theme';
 import { Card, Columns, Empty, HeatGrid, Label, Row, Screen, Section, Segmented, styles } from '../../components/ui';
 import { type DayRange, presetRanges, RangeSheet } from '../../components/RangePicker';
 import { type Catalog, loadCatalog, loadReportData, loadShifts } from '../../lib/data';
+import { sharePdf } from '../../lib/share';
 import { useLive } from '../../lib/useLive';
 
 type Grain = 'day' | 'week' | 'month' | 'range';
@@ -313,6 +315,7 @@ function Report({
   go(g: Grain, day: Day): void;
 }) {
   const [allProducts, setAllProducts] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
   if (cur.shifts.length === 0) {
     return <Empty text={p.grain === 'day' ? 'Bu gün kasa açılmadı.' : 'Bu dönemde kasa açılmadı.'} />;
   }
@@ -340,7 +343,7 @@ function Report({
           {formatTL(totals.revenue)}
         </Text>
         <Text style={{ fontSize: 12, fontWeight: '600', color: colors.forestMuted, marginTop: 4 }}>
-          {p.grain === 'day' || span === 1
+          {p.grain === 'day' || (p.grain === 'range' && span === 1)
             ? 'Bu gün alınan her şey. Henüz ödenmemiş açık hesaplar dahil.'
             : `Günlük ortalama ${formatTL(Math.round(totals.revenue / Math.max(1, openDays)))} · ${openDays} gün açık`}
         </Text>
@@ -441,6 +444,43 @@ function Report({
         <Line left="Fiyatı değiştirilen" sub="Kasada menü fiyatının altında satılan" right={formatTL(totals.priceChange)} />
         {totals.comp > 0 && <Line left="İkram" sub="Eski kayıtlar" right={formatTL(totals.comp)} />}
       </Box>
+
+      {/* Rapor dökümü (2026-11-23): this period as a PDF to share. */}
+      <Pressable
+        onPress={() => {
+          const st = periodStatement({
+            title: p.title,
+            prevLabel: p.prevLabel,
+            before: hasPrev ? before : null,
+            cur,
+            catalog,
+            now: new Date().toISOString(),
+            from: p.from,
+            to: p.to,
+          });
+          setExporting('busy');
+          sharePdf(st.html, st.fileName).then(
+            () => setExporting(null),
+            (e: unknown) => setExporting(e instanceof Error ? e.message : String(e)),
+          );
+        }}
+        disabled={exporting === 'busy'}
+        accessibilityRole="button"
+        testID="report-export"
+        style={{
+          height: 50,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.panel,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: exporting === 'busy' ? 0.5 : 1,
+        }}
+      >
+        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text }}>Bu raporu paylaş (PDF)</Text>
+      </Pressable>
+      {exporting && exporting !== 'busy' && <Text style={styles.error}>Rapor hazırlanamadı: {exporting}</Text>}
     </>
   );
 }

@@ -158,6 +158,11 @@ describe.skipIf(!bin || !existsSync(CHROMIUM))('Faz 6: yönetim uygulaması (mob
     await expect.poll(() => phone.getByTestId('reports-revenue').textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
     expect(await phone.getByTestId('reports-compare').textContent()).toContain('Önceki 1 gün');
     await snap(phone, 'faz6-reports-range');
+    // Rapor dökümü: the chosen period as a page to share (2026-11-23).
+    const [report] = await Promise.all([phone.context().waitForEvent('page'), phone.getByTestId('report-export').click()]);
+    await report.waitForLoadState();
+    expect(await report.textContent('body')).toContain('465,00 ₺');
+    await report.close();
     // Ay: the month list.
     await phone.getByRole('tab', { name: 'Ay', exact: true }).click();
     await expect.poll(() => phone.getByTestId('month-row').first().textContent(), { timeout: 15_000 }).toContain('465,00 ₺');
