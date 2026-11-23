@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Payment, Refund, Shift, Tab, TabItem } from '../types';
+import { formatTL } from '../money';
 import { addDays, dayBounds, daysBetween, istanbulDay, istanbulHour, monthStart, weekStart } from './dates';
 import { hourlyActivity, periodSales, periodTotals, productReport, revenueSeries, summarizeShift } from './reports';
 
@@ -165,5 +166,28 @@ describe('reports', () => {
     ]);
     expect(report.cartDiscount).toBe(3400);
     expect(report.totalRevenue).toBe(71350 + 25000 - 3400);
+  });
+});
+
+describe('periodStatement (rapor dökümü)', () => {
+  it('has the same numbers as the screen and says what it is compared with', async () => {
+    const { periodStatement } = await import('./periodStatement');
+    const d = data();
+    const s = periodStatement({
+      title: '2 – 3 Kasım',
+      prevLabel: 'Önceki 2 gün (31 Ekim – 1 Kasım)',
+      before: null,
+      cur: d,
+      catalog: { products: [], categories: [] },
+      now: '2026-11-03T12:00:00.000Z',
+      from: '2026-11-02',
+      to: '2026-11-03',
+    });
+    const t = periodTotals(d);
+    expect(s.html).toContain('Rapor · 2 – 3 Kasım');
+    expect(s.html).toContain(formatTL(t.revenue));
+    expect(s.html).toContain('karşılaştıracak veri yok');
+    expect(s.html).toContain('2 Kasım Pazartesi');
+    expect(s.fileName).toBe('Crumble-rapor-2026-11-02_2026-11-03');
   });
 });

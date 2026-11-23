@@ -9,3 +9,4 @@ export * from './reports/reports';
 export * from './reports/analytics';
 export * from './reports/busyness';
 export * from './reports/tabStatement';
+export * from './reports/periodStatement';
